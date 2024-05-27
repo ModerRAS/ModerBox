@@ -14,18 +14,39 @@ using System.Threading.Tasks;
 namespace ModerBox.ViewModels {
     public class HarmonicCalculateViewModel : ViewModelBase {
         public ReactiveCommand<Unit, Unit> SelectSource { get; }
+        public ReactiveCommand<Unit, Unit> SelectTarget { get; }
         private string _sourceFolder;
         public string SourceFolder {
             get => _sourceFolder;
             set => this.RaiseAndSetIfChanged(ref _sourceFolder, value);
         }
+
+        private string _targetFile;
+        public string TargetFile {
+            get => _targetFile;
+            set => this.RaiseAndSetIfChanged(ref _targetFile, value);
+        }
         public HarmonicCalculateViewModel() {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
+            SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
         }
 
         private async Task SelectSourceTask() {
-            var folder = await DoOpenFolderPickerAsync();
-            SourceFolder = folder?.TryGetLocalPath() ?? folder.Path.ToString();
+            try {
+                var folder = await DoOpenFolderPickerAsync();
+                SourceFolder = folder?.TryGetLocalPath() ?? folder.Path.ToString();
+            } catch (NullReferenceException) {
+
+            }
+        }
+
+        private async Task SelectTargetTask() {
+            try {
+                var file = await DoSaveFilePickerAsync();
+                TargetFile = file?.TryGetLocalPath() ?? file.Path.ToString();
+            } catch (NullReferenceException) {
+
+            }
         }
 
         private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
