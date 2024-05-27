@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Gemstone.COMTRADE" Version="1.0.117" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
