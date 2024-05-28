@@ -9,25 +9,25 @@ namespace ModerBox.Comtrade {
 
         public string ABCN;
 
-        public float[] Data;
+        public double[] Data;
 
-        public float MaxValue;
+        public double MaxValue;
 
-        public float MinValue;
+        public double MinValue;
 
-        public float Mul;
+        public double Mul;
 
-        public float Add;
+        public double Add;
 
-        public float Skew;
+        public double Skew;
 
         public string Key;
 
         public string VarName;
 
-        public float Primary = 1f;
+        public double Primary = 1f;
 
-        public float Secondary = 1f;
+        public double Secondary = 1f;
 
         public bool Ps = true;
     }

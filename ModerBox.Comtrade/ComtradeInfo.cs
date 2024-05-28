@@ -9,7 +9,7 @@ namespace ModerBox.Comtrade {
         }
 
         public void GetMs() {
-            this.TimeMs = new float[this.EndSamp];
+            this.TimeMs = new double[this.EndSamp];
             if (this.Samps.Length == 1) {
                 for (int i = 0; i < this.EndSamp; i++) {
                     this.TimeMs[i] = 1000f * (float)i / this.Samp;
@@ -61,7 +61,7 @@ namespace ModerBox.Comtrade {
 
         public int Hz = 50;
 
-        public float Samp;
+        public double Samp;
 
         public int EndSamp;
 
@@ -75,10 +75,10 @@ namespace ModerBox.Comtrade {
 
         public List<DigitalInfo> DData = new List<DigitalInfo>();
 
-        public float[] Samps;
+        public double[] Samps;
 
         public int[] EndSamps;
 
-        public float[] TimeMs;
+        public double[] TimeMs;
     }
 }
