@@ -38,12 +38,12 @@ namespace ModerBox.Comtrade {
                     analogInfo.ABCN = "N";
                 }
                 analogInfo.Unit = array[4];
-                float.TryParse(array[5], out analogInfo.Mul);
-                float.TryParse(array[6], out analogInfo.Add);
-                float.TryParse(array[7], out analogInfo.Skew);
+                double.TryParse(array[5], out analogInfo.Mul);
+                double.TryParse(array[6], out analogInfo.Add);
+                double.TryParse(array[7], out analogInfo.Skew);
                 if (array.Length == 13) {
-                    float.TryParse(array[10], out analogInfo.Primary);
-                    float.TryParse(array[11], out analogInfo.Secondary);
+                    double.TryParse(array[10], out analogInfo.Primary);
+                    double.TryParse(array[11], out analogInfo.Secondary);
                     analogInfo.Ps = !array[12].Equals("P", StringComparison.OrdinalIgnoreCase);
                 }
                 fileInfo.AData.Add(analogInfo);
@@ -62,14 +62,14 @@ namespace ModerBox.Comtrade {
             if (num2 == 0) {
                 num2 = 1;
             }
-            fileInfo.Samps = new float[num2];
+            fileInfo.Samps = new double[num2];
             fileInfo.EndSamps = new int[num2];
             for (int k = 0; k < num2; k++) {
                 text = streamReader.ReadLine();
                 array = text.Split(new char[] { ',' });
-                fileInfo.Samp = Math.Max(fileInfo.Samp, float.Parse(array[0]));
+                fileInfo.Samp = Math.Max(fileInfo.Samp, double.Parse(array[0]));
                 fileInfo.EndSamp = Math.Max(fileInfo.EndSamp, int.Parse(array[1]));
-                fileInfo.Samps[k] = float.Parse(array[0]);
+                fileInfo.Samps[k] = double.Parse(array[0]);
                 fileInfo.EndSamps[k] = int.Parse(array[1]);
             }
             text = streamReader.ReadLine();
@@ -81,7 +81,7 @@ namespace ModerBox.Comtrade {
             streamReader.Close();
             ABCVA(fileInfo);
             for (int l = 0; l < fileInfo.AnalogCount; l++) {
-                fileInfo.AData[l].Data = new float[fileInfo.EndSamp];
+                fileInfo.AData[l].Data = new double[fileInfo.EndSamp];
             }
             for (int m = 0; m < fileInfo.DigitalCount; m++) {
                 fileInfo.DData[m].Data = new int[fileInfo.EndSamp];
@@ -90,7 +90,7 @@ namespace ModerBox.Comtrade {
         }
 
         public static void ReadComtradeDAT(ComtradeInfo fI) {
-            float[] array = new float[fI.AnalogCount];
+            double[] array = new double[fI.AnalogCount];
             if (string.Equals("ASCII", fI.ASCII, StringComparison.OrdinalIgnoreCase)) {
                 string text = Path.ChangeExtension(fI.FileName, "dat");
                 StreamReader streamReader = new StreamReader(text, Encoding.Default);
@@ -100,7 +100,7 @@ namespace ModerBox.Comtrade {
                     string[] array3 = text2.Split(array2, StringSplitOptions.RemoveEmptyEntries);
                     for (int j = 0; j < fI.AnalogCount; j++) {
                         AnalogInfo analogInfo = fI.AData[j];
-                        float num = float.Parse(array3[j + 2]) * analogInfo.Mul + analogInfo.Add;
+                        double num = double.Parse(array3[j + 2]) * analogInfo.Mul + analogInfo.Add;
                         if (i == 0) {
                             array[j] = num;
                             analogInfo.Data[i] = num;
@@ -136,7 +136,7 @@ namespace ModerBox.Comtrade {
                 num5 += 8;
                 for (int m = 0; m < fI.AnalogCount; m++) {
                     AnalogInfo analogInfo2 = fI.AData[m];
-                    float num6 = (float)BitConverter.ToInt16(array4, num5) * analogInfo2.Mul + analogInfo2.Add;
+                    double num6 = (double)BitConverter.ToInt16(array4, num5) * analogInfo2.Mul + analogInfo2.Add;
                     num5 += 2;
                     if (l == 0) {
                         array[m] = num6;
