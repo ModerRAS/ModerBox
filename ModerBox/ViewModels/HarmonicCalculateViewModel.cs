@@ -2,6 +2,8 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using ModerBox.Common;
+using ModerBox.Comtrade;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
@@ -10,11 +12,13 @@ using System.Linq;
 using System.Reactive;
 using System.Text;
 using System.Threading.Tasks;
+using static ModerBox.Common.Util;
 
 namespace ModerBox.ViewModels {
     public class HarmonicCalculateViewModel : ViewModelBase {
         public ReactiveCommand<Unit, Unit> SelectSource { get; }
         public ReactiveCommand<Unit, Unit> SelectTarget { get; }
+        public ReactiveCommand<Unit, Unit> RunCalculate { get; }
         private string _sourceFolder;
         public string SourceFolder {
             get => _sourceFolder;
@@ -29,6 +33,7 @@ namespace ModerBox.ViewModels {
         public HarmonicCalculateViewModel() {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
+            RunCalculate = ReactiveCommand.CreateFromTask(RunCalculateTask);
         }
 
         private async Task SelectSourceTask() {
@@ -49,6 +54,22 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        private async Task RunCalculateTask() {
+            await Task.Run(() => {
+                try {
+                    var Data = SourceFolder.GetAllFiles().FilterCfgFiles().AsParallel().Select(f => {
+                        var harmonic = new Harmonic(f);
+                        return harmonic.Calculate();
+                    }).SelectMany(f => {
+                        return f;
+                    }).ToList();
+                    var writer = new DataWriter();
+                    writer.WriteHarmonicData(Data, "Harmonic");
+                    writer.SaveAs(TargetFile);
+                } catch (Exception ex) { }
+            });
+            
+        }
         private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
             // For learning purposes, we opted to directly get the reference
             // for StorageProvider APIs here inside the ViewModel. 

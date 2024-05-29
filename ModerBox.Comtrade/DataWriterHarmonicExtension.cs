@@ -18,7 +18,11 @@ namespace ModerBox.Comtrade {
                     "波形位置"
                 }
             };
-            total.AddRange(data.AsParallel().Select(d => {
+            total.AddRange(data
+                .OrderBy(o => o.Time)
+                .ThenBy(o => o.Name)
+                .ThenBy(o => o.HarmonicOrder)
+                .Select(d => {
                 return new List<string>() {
                     d.Time.ToString("yyyy/MM/dd HH:mm:ss"),
                     d.Name,
