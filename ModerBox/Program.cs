@@ -62,6 +62,7 @@ namespace ModerBox {
                     })
                     .EveryFiveMinutes().RunOnceAtStart();
             });
+            host.RunAsync();
             BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
         }
