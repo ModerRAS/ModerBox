@@ -1,0 +1,31 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ModerBox.Common {
+    public static class Util {
+        public static List<string> GetAllFiles(this string directory) {
+            List<string> files = new List<string>();
+
+            try {
+                // 获取当前目录的所有文件
+                files.AddRange(Directory.EnumerateFiles(directory));
+
+                // 获取当前目录的所有子目录
+                foreach (string subdirectory in Directory.EnumerateDirectories(directory)) {
+                    files.AddRange(GetAllFiles(subdirectory));
+                }
+            } catch (Exception ex) {
+                Console.WriteLine($"An error occurred while accessing the directory {directory}: {ex.Message}");
+            }
+
+            return files;
+        }
+        public static List<string> FilterCfgFiles(this List<string> files) {
+            // 使用 LINQ 过滤出以 .cfg 结尾的文件
+            return files.Where(file => file.EndsWith(".cfg", StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+}

@@ -1,0 +1,30 @@
+name: Deploy to GitHub Releases
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy-to-github-releases:
+    permissions: write-all
+    runs-on: windows-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Install .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    - name: Publish Application
+      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish -r win-x64 --self-contained false
+    - name: Create Velopack Release
+      env:
+        BUILD_NUMBER: ${{github.run_number}}
+      shell: pwsh
+      run: |
+        $Version = Get-Date -Format "yyyy.M.$env:BUILD_NUMBER"
+        dotnet tool install -g vpk
+        vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nightly-win-x64
+        vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish --framework net8.0-x64-desktop
+        vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --publish --channel nightly-win-x64 --releaseName "ModerBox $Version" --tag v$Version --token ${{ secrets.GITHUB_TOKEN }}

@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace ModerBox.Common {
     public class DataWriter {
@@ -10,12 +11,10 @@ namespace ModerBox.Common {
             Workbook.Dispose();
         }
         public void WriteDoubleList(List<List<string>> Data, string SheetName) {
-            using (var workbook = new XLWorkbook()) {
-                var worksheet = workbook.Worksheets.Add(SheetName);
-                for (var y = 0; y < Data.Count; y++) {
-                    for (var x = 0; x < Data[y].Count; x++) {
-                        worksheet.Cell(y, x).Value = Data[y][x];
-                    }
+            var worksheet = Workbook.Worksheets.Add(SheetName);
+            for (var y = 0; y < Data.Count; y++) {
+                for (var x = 0; x < Data[y].Count; x++) {
+                    worksheet.Cell(y + 1, x + 1).Value = Data[y][x];
                 }
             }
         }
