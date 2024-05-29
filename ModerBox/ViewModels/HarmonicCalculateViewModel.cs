@@ -90,6 +90,7 @@ namespace ModerBox.ViewModels {
                     writer.WriteHarmonicData(HarmonicData, "Harmonic");
                     writer.SaveAs(TargetFile);
                     Progress = ProgressMax;
+                    TargetFile.OpenFileWithExplorer();
                 } catch (Exception ex) { }
             });
             
@@ -127,7 +128,9 @@ namespace ModerBox.ViewModels {
                 throw new NullReferenceException("Missing StorageProvider instance.");
 
             return await provider.SaveFilePickerAsync(new FilePickerSaveOptions() {
-                Title = "Save Text File"
+                Title = "保存文件",
+                DefaultExtension = ".xlsx",
+                SuggestedFileName = "谐波分析.xlsx"
             });
         }
 

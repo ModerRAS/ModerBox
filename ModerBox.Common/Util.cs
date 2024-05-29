@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,6 +27,17 @@ namespace ModerBox.Common {
         public static List<string> FilterCfgFiles(this List<string> files) {
             // 使用 LINQ 过滤出以 .cfg 结尾的文件
             return files.Where(file => file.EndsWith(".cfg", StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        /// <summary>
+        /// 启动指定的文件（例如Excel文档）使用explorer.exe。
+        /// </summary>
+        /// <param name="filePath">要启动的文件的完整路径。</param>
+        public static void OpenFileWithExplorer(this string filePath) {
+            Process process = new Process();
+            process.StartInfo.FileName = "explorer.exe";
+            process.StartInfo.Arguments = "\"" + filePath + "\"";
+            process.Start();
         }
     }
 }
