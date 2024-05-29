@@ -9,21 +9,21 @@ namespace ModerBox.Comtrade {
         static Comtrade() {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
-        public static ComtradeInfo ReadComtradeCFG(string fileName) {
+        public static async Task<ComtradeInfo> ReadComtradeCFG(string fileName) {
             ComtradeInfo fileInfo = new ComtradeInfo(fileName);
-            StreamReader streamReader = new StreamReader(fileName, Encoding.GetEncoding("GBK"));
-            string text = streamReader.ReadLine();
+            using StreamReader streamReader = new StreamReader(fileName, Encoding.GetEncoding("GBK"));
+            string text = await streamReader.ReadLineAsync();
             int num = 0;
             if (text.IndexOf("RTDS", StringComparison.OrdinalIgnoreCase) >= 0) {
                 num = 1;
             }
-            text = streamReader.ReadLine();
+            text = await streamReader.ReadLineAsync();
             string[] array = text.Split(new char[] { ',' });
             int.Parse(array[0]);
             fileInfo.AnalogCount = int.Parse(array[1].Replace(" ", "").Replace("A", ""));
             fileInfo.DigitalCount = int.Parse(array[2].Replace(" ", "").Replace("D", ""));
             for (int i = 0; i < fileInfo.AnalogCount; i++) {
-                text = streamReader.ReadLine();
+                text = await streamReader.ReadLineAsync();
                 array = text.Split(new char[] { ',' });
                 AnalogInfo analogInfo = new AnalogInfo();
                 analogInfo.Name = array[1];
@@ -49,15 +49,15 @@ namespace ModerBox.Comtrade {
                 fileInfo.AData.Add(analogInfo);
             }
             for (int j = 0; j < fileInfo.DigitalCount; j++) {
-                text = streamReader.ReadLine();
+                text = await streamReader.ReadLineAsync();
                 array = text.Split(new char[] { ',' });
                 DigitalInfo digitalInfo = new DigitalInfo();
                 digitalInfo.Name = array[1];
                 fileInfo.DData.Add(digitalInfo);
             }
-            text = streamReader.ReadLine();
+            text = await streamReader.ReadLineAsync();
             fileInfo.Hz = (int)Convert.ToSingle(text);
-            text = streamReader.ReadLine();
+            text = await streamReader.ReadLineAsync();
             int num2 = int.Parse(text);
             if (num2 == 0) {
                 num2 = 1;
@@ -65,20 +65,20 @@ namespace ModerBox.Comtrade {
             fileInfo.Samps = new double[num2];
             fileInfo.EndSamps = new int[num2];
             for (int k = 0; k < num2; k++) {
-                text = streamReader.ReadLine();
+                text = await streamReader.ReadLineAsync();
                 array = text.Split(new char[] { ',' });
                 fileInfo.Samp = Math.Max(fileInfo.Samp, double.Parse(array[0]));
                 fileInfo.EndSamp = Math.Max(fileInfo.EndSamp, int.Parse(array[1]));
                 fileInfo.Samps[k] = double.Parse(array[0]);
                 fileInfo.EndSamps[k] = int.Parse(array[1]);
             }
-            text = streamReader.ReadLine();
+            text = await streamReader.ReadLineAsync();
             fileInfo.dt1 = Comtrade.Text2Time(text, num);
-            text = streamReader.ReadLine();
+            text = await streamReader.ReadLineAsync();
             fileInfo.dt0 = Comtrade.Text2Time(text, num);
-            text = streamReader.ReadLine();
+            text = await streamReader.ReadLineAsync();
             fileInfo.ASCII = text;
-            streamReader.Close();
+            //streamReader.Close();
             ABCVA(fileInfo);
             for (int l = 0; l < fileInfo.AnalogCount; l++) {
                 fileInfo.AData[l].Data = new double[fileInfo.EndSamp];
@@ -89,13 +89,13 @@ namespace ModerBox.Comtrade {
             return fileInfo;
         }
 
-        public static void ReadComtradeDAT(ComtradeInfo fI) {
+        public static async Task ReadComtradeDAT(ComtradeInfo fI) {
             double[] array = new double[fI.AnalogCount];
             if (string.Equals("ASCII", fI.ASCII, StringComparison.OrdinalIgnoreCase)) {
                 string text = Path.ChangeExtension(fI.FileName, "dat");
-                StreamReader streamReader = new StreamReader(text, Encoding.Default);
+                using StreamReader streamReader = new StreamReader(text, Encoding.Default);
                 for (int i = 0; i < fI.EndSamp; i++) {
-                    string text2 = streamReader.ReadLine();
+                    string text2 = await streamReader.ReadLineAsync();
                     string[] array2 = new string[] { ",", " ", "\t" };
                     string[] array3 = text2.Split(array2, StringSplitOptions.RemoveEmptyEntries);
                     for (int j = 0; j < fI.AnalogCount; j++) {
@@ -117,7 +117,7 @@ namespace ModerBox.Comtrade {
                         digitalInfo.Data[i] = int.Parse(array3[k + 2 + fI.AnalogCount]);
                     }
                 }
-                streamReader.Close();
+                //streamReader.Close();
                 return;
             }
             string text3 = Path.ChangeExtension(fI.FileName, "dat");

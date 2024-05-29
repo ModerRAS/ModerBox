@@ -57,8 +57,15 @@ namespace ModerBox.ViewModels {
         private async Task RunCalculateTask() {
             await Task.Run(() => {
                 try {
-                    var Data = SourceFolder.GetAllFiles().FilterCfgFiles().AsParallel().Select(f => {
-                        var harmonic = new Harmonic(f);
+                    var Data = SourceFolder
+                    .GetAllFiles()
+                    .FilterCfgFiles()
+                    .AsParallel()
+                    .WithDegreeOfParallelism(Environment.ProcessorCount)
+                    .WithCancellation(new System.Threading.CancellationToken())
+                    .Select(f => {
+                        var harmonic = new Harmonic();
+                        harmonic.ReadFromFile(f).Wait();
                         return harmonic.Calculate();
                     }).SelectMany(f => {
                         return f;
