@@ -12,8 +12,7 @@ namespace ModerBox.Comtrade {
         public int SampleRate { get => (int)comtradeInfo.Samp; }
         public int BaseFreq { get => comtradeInfo.Hz; }
         public int CycSample { get => SampleRate / BaseFreq; }
-        public Harmonic(string cfgFileName) {
-            ReadFromFile(cfgFileName);
+        public Harmonic() {
         }
 
         public List<HarmonicData> Calculate() {
@@ -37,9 +36,9 @@ namespace ModerBox.Comtrade {
             return harmonicDataList;
         }
         
-        public void ReadFromFile(string cfgFileName) {
-            comtradeInfo = Comtrade.ReadComtradeCFG(cfgFileName);
-            Comtrade.ReadComtradeDAT(comtradeInfo);
+        public async Task ReadFromFile(string cfgFileName) {
+            comtradeInfo = await Comtrade.ReadComtradeCFG(cfgFileName);
+            await Comtrade.ReadComtradeDAT(comtradeInfo);
         }
 
         public double HarmonicCalculate(AnalogInfo ai, int xx, int xiebo) {
