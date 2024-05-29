@@ -21,4 +21,9 @@
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.10" />
     <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.10" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModerBox.Common\ModerBox.Common.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
+  </ItemGroup>
 </Project>
