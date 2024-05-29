@@ -19,6 +19,17 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> SelectSource { get; }
         public ReactiveCommand<Unit, Unit> SelectTarget { get; }
         public ReactiveCommand<Unit, Unit> RunCalculate { get; }
+        private int _progress;
+        public int Progress {
+            get => _progress;
+            set => this.RaiseAndSetIfChanged(ref _progress, value);
+        }
+        private int _progressMax;
+        public int ProgressMax {
+            get => _progressMax;
+            set => this.RaiseAndSetIfChanged(ref _progressMax, value);
+        }
+
         private string _sourceFolder;
         public string SourceFolder {
             get => _sourceFolder;
@@ -34,6 +45,8 @@ namespace ModerBox.ViewModels {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
             RunCalculate = ReactiveCommand.CreateFromTask(RunCalculateTask);
+            ProgressMax = 100;
+            Progress = 0;
         }
 
         private async Task SelectSourceTask() {
@@ -55,15 +68,18 @@ namespace ModerBox.ViewModels {
         }
 
         private async Task RunCalculateTask() {
+            Progress = 0;
             await Task.Run(() => {
                 try {
                     var Data = SourceFolder
                     .GetAllFiles()
-                    .FilterCfgFiles()
-                    .AsParallel()
+                    .FilterCfgFiles();
+                    ProgressMax = Data.Count;
+                    var HarmonicData = Data.AsParallel()
                     .WithDegreeOfParallelism(Environment.ProcessorCount)
                     .WithCancellation(new System.Threading.CancellationToken())
                     .Select(f => {
+                        Progress++;
                         var harmonic = new Harmonic();
                         harmonic.ReadFromFile(f).Wait();
                         return harmonic.Calculate();
@@ -71,8 +87,9 @@ namespace ModerBox.ViewModels {
                         return f;
                     }).ToList();
                     var writer = new DataWriter();
-                    writer.WriteHarmonicData(Data, "Harmonic");
+                    writer.WriteHarmonicData(HarmonicData, "Harmonic");
                     writer.SaveAs(TargetFile);
+                    Progress = ProgressMax;
                 } catch (Exception ex) { }
             });
             
