@@ -20,17 +20,21 @@ namespace ModerBox.Comtrade {
             foreach (var data in comtradeInfo.AData) {
                 var count = data.Data.Length / CycSample;
                 for (var j = 0; j < 11; j++) {
-                    var tmp = new List<HarmonicData>();
-                    for (var i = 0;i * CycSample < data.Data.Length; i++) {
-                        tmp.Add(new HarmonicData() {
-                            Name = data.Name,
-                            HarmonicOrder = j,
-                            Time = comtradeInfo.dt0,
-                            Skip = i * CycSample,
-                            HarmonicRms = HarmonicCalculate(data, i * CycSample, j)
-                        });
+                    var tmp = new HarmonicData() {
+                        Name = data.Name,
+                        HarmonicOrder = j,
+                        Time = comtradeInfo.dt0,
+                        Skip = 0,
+                        HarmonicRms = 0.0
+                    };
+                    for (var i = 0; i * CycSample < data.Data.Length; i++) {
+                        var HarmonicRms = HarmonicCalculate(data.Data, i * CycSample, j, CycSample);
+                        if (HarmonicRms > tmp.HarmonicRms) {
+                            tmp.Skip = i * CycSample;
+                            tmp.HarmonicRms = HarmonicRms;
+                        }
                     }
-                    harmonicDataList.Add(tmp.OrderByDescending(p => p.HarmonicRms).FirstOrDefault());
+                    harmonicDataList.Add(tmp);
                 }
             }
             return harmonicDataList;
@@ -41,21 +45,19 @@ namespace ModerBox.Comtrade {
             await Comtrade.ReadComtradeDAT(comtradeInfo);
         }
 
-        public double HarmonicCalculate(AnalogInfo ai, int xx, int xiebo) {
-            if (ai == null) {
+        public double HarmonicCalculate(double[] data, int xx, int xiebo, int cycSample) {
+            if (data == null) {
                 return 0;
             }
-            int cycSample = CycSample;
             double num10 = 0.0;
             double num11 = 0.0;
             if (xx - (cycSample - 1) < 0) {
                 xx = cycSample - 1;
             }
-            double[] data4 = ai.Data;
             for (int l = 0; l < cycSample; l++) {
-                double num12 = data4[xx - l];
-                num10 += num12 * Math.Cos((double)(xiebo * -(double)l * 2) * 3.141592653589793 / (double)cycSample);
-                num11 += num12 * Math.Sin((double)(xiebo * -(double)l * 2) * 3.141592653589793 / (double)cycSample);
+                double num12 = data[xx - l];
+                num10 += num12 * Math.Cos(xiebo * -l * 2 * 3.141592653589793 / cycSample);
+                num11 += num12 * Math.Sin(xiebo * -l * 2 * 3.141592653589793 / cycSample);
             }
             num10 = num10 * Math.Sqrt(2.0) / cycSample;
             num11 = num11 * Math.Sqrt(2.0) / cycSample;
