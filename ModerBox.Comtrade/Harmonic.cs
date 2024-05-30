@@ -17,9 +17,8 @@ namespace ModerBox.Comtrade {
 
         public List<HarmonicData> Calculate() {
             var harmonicDataList = new List<HarmonicData>();
-            foreach (var data in comtradeInfo.AData) {
-                var count = data.Data.Length / CycSample;
-                for (var j = 0; j < 11; j++) {
+            Parallel.ForEach(comtradeInfo.AData, data => {
+                Parallel.For(0, 11, j => {
                     var tmp = new HarmonicData() {
                         Name = data.Name,
                         HarmonicOrder = j,
@@ -35,8 +34,8 @@ namespace ModerBox.Comtrade {
                         }
                     }
                     harmonicDataList.Add(tmp);
-                }
-            }
+                });
+            });
             return harmonicDataList;
         }
         
