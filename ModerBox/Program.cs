@@ -11,7 +11,6 @@ using Coravel;
 
 namespace ModerBox {
     internal sealed class Program {
-        public static IHost host { get; private set; }
         private static async Task UpdateMyApp() {
             var mgr = new UpdateManager(new GithubSource("https://github.com/ModerRAS/ModerBox", null, false));
 
@@ -34,7 +33,7 @@ namespace ModerBox {
         public static void Main(string[] args) {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             VelopackApp.Build().Run();
-            host = Host.CreateDefaultBuilder()
+            Env.host = Host.CreateDefaultBuilder()
                 .ConfigureServices(service => {
                     service.AddSingleton(service);
                     service.AddScheduler();
@@ -50,7 +49,7 @@ namespace ModerBox {
                     logging.AddDebug();
 #endif
                 }).Build();
-            host.Services.UseScheduler(scheduler => {
+            Env.host.Services.UseScheduler(scheduler => {
                 // Easy peasy 👇
                 scheduler
                     .ScheduleAsync(async () => {
@@ -62,7 +61,7 @@ namespace ModerBox {
                     })
                     .EveryFiveMinutes().RunOnceAtStart();
             });
-            host.RunAsync();
+            Env.host.RunAsync();
             BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
         }
