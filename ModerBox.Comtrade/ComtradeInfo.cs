@@ -21,11 +21,11 @@ namespace ModerBox.Comtrade {
             for (int j = 0; j < this.Samps.Length; j++) {
                 for (int k = num2; k < this.EndSamps[j]; k++) {
                     if (k > 0) {
-                        num += 1000.0 / (double)this.Samps[j];
+                        num += 1000.0 / this.Samps[j];
                     } else {
                         num = 0.0;
                     }
-                    this.TimeMs[k] = (float)num;
+                    this.TimeMs[k] = num;
                 }
                 num2 = this.EndSamps[j];
             }
