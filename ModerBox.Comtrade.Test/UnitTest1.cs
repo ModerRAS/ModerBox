@@ -8,7 +8,7 @@ namespace ModerBox.Comtrade.Test {
         public void TestMethod1() {
             var harmonic = new Harmonic();
             harmonic.ReadFromFile("TestData/06时04分35秒/2024年03月25日06时04分35秒.CFG").Wait();
-            harmonic.Calculate();
+            harmonic.Calculate(false);
         }
         [TestMethod]
         public async Task TestWriteComtrade() {
@@ -23,7 +23,7 @@ namespace ModerBox.Comtrade.Test {
                 .Select(f => {
                 var harmonic = new Harmonic();
                 harmonic.ReadFromFile(f).Wait();
-                return harmonic.Calculate();
+                return harmonic.Calculate(false);
             }).SelectMany(f => {
                 return f;
             }).ToList();
