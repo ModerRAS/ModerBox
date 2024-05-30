@@ -15,8 +15,12 @@ namespace ModerBox.Comtrade {
         public Harmonic() {
         }
 
-        public List<HarmonicData> Calculate() {
+        public List<HarmonicData> Calculate(bool HighPrecision) {
             var harmonicDataList = new List<HarmonicData>();
+            var offset = CycSample;
+            if (HighPrecision) {
+                offset = 1;
+            }
             Parallel.ForEach(comtradeInfo.AData, data => {
                 Parallel.For(0, 11, j => {
                     var tmp = new HarmonicData() {
@@ -26,10 +30,10 @@ namespace ModerBox.Comtrade {
                         Skip = 0,
                         HarmonicRms = 0.0
                     };
-                    for (var i = 0; i * CycSample < data.Data.Length; i++) {
-                        var HarmonicRms = HarmonicCalculate(data.Data, i * CycSample, j, CycSample);
+                    for (var i = 0; i < data.Data.Length; i+=offset) {
+                        var HarmonicRms = HarmonicCalculate(data.Data, i, j, CycSample);
                         if (HarmonicRms > tmp.HarmonicRms) {
-                            tmp.Skip = i * CycSample;
+                            tmp.Skip = i;
                             tmp.HarmonicRms = HarmonicRms;
                         }
                     }

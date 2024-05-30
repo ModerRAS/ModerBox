@@ -41,6 +41,11 @@ namespace ModerBox.ViewModels {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
         }
+        private bool _highPrecision;
+        public bool HighPrecision {
+            get => _highPrecision;
+            set => this.RaiseAndSetIfChanged(ref _highPrecision, value);
+        }
         public HarmonicCalculateViewModel() {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
@@ -82,7 +87,7 @@ namespace ModerBox.ViewModels {
                         Progress++;
                         var harmonic = new Harmonic();
                         harmonic.ReadFromFile(f).Wait();
-                        return harmonic.Calculate();
+                        return harmonic.Calculate(HighPrecision);
                     }).SelectMany(f => {
                         return f;
                     }).ToList();
