@@ -24,6 +24,7 @@ namespace ModerBox.ViewModels {
 
         public HomePageViewModel() {
             CheckUpdate = ReactiveCommand.CreateFromTask(CheckUpdateTask);
+            _log = "点击下方按钮可以检查并更新";
         }
     }
 }
