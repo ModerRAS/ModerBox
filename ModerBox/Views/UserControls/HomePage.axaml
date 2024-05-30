@@ -13,6 +13,7 @@
 
 	</Design.DataContext>
 	<StackPanel Margin="20">
-		<TextBlock Margin="0 5" >欢迎</TextBlock>
+		<TextBlock Margin="0 5" Text="{Binding Log}"></TextBlock>
+		<Button Command="{Binding CheckUpdate}">检查更新</Button>
 	</StackPanel>
 </UserControl>
