@@ -11,21 +11,7 @@ using Coravel;
 
 namespace ModerBox {
     internal sealed class Program {
-        private static async Task UpdateMyApp() {
-            var mgr = new UpdateManager(new GithubSource("https://github.com/ModerRAS/ModerBox", null, false));
-
-            // check for new version
-            var newVersion = await mgr.CheckForUpdatesAsync();
-            if (newVersion == null)
-                return; // no update available
-
-
-            // download new version
-            await mgr.DownloadUpdatesAsync(newVersion);
-
-            // install new version and restart app
-            mgr.ApplyUpdatesAndRestart(newVersion);
-        }
+        
         // Initialization code. Don't use any Avalonia, third-party APIs or any
         // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
         // yet and stuff might break.
@@ -54,7 +40,7 @@ namespace ModerBox {
                 scheduler
                     .ScheduleAsync(async () => {
                         try {
-                            await UpdateMyApp();
+                            //await Util.UpdateMyApp();
                         } catch (Exception ex) {
                             Console.WriteLine(ex.ToString());
                         }

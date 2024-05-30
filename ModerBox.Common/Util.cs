@@ -4,9 +4,30 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Velopack;
+using Velopack.Sources;
 
 namespace ModerBox.Common {
     public static class Util {
+        public static async Task UpdateMyApp(Action<string> Logging) {
+            Logging("检查中");
+            var mgr = new UpdateManager(new GithubSource("https://github.com/ModerRAS/ModerBox", null, false));
+
+            // check for new version
+            var newVersion = await mgr.CheckForUpdatesAsync();
+            if (newVersion == null) {
+                Logging("暂无更新");
+                return; // no update available
+            } else {
+                Logging("正在更新");
+            }
+
+            // download new version
+            await mgr.DownloadUpdatesAsync(newVersion);
+
+            // install new version and restart app
+            mgr.ApplyUpdatesAndRestart(newVersion);
+        }
         public static List<string> GetAllFiles(this string directory) {
             List<string> files = new List<string>();
 
