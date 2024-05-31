@@ -31,4 +31,4 @@ jobs:
         vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish --framework net8.0-x64-desktop
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --publish --channel nightly-win-x64 --releaseName "ModerBox $Version" --tag v$Version --token ${{ secrets.GITHUB_TOKEN }}
         $env:MINIO_SERVER = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
-        vpk upload s3 --bucket moderbox --endpoint $env:MINIO_SERVER --keyId $env:MINIO_ACCESS_KEY --secret $env:MINIO_SECRET_KEY
+        vpk upload s3 --channel nightly-win-x64 --bucket moderbox --endpoint $env:MINIO_SERVER --keyId $env:MINIO_ACCESS_KEY --secret $env:MINIO_SECRET_KEY
