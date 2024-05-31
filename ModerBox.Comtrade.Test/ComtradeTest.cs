@@ -5,12 +5,6 @@ namespace ModerBox.Comtrade.Test {
     [TestClass]
     public class UnitTest1 {
         [TestMethod]
-        public void TestMethod1() {
-            var harmonic = new Harmonic();
-            harmonic.ReadFromFile("TestData/06时04分35秒/2024年03月25日06时04分35秒.CFG").Wait();
-            harmonic.Calculate(false);
-        }
-        [TestMethod]
         public async Task TestWriteComtrade() {
             var SourceFolder = "TestData";
             var TargetFile = "TestData/output.xlsx";
