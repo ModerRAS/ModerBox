@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DnsClient;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -27,6 +28,34 @@ namespace ModerBox.Common {
 
             // install new version and restart app
             mgr.ApplyUpdatesAndRestart(newVersion);
+        }
+
+        public static async Task UpdateMyAppBackRoute(Action<string> Logging) {
+            Logging("检查中");
+            var records = DnsHelper.GetTxtRecords("moderbox.miaostay.com");
+            if (records.TryGetValue("mirror", out var ServerUrl)) {
+
+                var mgr = new UpdateManager($"{ServerUrl}/moderbox");
+
+                // check for new version
+                var newVersion = await mgr.CheckForUpdatesAsync();
+                if (newVersion == null) {
+                    Logging("暂无更新");
+                    return; // no update available
+                } else {
+                    Logging("正在更新");
+                }
+
+                // download new version
+                await mgr.DownloadUpdatesAsync(newVersion);
+
+                // install new version and restart app
+                mgr.ApplyUpdatesAndRestart(newVersion);
+            }
+            else {
+                Logging("暂无更新");
+                return; // no update available
+            }
         }
         public static List<string> GetAllFiles(this string directory) {
             List<string> files = new List<string>();
@@ -60,5 +89,8 @@ namespace ModerBox.Common {
             process.StartInfo.Arguments = "\"" + filePath + "\"";
             process.Start();
         }
+        
+
+        
     }
 }
