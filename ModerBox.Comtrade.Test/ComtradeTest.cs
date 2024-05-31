@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace ModerBox.Comtrade.Test {
     [TestClass]
-    public class UnitTest1 {
+    public class ComtradeTest {
         [TestMethod]
         public async Task TestWriteComtrade() {
             var SourceFolder = "TestData";
