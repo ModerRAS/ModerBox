@@ -15,5 +15,6 @@
 	<StackPanel Margin="20">
 		<TextBlock Margin="0 5" Text="{Binding Log}"></TextBlock>
 		<Button Command="{Binding CheckUpdate}">检查更新</Button>
+		<Button Command="{Binding CheckUpdateBackRoute}">检查更新（备用源）</Button>
 	</StackPanel>
 </UserControl>
