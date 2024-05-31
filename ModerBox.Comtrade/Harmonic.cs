@@ -48,23 +48,23 @@ namespace ModerBox.Comtrade {
             await Comtrade.ReadComtradeDAT(comtradeInfo);
         }
 
-        public double HarmonicCalculate(double[] data, int xx, int xiebo, int cycSample) {
+        public double HarmonicCalculate(double[] data, int Offset, int HarmonicOrder, int cycSample) {
             if (data == null) {
                 return 0;
             }
-            double num10 = 0.0;
-            double num11 = 0.0;
-            if (xx - (cycSample - 1) < 0) {
-                xx = cycSample - 1;
+            double CountCos = 0.0;
+            double CountSin = 0.0;
+            if (Offset - (cycSample - 1) < 0) {
+                Offset = cycSample - 1;
             }
             for (int l = 0; l < cycSample; l++) {
-                double num12 = data[xx - l];
-                num10 += num12 * Math.Cos(xiebo * -l * 2 * 3.141592653589793 / cycSample);
-                num11 += num12 * Math.Sin(xiebo * -l * 2 * 3.141592653589793 / cycSample);
+                double PerData = data[Offset - l];
+                CountCos += PerData * Math.Cos(HarmonicOrder * -l * 2 * Math.PI / cycSample);
+                CountSin += PerData * Math.Sin(HarmonicOrder * -l * 2 * Math.PI / cycSample);
             }
-            num10 = num10 * Math.Sqrt(2.0) / cycSample;
-            num11 = num11 * Math.Sqrt(2.0) / cycSample;
-            return Math.Sqrt(num10 * num10 + num11 * num11);
+            CountCos = CountCos * Math.Sqrt(2.0) / cycSample;
+            CountSin = CountSin * Math.Sqrt(2.0) / cycSample;
+            return Math.Sqrt(CountCos * CountCos + CountSin * CountSin);
         }
 
     }
