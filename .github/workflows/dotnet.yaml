@@ -16,6 +16,14 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
     - name: Publish Application
       run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish -r win-x64 --self-contained false
     - name: Create Velopack Release
