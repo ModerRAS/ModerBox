@@ -21,6 +21,8 @@ jobs:
     - name: Create Velopack Release
       env:
         BUILD_NUMBER: ${{github.run_number}}
+        MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+        MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       shell: pwsh
       run: |
         $Version = Get-Date -Format "yyyy.M.$env:BUILD_NUMBER"
@@ -28,19 +30,5 @@ jobs:
         vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nightly-win-x64
         vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish --framework net8.0-x64-desktop
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --publish --channel nightly-win-x64 --releaseName "ModerBox $Version" --tag v$Version --token ${{ secrets.GITHUB_TOKEN }}
-    - name: Install MinIO client (mc)
-      run: |
-        Invoke-WebRequest -Uri https://dl.min.io/client/mc/release/windows-amd64/mc.exe -OutFile mc.exe
-        New-Item -Path "C:\Program Files\MinIO" -ItemType Directory -Force
-        Move-Item -Path "mc.exe" -Destination "C:\Program Files\MinIO\mc.exe"
-        $env:PATH += ";C:\Program Files\MinIO"
-    - name: Configure MinIO client
-      run: |
         $env:MINIO_SERVER = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
-        mc alias set myminio $env:MINIO_SERVER $env:MINIO_ACCESS_KEY $env:MINIO_SECRET_KEY
-      env:
-        MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
-        MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
-    - name: Upload files to MinIO
-      run: |
-        mc cp --recursive .\Releases\ myminio/moderbox/
+        vpk upload s3 --bucket moderbox --endpoint $env:MINIO_SERVER --keyId {$env:MINIO_ACCESS_KEY} --secret {$env:MINIO_SECRET_KEY}
