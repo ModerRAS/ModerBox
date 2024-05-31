@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.UIAutomation.Andro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.UIAutomation.Android.Common.Test", "ModerBox.UIAutomation.Android.Common.Test\ModerBox.UIAutomation.Android.Common.Test.csproj", "{40BFAA16-3CA3-4481-8988-4087EC252089}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Common.Test", "ModerBox.Common.Test\ModerBox.Common.Test.csproj", "{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{40BFAA16-3CA3-4481-8988-4087EC252089}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{40BFAA16-3CA3-4481-8988-4087EC252089}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{40BFAA16-3CA3-4481-8988-4087EC252089}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
