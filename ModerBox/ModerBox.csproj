@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ModerBox.Common\ModerBox.Common.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
   </ItemGroup>
 </Project>
