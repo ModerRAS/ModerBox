@@ -11,11 +11,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.Comtrade.Test", "M
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.Common", "ModerBox.Common\ModerBox.Common.csproj", "{454E84CD-AA53-45AC-B275-05D35372BEFD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.UIAutomation.Android.Common", "ModerBox.UIAutomation.Android.Common\ModerBox.UIAutomation.Android.Common.csproj", "{9D802477-3CBF-47B6-B1F3-2FB0DF7969FF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.UIAutomation.Android.Common", "ModerBox.UIAutomation.Android.Common\ModerBox.UIAutomation.Android.Common.csproj", "{9D802477-3CBF-47B6-B1F3-2FB0DF7969FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.UIAutomation.Android.Common.Test", "ModerBox.UIAutomation.Android.Common.Test\ModerBox.UIAutomation.Android.Common.Test.csproj", "{40BFAA16-3CA3-4481-8988-4087EC252089}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.UIAutomation.Android.Common.Test", "ModerBox.UIAutomation.Android.Common.Test\ModerBox.UIAutomation.Android.Common.Test.csproj", "{40BFAA16-3CA3-4481-8988-4087EC252089}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Common.Test", "ModerBox.Common.Test\ModerBox.Common.Test.csproj", "{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.Common.Test", "ModerBox.Common.Test\ModerBox.Common.Test.csproj", "{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.FilterWaveform", "ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj", "{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.FilterWaveform.Test", "ModerBox.Comtrade.FilterWaveform.Test\ModerBox.Comtrade.FilterWaveform.Test.csproj", "{F93283D4-AF85-4225-8B3C-7264CC025C55}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +55,14 @@ Global
 		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
