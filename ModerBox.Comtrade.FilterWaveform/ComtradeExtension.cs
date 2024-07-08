@@ -45,12 +45,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
             int zeroThreshold = 50; // 设置连续0值的样本数量阈值
             var count = 0;
             for (int i = 0; i < waveform.Length; i++) {
-                if (Math.Abs(waveform[i]) < 0.05) {
+                if (Math.Abs(waveform[i]) < 0.011) {
                     bool isZeroForThreshold = true;
 
                     // 检查接下来的样本是否连续为0
                     for (int j = i; j < i + zeroThreshold && j < waveform.Length; j++) {
-                        if (Math.Abs(waveform[j]) > 0.05) {
+                        if (Math.Abs(waveform[j]) > 0.011) {
                             count++;
                             if (count > 5) {
                                 isZeroForThreshold = false;
@@ -75,12 +75,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
             int nonZeroThreshold = 50; // 设置连续非0值的样本数量阈值
 
             for (int i = 0; i < waveform.Length; i++) {
-                if (Math.Abs(waveform[i]) > 0.05) {
+                if (Math.Abs(waveform[i]) > 0.011) {
                     bool isNonZeroForThreshold = true;
                     var count = 0;
                     // 检查接下来的样本是否连续为非0,并且小于0.05
                     for (int j = i; j < i + nonZeroThreshold && j < waveform.Length; j++) {
-                        if (Math.Abs(waveform[j]) < 0.05) {
+                        if (Math.Abs(waveform[j]) < 0.011) {
                             count++;
                             if (count > 5) {
                                 isNonZeroForThreshold = false;

@@ -13,6 +13,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
         public string ACFilterPath { get; init; }
         public List<ACFilter> ACFilterData { get; set; }
         public List<string> AllDataPath { get; set; }
+        public int Count { get => AllDataPath.Count; }
         public ACFilterParser(string aCFilterPath) {
             ACFilterPath = aCFilterPath;
             AllDataPath = ACFilterPath
@@ -24,23 +25,34 @@ namespace ModerBox.Comtrade.FilterWaveform {
             ACFilterData = JsonConvert.DeserializeObject<List<ACFilter>>(dataJson);
         }
         
-        public async Task ParseAllComtrade() {
-            //try {
-                
-            //    var HarmonicData = AllDataPath.AsParallel()
-            //    .WithDegreeOfParallelism(Environment.ProcessorCount)
-            //    .WithCancellation(new System.Threading.CancellationToken())
-            //    .Select(async f => {
-
-            //    }).SelectMany(f => {
-            //        return f;
-            //    }).ToList();
-            //} catch (Exception ex) { }
+        public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify) {
+            try {
+                var count = 0;
+                //var AllDataTask = AllDataPath
+                ////.AsParallel()
+                ////.WithDegreeOfParallelism(Environment.ProcessorCount)
+                ////.WithCancellation(new System.Threading.CancellationToken())
+                //.Select(f => {
+                //    Notify(count++);
+                //    return ParsePerComtrade(f);
+                //}).ToList();
+                var AllData = new List<ACFilterSheetSpec>();
+                foreach (var e in AllDataPath) {
+                    var PerData = await ParsePerComtrade(e);
+                    Notify(count++);
+                    if (PerData is not null) {
+                        AllData.Add(PerData);
+                    }
+                }
+                return AllData;
+            } catch (Exception ex) {
+                return null;
+            }
         }
 
-        
-        
-        
+
+
+
         public async Task<ACFilterSheetSpec?> ParsePerComtrade(string cfgPath) {
             var retData = new ACFilterSheetSpec();
             var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
@@ -49,6 +61,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                  join b in ACFilterData on a.Name equals b.PhaseASwitchClose
                                  select (a, b);
             retData.Time = comtradeInfo.dt1;
+            var TimeUnit = comtradeInfo.Samp / 1000;
             foreach (var obj in matchedObjects) {
                 if (obj.a.IsTR) {
                     // 检测到需要的数据变位，则开始判断变位点和电流开始或消失点。
@@ -60,14 +73,14 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     }
                     if (retData.SwitchType == SwitchType.Close) {
                         //合闸就要分闸消失到电流出现
-                        retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave);
-                        retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave);
-                        retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave);
+                        retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit;
+                        retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit;
+                        retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit;
                     } else {
                         //分闸就要合闸消失到电流消失
-                        retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave);
-                        retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave);
-                        retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave);
+                        retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit;
+                        retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit;
+                        retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit;
 
                     }
                     if (comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseASwitchClose).GetChangePointCount() > 1 ||
