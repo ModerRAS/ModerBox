@@ -38,4 +38,10 @@
     <ProjectReference Include="..\ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\UserControls\FilterWaveformSwitchInterval.axaml.cs">
+      <DependentUpon>FilterWaveformSwitchInterval.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

@@ -25,8 +25,8 @@
 			<TabItem Header="谐波计算">
 				<view:HarmonicCalculate></view:HarmonicCalculate>
 			</TabItem>
-			<TabItem Header="Tab 2">
-				<TextBlock Margin="5">This is tab 2 content</TextBlock>
+			<TabItem Header="滤波器分合闸波形检测">
+				<view:FilterWaveformSwitchInterval></view:FilterWaveformSwitchInterval>
 			</TabItem>
 		</TabControl>
 		
