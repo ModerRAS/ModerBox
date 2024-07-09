@@ -28,6 +28,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
         public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify) {
             try {
                 var count = 0;
+                await GetFilterData();
                 //var AllDataTask = AllDataPath
                 ////.AsParallel()
                 ////.WithDegreeOfParallelism(Environment.ProcessorCount)
@@ -54,48 +55,71 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
 
         public async Task<ACFilterSheetSpec?> ParsePerComtrade(string cfgPath) {
-            var retData = new ACFilterSheetSpec();
-            var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
-            await Comtrade.ReadComtradeDAT(comtradeInfo);
-            var matchedObjects = from a in comtradeInfo.DData
-                                 join b in ACFilterData on a.Name equals b.PhaseASwitchClose
-                                 select (a, b);
-            retData.Time = comtradeInfo.dt1;
-            var TimeUnit = comtradeInfo.Samp / 1000;
-            foreach (var obj in matchedObjects) {
-                if (obj.a.IsTR) {
-                    // 检测到需要的数据变位，则开始判断变位点和电流开始或消失点。
-                    // 理论上一个波形中只会有一个滤波器产生变位，而且仅变位一次。
-                    if (obj.a.Data[0] == 0) {
-                        retData.SwitchType = SwitchType.Close;
-                    } else {
-                        retData.SwitchType = SwitchType.Open;
-                    }
-                    if (retData.SwitchType == SwitchType.Close) {
-                        //合闸就要分闸消失到电流出现
-                        retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit;
-                        retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit;
-                        retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit;
-                    } else {
-                        //分闸就要合闸消失到电流消失
-                        retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit;
-                        retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit;
-                        retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit;
+            try {
+                var retData = new ACFilterSheetSpec();
+                var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
+                await Comtrade.ReadComtradeDAT(comtradeInfo);
+                var matchedObjects = from a in comtradeInfo.DData.AsParallel()
+                                     join b in ACFilterData.AsParallel() on a.Name equals b.PhaseASwitchClose
+                                     select (a, b);
+                retData.Time = comtradeInfo.dt1;
+                var TimeUnit = comtradeInfo.Samp / 1000;
+                foreach (var obj in matchedObjects) {
+                    if (obj.a.IsTR) {
+                        // 检测到需要的数据变位，则开始判断变位点和电流开始或消失点。
+                        // 理论上一个波形中只会有一个滤波器产生变位，而且仅变位一次。
+                        if (obj.a.Data[0] == 0) {
+                            retData.SwitchType = SwitchType.Close;
+                        } else {
+                            retData.SwitchType = SwitchType.Open;
+                        }
+                        if (retData.SwitchType == SwitchType.Close) {
+                            //合闸就要分闸消失到电流出现
+                            Parallel.Invoke(
+                                () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
+                                () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit,
+                                () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit
+                                );
+                            
+                        } else {
+                            //分闸就要合闸消失到电流消失
+                            Parallel.Invoke(
+                                () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit,
+                                () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit,
+                                () => retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit
+                                );
+                            
 
+                        }
+                        var PhaseASwitchClose = 0;
+                        var PhaseBSwitchClose = 0;
+                        var PhaseCSwitchClose = 0;
+                        var PhaseASwitchOpen = 0;
+                        var PhaseBSwitchOpen = 0;
+                        var PhaseCSwitchOpen = 0;
+                        Parallel.Invoke(
+                            () => PhaseASwitchClose = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseASwitchClose).GetChangePointCount(),
+                            () => PhaseBSwitchClose = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseBSwitchClose).GetChangePointCount(),
+                            () => PhaseCSwitchClose = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseCSwitchClose).GetChangePointCount(),
+                            () => PhaseASwitchOpen = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseASwitchOpen).GetChangePointCount(),
+                            () => PhaseBSwitchOpen = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseBSwitchOpen).GetChangePointCount(),
+                            () => PhaseCSwitchOpen = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseCSwitchOpen).GetChangePointCount()
+                            );
+                        if (PhaseASwitchClose > 1 || PhaseBSwitchClose > 1 || PhaseCSwitchClose > 1 ||
+                            PhaseASwitchOpen > 1 || PhaseBSwitchOpen > 1 || PhaseCSwitchOpen > 1 ||
+                            retData.PhaseATimeInterval <= 0 ||
+                            retData.PhaseBTimeInterval <= 0 ||
+                            retData.PhaseCTimeInterval <= 0) {
+                            retData.WorkType = WorkType.Error;
+                        } else {
+                            retData.WorkType = WorkType.Ok;
+                        }
+                        retData.Name = obj.b.Name;
+                        return retData;
                     }
-                    if (comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseASwitchClose).GetChangePointCount() > 1 ||
-                        comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseBSwitchClose).GetChangePointCount() > 1 ||
-                        comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseCSwitchClose).GetChangePointCount() > 1 ||
-                        comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseASwitchOpen).GetChangePointCount() > 1 ||
-                        comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseBSwitchOpen).GetChangePointCount() > 1 ||
-                        comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseCSwitchOpen).GetChangePointCount() > 1) {
-                        retData.WorkType = WorkType.Error;
-                    } else {
-                        retData.WorkType = WorkType.Ok;
-                    }
-                    retData.Name = obj.b.Name;
-                    return retData;
                 }
+            } catch {
+                return null;
             }
             return null;
         }
