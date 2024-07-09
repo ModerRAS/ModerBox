@@ -133,32 +133,36 @@ namespace ModerBox.Comtrade {
             fileStream.Close();
             int num5 = 0;
             for (int l = 0; l < fI.EndSamp; l++) {
-                num5 += 8;
-                for (int m = 0; m < fI.AnalogCount; m++) {
-                    AnalogInfo analogInfo2 = fI.AData[m];
-                    double num6 = (double)BitConverter.ToInt16(array4, num5) * analogInfo2.Mul + analogInfo2.Add;
-                    num5 += 2;
-                    if (l == 0) {
-                        array[m] = num6;
-                        analogInfo2.Data[l] = num6;
-                        analogInfo2.MaxValue = analogInfo2.Data[l];
-                        analogInfo2.MinValue = analogInfo2.Data[l];
-                    } else {
-                        analogInfo2.Data[l] = num6;
-                        analogInfo2.MaxValue = Math.Max(analogInfo2.Data[l], analogInfo2.MaxValue);
-                        analogInfo2.MinValue = Math.Min(analogInfo2.Data[l], analogInfo2.MinValue);
-                    }
-                }
-                int num8 = 0;
-                for (int n = 0; n < fI.DigitalCount; n++) {
-                    ushort num9 = BitConverter.ToUInt16(array4, num5);
-                    DigitalInfo digitalInfo2 = fI.DData[n];
-                    digitalInfo2.Data[l] = (num9 >> num8) & 1;
-                    num8++;
-                    if (num8 == 16 || n == fI.DigitalCount - 1) {
+                try {
+                    num5 += 8;
+                    for (int m = 0; m < fI.AnalogCount; m++) {
+                        AnalogInfo analogInfo2 = fI.AData[m];
+                        double num6 = (double)BitConverter.ToInt16(array4, num5) * analogInfo2.Mul + analogInfo2.Add;
                         num5 += 2;
-                        num8 = 0;
+                        if (l == 0) {
+                            array[m] = num6;
+                            analogInfo2.Data[l] = num6;
+                            analogInfo2.MaxValue = analogInfo2.Data[l];
+                            analogInfo2.MinValue = analogInfo2.Data[l];
+                        } else {
+                            analogInfo2.Data[l] = num6;
+                            analogInfo2.MaxValue = Math.Max(analogInfo2.Data[l], analogInfo2.MaxValue);
+                            analogInfo2.MinValue = Math.Min(analogInfo2.Data[l], analogInfo2.MinValue);
+                        }
                     }
+                    int num8 = 0;
+                    for (int n = 0; n < fI.DigitalCount; n++) {
+                        ushort num9 = BitConverter.ToUInt16(array4, num5);
+                        DigitalInfo digitalInfo2 = fI.DData[n];
+                        digitalInfo2.Data[l] = (num9 >> num8) & 1;
+                        num8++;
+                        if (num8 == 16 || n == fI.DigitalCount - 1) {
+                            num5 += 2;
+                            num8 = 0;
+                        }
+                    }
+                } catch (ArgumentOutOfRangeException) {
+                    
                 }
             }
         }

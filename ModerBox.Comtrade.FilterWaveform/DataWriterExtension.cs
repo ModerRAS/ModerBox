@@ -13,10 +13,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     "名称",
                     "时间",
                     "分合闸",
-                    "时刻",
-                    "A相合闸时间/ms",
-                    "B相合闸时间/ms",
-                    "C相合闸时间/ms",
+                    "A相分合闸时间/ms",
+                    "B相分合闸时间/ms",
+                    "C相分合闸时间/ms",
                     "波形有无异常",
                 }
             };
