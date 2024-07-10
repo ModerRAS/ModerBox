@@ -115,6 +115,20 @@ namespace ModerBox.Comtrade.FilterWaveform {
                             retData.WorkType = WorkType.Ok;
                         }
                         retData.Name = obj.b.Name;
+                        var plt = new ScottPlot.Plot();
+                        //plt.Add.Signal()
+                        var (DigitalData, AnalogData) = comtradeInfo.ClipComtradeWithFilters(obj.b, retData);
+                        foreach (var e in DigitalData) {
+                            var sig = plt.Add.Signal(e.Item2);
+                            sig.LegendText = e.Item1;
+                        }
+                        foreach (var e in AnalogData) {
+                            var sig = plt.Add.Signal(e.Item2);
+                            sig.LegendText = e.Item1;
+                        }
+                        plt.ShowLegend(ScottPlot.Edge.Right);
+                        plt.Font.Automatic();
+                        retData.SignalPicture = plt.GetImageBytes(1920, 1080, ScottPlot.ImageFormat.Png);
                         return retData;
                     }
                 }
