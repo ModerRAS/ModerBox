@@ -117,5 +117,40 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var timeTick = startIndex - first;
             return timeTick;
         }
+
+
+        public static (List<(string, int[])>, List<(string, double[])>) ClipComtradeWithFilters(this ComtradeInfo comtradeInfo, ACFilter aCFilter, ACFilterSheetSpec aCFilterSheetSpec) {
+            int first = 0; 
+            var DigitalData = new List<(string, int[])>();
+            var AnalogData = new List<(string, double[])>();
+            if (aCFilterSheetSpec.SwitchType == SwitchType.Open) {
+                //一般来说在分合闸指令出现的前100ms和后200ms之间就能包含所有的分合闸变化波形了，所以可以省略。
+                first = comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchClose).GetFirstChangePoint();
+            } else if (aCFilterSheetSpec.SwitchType == SwitchType.Close) {
+                first = comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchOpen).GetFirstChangePoint();
+            }
+            var startIndex = first - 1000 > 0 ? first - 1000 : 0;
+            var endIndex = first + 2000 < comtradeInfo.DData.FirstOrDefault().Data.Length ? first + 2000 : comtradeInfo.DData.FirstOrDefault().Data.Length;
+
+            var GetDigitalData = (string name) => {
+                return (name, new Span<int>(comtradeInfo.DData.GetACFilterDigital(name).Data, startIndex, endIndex - startIndex).ToArray());
+            };
+            DigitalData.Add(GetDigitalData(aCFilter.PhaseASwitchClose));
+            DigitalData.Add(GetDigitalData(aCFilter.PhaseBSwitchClose));
+            DigitalData.Add(GetDigitalData(aCFilter.PhaseCSwitchClose));
+            DigitalData.Add(GetDigitalData(aCFilter.PhaseASwitchOpen));
+            DigitalData.Add(GetDigitalData(aCFilter.PhaseBSwitchOpen));
+            DigitalData.Add(GetDigitalData(aCFilter.PhaseCSwitchOpen));
+
+            var GetAnalogData = (string name) => {
+                return (name, new Span<double>(comtradeInfo.AData.GetACFilterAnalog(name).Data, startIndex, endIndex - startIndex).ToArray());
+            };
+
+            AnalogData.Add(GetAnalogData(aCFilter.PhaseACurrentWave));
+            AnalogData.Add(GetAnalogData(aCFilter.PhaseBCurrentWave));
+            AnalogData.Add(GetAnalogData(aCFilter.PhaseCCurrentWave));
+
+            return (DigitalData, AnalogData);
+        }
     }
 }

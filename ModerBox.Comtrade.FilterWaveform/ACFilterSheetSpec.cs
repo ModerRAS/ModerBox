@@ -13,6 +13,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
         public double PhaseBTimeInterval { get; set; }
         public double PhaseCTimeInterval { get; set; }
         public WorkType WorkType { get; set; }
+        public byte[] SignalPicture { get; set; } = Array.Empty<byte>();
     }
     public enum SwitchType {
         Open,

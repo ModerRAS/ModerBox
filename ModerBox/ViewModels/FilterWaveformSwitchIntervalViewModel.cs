@@ -42,11 +42,6 @@ namespace ModerBox.ViewModels {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
         }
-        private bool _highPrecision;
-        public bool HighPrecision {
-            get => _highPrecision;
-            set => this.RaiseAndSetIfChanged(ref _highPrecision, value);
-        }
         public FilterWaveformSwitchIntervalViewModel() {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
@@ -83,6 +78,13 @@ namespace ModerBox.ViewModels {
                     var writer = new DataWriter();
                     writer.WriteACFilterWaveformSwitchIntervalData(Data, "分合闸动作时间");
                     writer.SaveAs(TargetFile);
+                    foreach (var e in Data) {
+                        var folder = Path.GetDirectoryName(TargetFile);
+                        if (!Directory.Exists(Path.Combine(folder, e.Name))) {
+                            Directory.CreateDirectory(Path.Combine(folder, e.Name));
+                        }
+                        await File.WriteAllBytesAsync(Path.Combine(folder, e.Name, $"{e.Time.ToString("yyyy-MM-dd_HH-mm-ss-fff")}.png"), e.SignalPicture);
+                    }
                     Progress = ProgressMax;
                     TargetFile.OpenFileWithExplorer();
                 } catch (Exception ex) { }
