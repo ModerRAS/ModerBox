@@ -120,17 +120,25 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
 
         public static (List<(string, int[])>, List<(string, double[])>) ClipComtradeWithFilters(this ComtradeInfo comtradeInfo, ACFilter aCFilter, ACFilterSheetSpec aCFilterSheetSpec) {
-            int first = 0; 
+            int first = 0;
+            int end = 0;
+            var SwitchChange = new List<int>();
+
+            Parallel.Invoke(
+                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchClose).GetFirstChangePoint()),
+                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseBSwitchClose).GetFirstChangePoint()),
+                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseCSwitchClose).GetFirstChangePoint()),
+                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchOpen).GetFirstChangePoint()),
+                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseBSwitchOpen).GetFirstChangePoint()),
+                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseCSwitchOpen).GetFirstChangePoint())
+                );
+
             var DigitalData = new List<(string, int[])>();
             var AnalogData = new List<(string, double[])>();
-            if (aCFilterSheetSpec.SwitchType == SwitchType.Open) {
-                //一般来说在分合闸指令出现的前100ms和后200ms之间就能包含所有的分合闸变化波形了，所以可以省略。
-                first = comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchClose).GetFirstChangePoint();
-            } else if (aCFilterSheetSpec.SwitchType == SwitchType.Close) {
-                first = comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchOpen).GetFirstChangePoint();
-            }
-            var startIndex = first - 1000 > 0 ? first - 1000 : 0;
-            var endIndex = first + 2000 < comtradeInfo.DData.FirstOrDefault().Data.Length ? first + 2000 : comtradeInfo.DData.FirstOrDefault().Data.Length;
+            first = SwitchChange.Min();
+            end = SwitchChange.Max();
+            var startIndex = first - 100 > 0 ? first - 100 : 0;
+            var endIndex = end + 100 < comtradeInfo.DData.FirstOrDefault().Data.Length ? end + 100 : comtradeInfo.DData.FirstOrDefault().Data.Length;
 
             var GetDigitalData = (string name) => {
                 return (name, new Span<int>(comtradeInfo.DData.GetACFilterDigital(name).Data, startIndex, endIndex - startIndex).ToArray());
