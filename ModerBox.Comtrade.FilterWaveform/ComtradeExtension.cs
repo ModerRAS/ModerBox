@@ -138,7 +138,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
             first = SwitchChange.Min();
             end = SwitchChange.Max();
             var startIndex = first - 100 > 0 ? first - 100 : 0;
-            var endIndex = end + 100 < comtradeInfo.DData.FirstOrDefault().Data.Length ? end + 100 : comtradeInfo.DData.FirstOrDefault().Data.Length;
+            var endIndex = end + 300 < comtradeInfo.DData.FirstOrDefault().Data.Length ? end + 300 : comtradeInfo.DData.FirstOrDefault().Data.Length;
 
             var GetDigitalData = (string name) => {
                 return (name, new Span<int>(comtradeInfo.DData.GetACFilterDigital(name).Data, startIndex, endIndex - startIndex).ToArray());
