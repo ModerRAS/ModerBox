@@ -1,6 +1,9 @@
 [
   {
     "Name": "T611",
+    "PhaseAVoltageWave": "#61M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#61M交流系统B相电压Uac_L2",
+    "PhaseCVoltageWave": "#61M交流系统C相电压Uac_L3",
     "PhaseACurrentWave": "T611ACF(HP12/24)高压侧A相电流(滤波器)ACF1_1_T1_L1",
     "PhaseBCurrentWave": "T611ACF(HP12/24)高压侧B相电流(滤波器)ACF1_1_T1_L2",
     "PhaseCCurrentWave": "T611ACF(HP12/24)高压侧C相电流(滤波器)ACF1_1_T1_L3",
@@ -13,6 +16,9 @@
   },
   {
     "Name": "T612",
+    "PhaseAVoltageWave": "#61M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#61M交流系统B相电压Uac_L2",
+    "PhaseCVoltageWave": "#61M交流系统C相电压Uac_L3",
     "PhaseACurrentWave": "T612ACF(HP12/24)高压侧A相电流(滤波器)ACF1_2_T1_L1",
     "PhaseBCurrentWave": "T612ACF(HP12/24)高压侧B相电流(滤波器)ACF1_2_T1_L2",
     "PhaseCCurrentWave": "T612ACF(HP12/24)高压侧C相电流(滤波器)ACF1_2_T1_L3",
@@ -25,6 +31,9 @@
   },
   {
     "Name": "T613",
+    "PhaseAVoltageWave": "#61M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#61M交流系统B相电压Uac_L2",
+    "PhaseCVoltageWave": "#61M交流系统C相电压Uac_L3",
     "PhaseACurrentWave": "T613ACF(HP12/24)高压侧A相电流(滤波器)ACF1_3_T1_L1",
     "PhaseBCurrentWave": "T613ACF(HP12/24)高压侧B相电流(滤波器)ACF1_3_T1_L2",
     "PhaseCCurrentWave": "T613ACF(HP12/24)高压侧C相电流(滤波器)ACF1_3_T1_L3",
@@ -37,6 +46,9 @@
   },
   {
     "Name": "T614",
+    "PhaseAVoltageWave": "#61M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#61M交流系统B相电压Uac_L2",
+    "PhaseCVoltageWave": "#61M交流系统C相电压Uac_L3",
     "PhaseACurrentWave": "T614ACF(HP12/24)高压侧A相电流(滤波器)ACF1_4_T1_L1",
     "PhaseBCurrentWave": "T614ACF(HP12/24)高压侧B相电流(滤波器)ACF1_4_T1_L2",
     "PhaseCCurrentWave": "T614ACF(HP12/24)高压侧C相电流(滤波器)ACF1_4_T1_L3",
@@ -49,6 +61,9 @@
   },
   {
     "Name": "T615",
+    "PhaseAVoltageWave": "#61M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#61M交流系统B相电压Uac_L2",
+    "PhaseCVoltageWave": "#61M交流系统C相电压Uac_L3",
     "PhaseACurrentWave": "T615ACF(HP3)高压侧A相电流(滤波器)ACF1_5_T1_L1",
     "PhaseBCurrentWave": "T615ACF(HP3)高压侧B相电流(滤波器)ACF1_5_T1_L2",
     "PhaseCCurrentWave": "T615ACF(HP3)高压侧C相电流(滤波器)ACF1_5_T1_L3",
@@ -61,6 +76,9 @@
   },
   {
     "Name": "T616",
+    "PhaseAVoltageWave": "#61M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#61M交流系统B相电压Uac_L2",
+    "PhaseCVoltageWave": "#61M交流系统C相电压Uac_L3",
     "PhaseACurrentWave": "T616ACF(SC)高压侧A相电流(滤波器)ACF1_6_T1_L1",
     "PhaseBCurrentWave": "T616ACF(SC)高压侧B相电流(滤波器)ACF1_6_T1_L2",
     "PhaseCCurrentWave": "T616ACF(SC)高压侧C相电流(滤波器)ACF1_6_T1_L3",
@@ -73,6 +91,9 @@
   },
   {
     "Name": "T621",
+    "PhaseAVoltageWave": "#62M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#62M交流系统A相电压Uac_L2",
+    "PhaseCVoltageWave": "#62M交流系统A相电压Uac_L3",
     "PhaseACurrentWave": "T621ACF(HP12/24)高压侧A相电流(滤波器)ACF2_1_T1_L1",
     "PhaseBCurrentWave": "T621ACF(HP12/24)高压侧B相电流(滤波器)ACF2_1_T1_L2",
     "PhaseCCurrentWave": "T621ACF(HP12/24)高压侧C相电流(滤波器)ACF2_1_T1_L3",
@@ -85,6 +106,9 @@
   },
   {
     "Name": "T622",
+    "PhaseAVoltageWave": "#62M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#62M交流系统A相电压Uac_L2",
+    "PhaseCVoltageWave": "#62M交流系统A相电压Uac_L3",
     "PhaseACurrentWave": "T622ACF(HP12/24)高压侧A相电流(滤波器)ACF2_2_T1_L1",
     "PhaseBCurrentWave": "T622ACF(HP12/24)高压侧B相电流(滤波器)ACF2_2_T1_L2",
     "PhaseCCurrentWave": "T622ACF(HP12/24)高压侧C相电流(滤波器)ACF2_2_T1_L3",
@@ -97,6 +121,9 @@
   },
   {
     "Name": "T623",
+    "PhaseAVoltageWave": "#62M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#62M交流系统A相电压Uac_L2",
+    "PhaseCVoltageWave": "#62M交流系统A相电压Uac_L3",
     "PhaseACurrentWave": "T623ACF(HP12/24)高压侧A相电流(滤波器)ACF2_3_T1_L1",
     "PhaseBCurrentWave": "T623ACF(HP12/24)高压侧B相电流(滤波器)ACF2_3_T1_L2",
     "PhaseCCurrentWave": "T623ACF(HP12/24)高压侧C相电流(滤波器)ACF2_3_T1_L3",
@@ -109,6 +136,9 @@
   },
   {
     "Name": "T624",
+    "PhaseAVoltageWave": "#62M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#62M交流系统A相电压Uac_L2",
+    "PhaseCVoltageWave": "#62M交流系统A相电压Uac_L3",
     "PhaseACurrentWave": "T624ACF(HP12/24)高压侧A相电流(滤波器)ACF2_4_T1_L1",
     "PhaseBCurrentWave": "T624ACF(HP12/24)高压侧B相电流(滤波器)ACF2_4_T1_L2",
     "PhaseCCurrentWave": "T624ACF(HP12/24)高压侧C相电流(滤波器)ACF2_4_T1_L3",
@@ -121,6 +151,9 @@
   },
   {
     "Name": "T625",
+    "PhaseAVoltageWave": "#62M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#62M交流系统A相电压Uac_L2",
+    "PhaseCVoltageWave": "#62M交流系统A相电压Uac_L3",
     "PhaseACurrentWave": "T625ACF(SC)高压侧A相电流(滤波器)ACF2_5_T1_L1",
     "PhaseBCurrentWave": "T625ACF(SC)高压侧B相电流(滤波器)ACF2_5_T1_L2",
     "PhaseCCurrentWave": "T625ACF(SC)高压侧C相电流(滤波器)ACF2_5_T1_L3",
@@ -133,6 +166,9 @@
   },
   {
     "Name": "T626",
+    "PhaseAVoltageWave": "#62M交流系统A相电压Uac_L1",
+    "PhaseBVoltageWave": "#62M交流系统A相电压Uac_L2",
+    "PhaseCVoltageWave": "#62M交流系统A相电压Uac_L3",
     "PhaseACurrentWave": "T626ACF(SC)高压侧A相电流(滤波器)ACF2_6_T1_L1",
     "PhaseBCurrentWave": "T626ACF(SC)高压侧B相电流(滤波器)ACF2_6_T1_L2",
     "PhaseCCurrentWave": "T626ACF(SC)高压侧C相电流(滤波器)ACF2_6_T1_L3",
@@ -145,6 +181,9 @@
   },
   {
     "Name": "5631",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第1小组进线电流Ia",
     "PhaseBCurrentWave": "第1小组进线电流Ib",
     "PhaseCCurrentWave": "第1小组进线电流Ic",
@@ -157,6 +196,9 @@
   },
   {
     "Name": "5632",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第2小组进线电流Ia",
     "PhaseBCurrentWave": "第2小组进线电流Ib",
     "PhaseCCurrentWave": "第2小组进线电流Ic",
@@ -169,6 +211,9 @@
   },
   {
     "Name": "5633",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第3小组进线电流Ia",
     "PhaseBCurrentWave": "第3小组进线电流Ib",
     "PhaseCCurrentWave": "第3小组进线电流Ic",
@@ -181,6 +226,9 @@
   },
   {
     "Name": "5634",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第4小组进线电流Ia",
     "PhaseBCurrentWave": "第4小组进线电流Ib",
     "PhaseCCurrentWave": "第4小组进线电流Ic",
@@ -193,6 +241,9 @@
   },
   {
     "Name": "5635",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第5小组进线电流Ia",
     "PhaseBCurrentWave": "第5小组进线电流Ib",
     "PhaseCCurrentWave": "第5小组进线电流Ic",
@@ -205,6 +256,9 @@
   },
   {
     "Name": "5641",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第1小组进线电流Ia",
     "PhaseBCurrentWave": "第1小组进线电流Ib",
     "PhaseCCurrentWave": "第1小组进线电流Ic",
@@ -217,6 +271,9 @@
   },
   {
     "Name": "5642",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第2小组进线电流Ia",
     "PhaseBCurrentWave": "第2小组进线电流Ib",
     "PhaseCCurrentWave": "第2小组进线电流Ic",
@@ -229,6 +286,9 @@
   },
   {
     "Name": "5643",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第3小组进线电流Ia",
     "PhaseBCurrentWave": "第3小组进线电流Ib",
     "PhaseCCurrentWave": "第3小组进线电流Ic",
@@ -241,6 +301,9 @@
   },
   {
     "Name": "5644",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第4小组进线电流Ia",
     "PhaseBCurrentWave": "第4小组进线电流Ib",
     "PhaseCCurrentWave": "第4小组进线电流Ic",
@@ -253,6 +316,9 @@
   },
   {
     "Name": "5651",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第1小组进线电流Ia",
     "PhaseBCurrentWave": "第1小组进线电流Ib",
     "PhaseCCurrentWave": "第1小组进线电流Ic",
@@ -265,6 +331,9 @@
   },
   {
     "Name": "5652",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第2小组进线电流Ia",
     "PhaseBCurrentWave": "第2小组进线电流Ib",
     "PhaseCCurrentWave": "第2小组进线电流Ic",
@@ -277,6 +346,9 @@
   },
   {
     "Name": "5653",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第3小组进线电流Ia",
     "PhaseBCurrentWave": "第3小组进线电流Ib",
     "PhaseCCurrentWave": "第3小组进线电流Ic",
@@ -289,6 +361,9 @@
   },
   {
     "Name": "5654",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第4小组进线电流Ia",
     "PhaseBCurrentWave": "第4小组进线电流Ib",
     "PhaseCCurrentWave": "第4小组进线电流Ic",
@@ -301,6 +376,9 @@
   },
   {
     "Name": "5655",
+    "PhaseAVoltageWave": "交流滤波器母线电压Ua",
+    "PhaseBVoltageWave": "交流滤波器母线电压Ub",
+    "PhaseCVoltageWave": "交流滤波器母线电压Uc",
     "PhaseACurrentWave": "第5小组进线电流Ia",
     "PhaseBCurrentWave": "第5小组进线电流Ib",
     "PhaseCCurrentWave": "第5小组进线电流Ic",

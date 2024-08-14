@@ -118,8 +118,25 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return timeTick;
         }
 
+        public static List<(string, int[])> ClipDigitalData(this ComtradeInfo comtradeInfo, List<string> DigitalDataNames, int startIndex, int endIndex) {
 
-        public static (List<(string, int[])>, List<(string, double[])>) ClipComtradeWithFilters(this ComtradeInfo comtradeInfo, ACFilter aCFilter, ACFilterSheetSpec aCFilterSheetSpec) {
+            var GetDigitalData = (string name) => {
+                return (name, new Span<int>(comtradeInfo.DData.GetACFilterDigital(name).Data, startIndex, endIndex - startIndex).ToArray());
+            };
+            return DigitalDataNames.Select(GetDigitalData).ToList();
+        }
+
+        public static List<(string, double[])> ClipAnalogData(this ComtradeInfo comtradeInfo, List<string> AnalogDataNames, int startIndex, int endIndex) {
+
+            var GetAnalogData = (string name) => {
+                var analog = comtradeInfo.AData.GetACFilterAnalog(name);
+                var tmp = analog.Data;
+                return (name, new Span<double>(tmp, startIndex, endIndex - startIndex).ToArray());
+            };
+            return AnalogDataNames.Select(GetAnalogData).ToList();
+        }
+
+        public static (int, int) GetComtradeStartAndEnd(this ComtradeInfo comtradeInfo, ACFilter aCFilter) {
             int first = 0;
             int end = 0;
             var SwitchChange = new List<int>();
@@ -132,33 +149,42 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseBSwitchOpen).GetFirstChangePoint()),
                 () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseCSwitchOpen).GetFirstChangePoint())
                 );
-
-            var DigitalData = new List<(string, int[])>();
-            var AnalogData = new List<(string, double[])>();
             first = SwitchChange.Min();
             end = SwitchChange.Max();
             var startIndex = first - 100 > 0 ? first - 100 : 0;
             var endIndex = end + 300 < comtradeInfo.DData.FirstOrDefault().Data.Length ? end + 300 : comtradeInfo.DData.FirstOrDefault().Data.Length;
-
-            var GetDigitalData = (string name) => {
-                return (name, new Span<int>(comtradeInfo.DData.GetACFilterDigital(name).Data, startIndex, endIndex - startIndex).ToArray());
-            };
-            DigitalData.Add(GetDigitalData(aCFilter.PhaseASwitchClose));
-            DigitalData.Add(GetDigitalData(aCFilter.PhaseBSwitchClose));
-            DigitalData.Add(GetDigitalData(aCFilter.PhaseCSwitchClose));
-            DigitalData.Add(GetDigitalData(aCFilter.PhaseASwitchOpen));
-            DigitalData.Add(GetDigitalData(aCFilter.PhaseBSwitchOpen));
-            DigitalData.Add(GetDigitalData(aCFilter.PhaseCSwitchOpen));
-
-            var GetAnalogData = (string name) => {
-                return (name, new Span<double>(comtradeInfo.AData.GetACFilterAnalog(name).Data, startIndex, endIndex - startIndex).ToArray());
-            };
-
-            AnalogData.Add(GetAnalogData(aCFilter.PhaseACurrentWave));
-            AnalogData.Add(GetAnalogData(aCFilter.PhaseBCurrentWave));
-            AnalogData.Add(GetAnalogData(aCFilter.PhaseCCurrentWave));
-
-            return (DigitalData, AnalogData);
+            return (startIndex, endIndex);
         }
+
+        public static PlotDataDTO ClipComtradeWithFilters(this ComtradeInfo comtradeInfo, ACFilter aCFilter, ACFilterSheetSpec aCFilterSheetSpec) {
+
+            var (startIndex, endIndex) = comtradeInfo.GetComtradeStartAndEnd(aCFilter);
+            var DigitalDataNames = new List<string>() {
+                aCFilter.PhaseASwitchClose,
+                aCFilter.PhaseBSwitchClose,
+                aCFilter.PhaseCSwitchClose,
+                aCFilter.PhaseASwitchOpen,
+                aCFilter.PhaseBSwitchOpen,
+                aCFilter.PhaseCSwitchOpen
+            };
+
+            var DigitalData = comtradeInfo.ClipDigitalData(DigitalDataNames, startIndex, endIndex);
+
+
+            return new PlotDataDTO() {
+                DigitalData = DigitalData,
+                CurrentData = comtradeInfo.ClipAnalogData(new List<string>() {
+                    aCFilter.PhaseACurrentWave,
+                    aCFilter.PhaseBCurrentWave,
+                    aCFilter.PhaseCCurrentWave
+                }, startIndex, endIndex),
+                VoltageData = comtradeInfo.ClipAnalogData(new List<string>() {
+                    aCFilter.PhaseAVoltageWave,
+                    aCFilter.PhaseBVoltageWave,
+                    aCFilter.PhaseCVoltageWave
+                }, startIndex, endIndex)
+            };
+        }
+
     }
 }
