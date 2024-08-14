@@ -1,6 +1,9 @@
 ﻿namespace ModerBox.Comtrade.FilterWaveform {
     public class ACFilter {
         public string Name { get; set; }
+        public string PhaseAVoltageWave { get; set; }
+        public string PhaseBVoltageWave { get; set; }
+        public string PhaseCVoltageWave { get; set; }
         public string PhaseACurrentWave { get; set; }
         public string PhaseBCurrentWave { get; set; }
         public string PhaseCCurrentWave { get; set; }
