@@ -17,9 +17,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.UIAutomation.Andro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.Common.Test", "ModerBox.Common.Test\ModerBox.Common.Test.csproj", "{6AA8FFE0-BE76-4C1A-90A5-8CE0C9902D8F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.FilterWaveform", "ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj", "{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.Comtrade.FilterWaveform", "ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj", "{9BC7AF66-6D15-4CB4-AA0B-41F06A0523A2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.FilterWaveform.Test", "ModerBox.Comtrade.FilterWaveform.Test\ModerBox.Comtrade.FilterWaveform.Test.csproj", "{F93283D4-AF85-4225-8B3C-7264CC025C55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModerBox.Comtrade.FilterWaveform.Test", "ModerBox.Comtrade.FilterWaveform.Test\ModerBox.Comtrade.FilterWaveform.Test.csproj", "{F93283D4-AF85-4225-8B3C-7264CC025C55}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.PDF", "ModerBox.PDF\ModerBox.PDF.csproj", "{8850BBAB-0916-48BE-84A3-3E217A3FD4D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.PDF.Test", "ModerBox.PDF.Test\ModerBox.PDF.Test.csproj", "{D96AE569-8EB7-4A1E-9F5D-716005555786}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,6 +67,14 @@ Global
 		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F93283D4-AF85-4225-8B3C-7264CC025C55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8850BBAB-0916-48BE-84A3-3E217A3FD4D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8850BBAB-0916-48BE-84A3-3E217A3FD4D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8850BBAB-0916-48BE-84A3-3E217A3FD4D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8850BBAB-0916-48BE-84A3-3E217A3FD4D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D96AE569-8EB7-4A1E-9F5D-716005555786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D96AE569-8EB7-4A1E-9F5D-716005555786}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D96AE569-8EB7-4A1E-9F5D-716005555786}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D96AE569-8EB7-4A1E-9F5D-716005555786}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
