@@ -12,7 +12,7 @@ namespace ModerBox.PDF {
                 bool isImagePdf = true;
 
                 foreach (Page page in document.GetPages()) {
-                    if (page.GetImages().Count() == 0) {
+                    if (!page.GetImages().Any()) {
                         isImagePdf = false;
                         break;
                     }
@@ -33,5 +33,6 @@ namespace ModerBox.PDF {
                 return rows;
             }
         }
+        
     }
 }
