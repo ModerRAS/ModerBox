@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.102.2" />
+    <PackageReference Include="ClosedXML" Version="0.102.3" />
     <PackageReference Include="DnsClient" Version="1.8.0" />
-	<PackageReference Include="Velopack" Version="0.0.556" />
+	<PackageReference Include="Velopack" Version="0.0.594" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
   </ItemGroup>
 
