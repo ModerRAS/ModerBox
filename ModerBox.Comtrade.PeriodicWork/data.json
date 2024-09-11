@@ -1,6 +1,7 @@
 {
-    "OrthogonalData": {
-        "DCFieldCurrent": {
+    "OrthogonalData": [
+        {
+            "Name": "DCFieldCurrent",
             "AnalogName": [
                 "IDEL1",
                 "IDEL2",
@@ -27,7 +28,8 @@
                 "PPR2C"
             ]
         },
-        "DCFieldVoltage": {
+        {
+            "Name": "DCFieldVoltage",
             "AnalogName": [
                 "UDL",
                 "UDM",
@@ -54,7 +56,8 @@
                 "PPR2C"
             ]
         },
-        "DCFieldVoltage_PCP_CCP": {
+        {
+            "Name": "DCFieldVoltage_PCP_CCP",
             "AnalogName": [
                 "UDL_IN",
                 "UDM_IN",
@@ -75,7 +78,8 @@
                 "CCP22B"
             ]
         },
-        "ConverterTransformer": {
+        {
+            "Name": "ConverterTransformer",
             "AnalogName": [
                 "YY换流变中性点电流",
                 "YD换流变中性点电流"
@@ -95,7 +99,8 @@
                 "CPR22C"
             ]
         },
-        "ConverterTransformer2": {
+        {
+            "Name": "ConverterTransformer2",
             "AnalogName": [
                 "网侧开关1分支A相电流",
                 "网侧开关1分支B相电流",
@@ -151,13 +156,14 @@
                 "CPR22C"
             ]
         }
-    },
-    "NonOrthogonalData": {
-        "DCField": {
+    ],
+    "NonOrthogonalData": [
+        {
+            "Name": "DCField",
             "AnalogData": [
                 {
-                    "display_name": "Z1.T3(R1)",
-                    "data_names": [
+                    "DisplayName": "Z1.T3(R1)",
+                    "DataNames": [
                         "IZ1R"
                     ],
                     "Child": "Child4",
@@ -171,8 +177,8 @@
                     ]
                 },
                 {
-                    "display_name": "Z1.T4(L2)",
-                    "data_names": [
+                    "DisplayName": "Z1.T4(L2)",
+                    "DataNames": [
                         "IZ1L2"
                     ],
                     "Child": "Child4",
@@ -186,8 +192,8 @@
                     ]
                 },
                 {
-                    "display_name": "Z1.T5(F1)",
-                    "data_names": [
+                    "DisplayName": "Z1.T5(F1)",
+                    "DataNames": [
                         "IAZ1"
                     ],
                     "Child": "Child0",
@@ -201,8 +207,8 @@
                     ]
                 },
                 {
-                    "display_name": "Z2.T3(R1)",
-                    "data_names": [
+                    "DisplayName": "Z2.T3(R1)",
+                    "DataNames": [
                         "IZ2R"
                     ],
                     "Child": "Child4",
@@ -216,8 +222,8 @@
                     ]
                 },
                 {
-                    "display_name": "Z2.T4(L2)",
-                    "data_names": [
+                    "DisplayName": "Z2.T4(L2)",
+                    "DataNames": [
                         "IZ2L2"
                     ],
                     "Child": "Child4",
@@ -231,8 +237,8 @@
                     ]
                 },
                 {
-                    "display_name": "Z2.T5(F1)",
-                    "data_names": [
+                    "DisplayName": "Z2.T5(F1)",
+                    "DataNames": [
                         "IAZ2"
                     ],
                     "Child": "Child0",
@@ -246,8 +252,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1Udl",
-                    "data_names": [
+                    "DisplayName": "P1Udl",
+                    "DataNames": [
                         "UDL",
                         "UDL_IN"
                     ],
@@ -271,8 +277,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1Udn",
-                    "data_names": [
+                    "DisplayName": "P1Udn",
+                    "DataNames": [
                         "UDN",
                         "UDN_IN"
                     ],
@@ -296,8 +302,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1Udm",
-                    "data_names": [
+                    "DisplayName": "P1Udm",
+                    "DataNames": [
                         "UDM",
                         "UDM_IN"
                     ],
@@ -318,8 +324,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2Udl",
-                    "data_names": [
+                    "DisplayName": "P2Udl",
+                    "DataNames": [
                         "UDL",
                         "UDL_IN"
                     ],
@@ -343,8 +349,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2Udn",
-                    "data_names": [
+                    "DisplayName": "P2Udn",
+                    "DataNames": [
                         "UDN",
                         "UDN_IN"
                     ],
@@ -368,8 +374,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2Udm",
-                    "data_names": [
+                    "DisplayName": "P2Udm",
+                    "DataNames": [
                         "UDM",
                         "UDM_IN"
                     ],
@@ -390,8 +396,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDNC1",
-                    "data_names": [
+                    "DisplayName": "IDNC1",
+                    "DataNames": [
                         "IDNC",
                         "IDNC_IN"
                     ],
@@ -415,8 +421,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDNE1",
-                    "data_names": [
+                    "DisplayName": "IDNE1",
+                    "DataNames": [
                         "IDNE",
                         "IDNE_IN"
                     ],
@@ -440,8 +446,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDNC2",
-                    "data_names": [
+                    "DisplayName": "IDNC2",
+                    "DataNames": [
                         "IDNC",
                         "IDNC_IN"
                     ],
@@ -465,8 +471,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDNE2",
-                    "data_names": [
+                    "DisplayName": "IDNE2",
+                    "DataNames": [
                         "IDNE",
                         "IDNE_IN"
                     ],
@@ -490,8 +496,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDME",
-                    "data_names": [
+                    "DisplayName": "IDME",
+                    "DataNames": [
                         "IDME"
                     ],
                     "Child": "Child0",
@@ -509,8 +515,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDGND_M",
-                    "data_names": [
+                    "DisplayName": "IDGND_M",
+                    "DataNames": [
                         "IDGND_M"
                     ],
                     "Child": "Child0",
@@ -528,8 +534,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDGND_P",
-                    "data_names": [
+                    "DisplayName": "IDGND_P",
+                    "DataNames": [
                         "IDGND"
                     ],
                     "Child": "Child0",
@@ -547,8 +553,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDEL1_M",
-                    "data_names": [
+                    "DisplayName": "IDEL1_M",
+                    "DataNames": [
                         "IDEL1_M"
                     ],
                     "Child": "Child0",
@@ -566,8 +572,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDEL1_P",
-                    "data_names": [
+                    "DisplayName": "IDEL1_P",
+                    "DataNames": [
                         "IDEL1",
                         "IDEL"
                     ],
@@ -586,8 +592,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDEL2_M",
-                    "data_names": [
+                    "DisplayName": "IDEL2_M",
+                    "DataNames": [
                         "IDEL2_M"
                     ],
                     "Child": "Child0",
@@ -605,8 +611,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDEL2_P",
-                    "data_names": [
+                    "DisplayName": "IDEL2_P",
+                    "DataNames": [
                         "IDEL2"
                     ],
                     "Child": "Child0",
@@ -624,8 +630,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IDL",
-                    "data_names": [
+                    "DisplayName": "P1IDL",
+                    "DataNames": [
                         "IDL"
                     ],
                     "Child": "Child0",
@@ -638,8 +644,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IDC1P",
-                    "data_names": [
+                    "DisplayName": "P1IDC1P",
+                    "DataNames": [
                         "IDC1P"
                     ],
                     "Child": "Child0",
@@ -658,8 +664,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IDC1N",
-                    "data_names": [
+                    "DisplayName": "P1IDC1N",
+                    "DataNames": [
                         "IDC1N"
                     ],
                     "Child": "Child0",
@@ -678,8 +684,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IDC2P",
-                    "data_names": [
+                    "DisplayName": "P1IDC2P",
+                    "DataNames": [
                         "IDC2P"
                     ],
                     "Child": "Child0",
@@ -698,8 +704,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IDC2N",
-                    "data_names": [
+                    "DisplayName": "P1IDC2N",
+                    "DataNames": [
                         "IDC2N"
                     ],
                     "Child": "Child0",
@@ -718,8 +724,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1ICN",
-                    "data_names": [
+                    "DisplayName": "P1ICN",
+                    "DataNames": [
                         "ICN"
                     ],
                     "Child": "Child0",
@@ -730,8 +736,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IAN",
-                    "data_names": [
+                    "DisplayName": "P1IAN",
+                    "DataNames": [
                         "IAN"
                     ],
                     "Child": "Child0",
@@ -742,8 +748,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IZT1",
-                    "data_names": [
+                    "DisplayName": "P1IZT1",
+                    "DataNames": [
                         "IZT1"
                     ],
                     "Child": "Child0",
@@ -754,8 +760,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IZ1T11",
-                    "data_names": [
+                    "DisplayName": "P1IZ1T11",
+                    "DataNames": [
                         "IUNB_Z1T11"
                     ],
                     "Child": "Child4",
@@ -766,8 +772,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IZ1T12",
-                    "data_names": [
+                    "DisplayName": "P1IZ1T12",
+                    "DataNames": [
                         "IUNB_Z1T12"
                     ],
                     "Child": "Child4",
@@ -778,8 +784,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IZ1T2",
-                    "data_names": [
+                    "DisplayName": "P1IZ1T2",
+                    "DataNames": [
                         "IZ1T2"
                     ],
                     "Child": "Child0",
@@ -790,8 +796,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IZ2T1",
-                    "data_names": [
+                    "DisplayName": "P1IZ2T1",
+                    "DataNames": [
                         "IUNB_Z2T1"
                     ],
                     "Child": "Child4",
@@ -802,8 +808,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1IZ2T2",
-                    "data_names": [
+                    "DisplayName": "P1IZ2T2",
+                    "DataNames": [
                         "IZ2T2"
                     ],
                     "Child": "Child0",
@@ -814,8 +820,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IDL",
-                    "data_names": [
+                    "DisplayName": "P2IDL",
+                    "DataNames": [
                         "IDL"
                     ],
                     "Child": "Child0",
@@ -828,8 +834,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IDC1P",
-                    "data_names": [
+                    "DisplayName": "P2IDC1P",
+                    "DataNames": [
                         "IDC1P"
                     ],
                     "Child": "Child0",
@@ -848,8 +854,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IDC1N",
-                    "data_names": [
+                    "DisplayName": "P2IDC1N",
+                    "DataNames": [
                         "IDC1N"
                     ],
                     "Child": "Child0",
@@ -868,8 +874,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IDC2P",
-                    "data_names": [
+                    "DisplayName": "P2IDC2P",
+                    "DataNames": [
                         "IDC2P"
                     ],
                     "Child": "Child0",
@@ -888,8 +894,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IDC2N",
-                    "data_names": [
+                    "DisplayName": "P2IDC2N",
+                    "DataNames": [
                         "IDC2N"
                     ],
                     "Child": "Child0",
@@ -908,8 +914,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2ICN",
-                    "data_names": [
+                    "DisplayName": "P2ICN",
+                    "DataNames": [
                         "ICN"
                     ],
                     "Child": "Child0",
@@ -920,8 +926,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IAN",
-                    "data_names": [
+                    "DisplayName": "P2IAN",
+                    "DataNames": [
                         "IAN"
                     ],
                     "Child": "Child0",
@@ -932,8 +938,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IZT1",
-                    "data_names": [
+                    "DisplayName": "P2IZT1",
+                    "DataNames": [
                         "IZT1"
                     ],
                     "Child": "Child0",
@@ -944,8 +950,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IZ1T11",
-                    "data_names": [
+                    "DisplayName": "P2IZ1T11",
+                    "DataNames": [
                         "IUNB_Z1T11"
                     ],
                     "Child": "Child4",
@@ -956,8 +962,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IZ1T12",
-                    "data_names": [
+                    "DisplayName": "P2IZ1T12",
+                    "DataNames": [
                         "IUNB_Z1T12"
                     ],
                     "Child": "Child4",
@@ -968,8 +974,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IZ1T2",
-                    "data_names": [
+                    "DisplayName": "P2IZ1T2",
+                    "DataNames": [
                         "IZ1T2"
                     ],
                     "Child": "Child0",
@@ -980,8 +986,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IZ2T1",
-                    "data_names": [
+                    "DisplayName": "P2IZ2T1",
+                    "DataNames": [
                         "IUNB_Z2T1"
                     ],
                     "Child": "Child4",
@@ -992,8 +998,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2IZ2T2",
-                    "data_names": [
+                    "DisplayName": "P2IZ2T2",
+                    "DataNames": [
                         "IZ2T2"
                     ],
                     "Child": "Child0",
@@ -1004,8 +1010,8 @@
                     ]
                 },
                 {
-                    "display_name": "P1INBS",
-                    "data_names": [
+                    "DisplayName": "P1INBS",
+                    "DataNames": [
                         "INBS"
                     ],
                     "Child": "Child0",
@@ -1016,8 +1022,8 @@
                     ]
                 },
                 {
-                    "display_name": "P2INBS",
-                    "data_names": [
+                    "DisplayName": "P2INBS",
+                    "DataNames": [
                         "INBS"
                     ],
                     "Child": "Child0",
@@ -1028,8 +1034,8 @@
                     ]
                 },
                 {
-                    "display_name": "INBGS",
-                    "data_names": [
+                    "DisplayName": "INBGS",
+                    "DataNames": [
                         "INBGS"
                     ],
                     "Child": "Child0",
@@ -1043,8 +1049,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDEE1",
-                    "data_names": [
+                    "DisplayName": "IDEE1",
+                    "DataNames": [
                         "IDEE1"
                     ],
                     "Child": "Child0",
@@ -1058,8 +1064,8 @@
                     ]
                 },
                 {
-                    "display_name": "IDEE2",
-                    "data_names": [
+                    "DisplayName": "IDEE2",
+                    "DataNames": [
                         "IDEE2"
                     ],
                     "Child": "Child0",
@@ -1106,11 +1112,12 @@
                 "P2PPRC"
             ]
         },
-        "ConverterTransformer1": {
+        {
+            "Name": "ConverterTransformer1",
             "AnalogData": [
                 {
-                    "display_name": "UAC_L1",
-                    "data_names": [
+                    "DisplayName": "UAC_L1",
+                    "DataNames": [
                         "UAC_IN_L1",
                         "UAC_L1"
                     ],
@@ -1139,8 +1146,8 @@
                     ]
                 },
                 {
-                    "display_name": "UAC_L2",
-                    "data_names": [
+                    "DisplayName": "UAC_L2",
+                    "DataNames": [
                         "UAC_IN_L2",
                         "UAC_L2"
                     ],
@@ -1169,8 +1176,8 @@
                     ]
                 },
                 {
-                    "display_name": "UAC_L3",
-                    "data_names": [
+                    "DisplayName": "UAC_L3",
+                    "DataNames": [
                         "UAC_IN_L3",
                         "UAC_L3"
                     ],
@@ -1199,8 +1206,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVY_L1",
-                    "data_names": [
+                    "DisplayName": "IVY_L1",
+                    "DataNames": [
                         "IVY_IN_L1",
                         "IVY_L1"
                     ],
@@ -1229,8 +1236,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVY_L2",
-                    "data_names": [
+                    "DisplayName": "IVY_L2",
+                    "DataNames": [
                         "IVY_IN_L2",
                         "IVY_L2"
                     ],
@@ -1259,8 +1266,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVY_L3",
-                    "data_names": [
+                    "DisplayName": "IVY_L3",
+                    "DataNames": [
                         "IVY_IN_L3",
                         "IVY_L3"
                     ],
@@ -1289,8 +1296,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVD1_L1",
-                    "data_names": [
+                    "DisplayName": "IVD1_L1",
+                    "DataNames": [
                         "IVD1_L1"
                     ],
                     "Child": "Child0",
@@ -1318,8 +1325,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVD1_L2",
-                    "data_names": [
+                    "DisplayName": "IVD1_L2",
+                    "DataNames": [
                         "IVD1_L2"
                     ],
                     "Child": "Child0",
@@ -1347,8 +1354,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVD1_L3",
-                    "data_names": [
+                    "DisplayName": "IVD1_L3",
+                    "DataNames": [
                         "IVD1_L3"
                     ],
                     "Child": "Child0",
@@ -1376,8 +1383,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVD0_L1",
-                    "data_names": [
+                    "DisplayName": "IVD0_L1",
+                    "DataNames": [
                         "IVD0_L1"
                     ],
                     "Child": "Child0",
@@ -1397,8 +1404,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVD0_L2",
-                    "data_names": [
+                    "DisplayName": "IVD0_L2",
+                    "DataNames": [
                         "IVD0_L2"
                     ],
                     "Child": "Child0",
@@ -1418,8 +1425,8 @@
                     ]
                 },
                 {
-                    "display_name": "IVD0_L3",
-                    "data_names": [
+                    "DisplayName": "IVD0_L3",
+                    "DataNames": [
                         "IVD0_L3"
                     ],
                     "Child": "Child0",
@@ -1439,8 +1446,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVY_L1",
-                    "data_names": [
+                    "DisplayName": "UVY_L1",
+                    "DataNames": [
                         "UVY_L1"
                     ],
                     "Child": "Child0",
@@ -1460,8 +1467,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVY_L2",
-                    "data_names": [
+                    "DisplayName": "UVY_L2",
+                    "DataNames": [
                         "UVY_L2"
                     ],
                     "Child": "Child0",
@@ -1481,8 +1488,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVY_L3",
-                    "data_names": [
+                    "DisplayName": "UVY_L3",
+                    "DataNames": [
                         "UVY_L3"
                     ],
                     "Child": "Child0",
@@ -1502,8 +1509,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVD1_L1",
-                    "data_names": [
+                    "DisplayName": "UVD1_L1",
+                    "DataNames": [
                         "UVD1_L1",
                         "UVD_L1"
                     ],
@@ -1524,8 +1531,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVD1_L2",
-                    "data_names": [
+                    "DisplayName": "UVD1_L2",
+                    "DataNames": [
                         "UVD1_L2",
                         "UVD_L2"
                     ],
@@ -1546,8 +1553,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVD1_L3",
-                    "data_names": [
+                    "DisplayName": "UVD1_L3",
+                    "DataNames": [
                         "UVD1_L3",
                         "UVD_L3"
                     ],
@@ -1568,8 +1575,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVD0_L1",
-                    "data_names": [
+                    "DisplayName": "UVD0_L1",
+                    "DataNames": [
                         "UVD0_L1"
                     ],
                     "Child": "Child0",
@@ -1589,8 +1596,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVD0_L2",
-                    "data_names": [
+                    "DisplayName": "UVD0_L2",
+                    "DataNames": [
                         "UVD0_L2"
                     ],
                     "Child": "Child0",
@@ -1610,8 +1617,8 @@
                     ]
                 },
                 {
-                    "display_name": "UVD0_L3",
-                    "data_names": [
+                    "DisplayName": "UVD0_L3",
+                    "DataNames": [
                         "UVD0_L3"
                     ],
                     "Child": "Child0",
@@ -1654,5 +1661,5 @@
                 "P2CPR2C"
             ]
         }
-    }
+    ]
 }
