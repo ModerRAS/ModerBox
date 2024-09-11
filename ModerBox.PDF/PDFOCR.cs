@@ -28,24 +28,24 @@ namespace ModerBox.PDF {
                 }
             }
         }
-        public async Task ProcessImage(IReadOnlyList<byte> bytes) {
-            FullOcrModel model = await OnlineFullModels.ChineseV3.DownloadAsync();
+        //public async Task ProcessImage(IReadOnlyList<byte> bytes) {
+        //    FullOcrModel model = await OnlineFullModels.ChineseV3.DownloadAsync();
 
-            using (PaddleOcrAll all = new PaddleOcrAll(model, PaddleDevice.Mkldnn()) {
-                AllowRotateDetection = true, /* 允许识别有角度的文字 */
-                Enable180Classification = false, /* 允许识别旋转角度大于90度的文字 */
-            }) {
-                // Load local file by following code:
-                // using (Mat src2 = Cv2.ImRead(@"C:\test.jpg"))
-                using (Mat src = Cv2.ImDecode(bytes, ImreadModes.Color)) {
-                    PaddleOcrResult result = all.Run(src);
-                    Console.WriteLine("Detected all texts: \n" + result.Text);
-                    foreach (PaddleOcrResultRegion region in result.Regions) {
-                        Console.WriteLine($"Text: {region.Text}, Score: {region.Score}, RectCenter: {region.Rect.Center}, RectSize:    {region.Rect.Size}, Angle: {region.Rect.Angle}");
-                    }
-                }
-            }
-        }
+        //    using (PaddleOcrAll all = new PaddleOcrAll(model, PaddleDevice.Mkldnn()) {
+        //        AllowRotateDetection = true, /* 允许识别有角度的文字 */
+        //        Enable180Classification = false, /* 允许识别旋转角度大于90度的文字 */
+        //    }) {
+        //        // Load local file by following code:
+        //        // using (Mat src2 = Cv2.ImRead(@"C:\test.jpg"))
+        //        using (Mat src = Cv2.ImDecode(bytes, ImreadModes.Color)) {
+        //            PaddleOcrResult result = all.Run(src);
+        //            Console.WriteLine("Detected all texts: \n" + result.Text);
+        //            foreach (PaddleOcrResultRegion region in result.Regions) {
+        //                Console.WriteLine($"Text: {region.Text}, Score: {region.Score}, RectCenter: {region.Rect.Center}, RectSize:    {region.Rect.Size}, Angle: {region.Rect.Angle}");
+        //            }
+        //        }
+        //    }
+        //}
         public void DetectTable() {
 
         }
