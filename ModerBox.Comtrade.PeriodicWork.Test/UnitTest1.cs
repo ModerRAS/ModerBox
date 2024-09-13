@@ -1,8 +1,12 @@
+using Newtonsoft.Json;
+
 namespace ModerBox.Comtrade.PeriodicWork.Test {
     [TestClass]
     public class UnitTest1 {
         [TestMethod]
-        public void TestMethod1() {
+        public void TestJsonDeserialization() {
+            var file = File.ReadAllText("data.json");
+            var data = JsonConvert.DeserializeObject<DataSpec>(file);
         }
     }
 }
