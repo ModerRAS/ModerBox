@@ -5,7 +5,7 @@ namespace ModerBox.Comtrade.PeriodicWork.Test {
     public class UnitTest1 {
         [TestMethod]
         public void TestJsonDeserialization() {
-            var file = File.ReadAllText("data.json");
+            var file = File.ReadAllText("PeriodicWorkData.json");
             var data = JsonConvert.DeserializeObject<DataSpec>(file);
         }
     }
