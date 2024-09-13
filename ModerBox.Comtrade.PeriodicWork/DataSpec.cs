@@ -6,32 +6,16 @@ using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.PeriodicWork {
     public class OrthogonalDataItem {
-        /// <summary>
-        /// 
-        /// </summary>
         public string Name { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
+        public string DisplayName { get; set; }
+        public string Child {  get; set; }
         public List<string> AnalogName { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public List<string> DeviceName { get; set; }
     }
 
     public class AnalogDataItem {
-        /// <summary>
-        /// 
-        /// </summary>
         public string DisplayName { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public List<string> DataNames { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Child { get; set; }
         /// <summary>
         /// 
@@ -40,29 +24,25 @@ namespace ModerBox.Comtrade.PeriodicWork {
     }
 
     public class NonOrthogonalDataItem {
-        /// <summary>
-        /// 
-        /// </summary>
         public string Name { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
+        public string DisplayName { get; set; }
         public List<AnalogDataItem> AnalogData { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public List<string> DeviceName { get; set; }
     }
 
+    public class DataNames {
+        public string Name { get; set; }
+        public string Type { get; set; }
+    }
+
+    public class DataFilter {
+        public string Name { get; set; }
+        public List<DataNames> DataNames { get; set; }
+    }
     public class DataSpec {
-        /// <summary>
-        /// 
-        /// </summary>
         public List<OrthogonalDataItem> OrthogonalData { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public List<NonOrthogonalDataItem> NonOrthogonalData { get; set; }
+        public List<DataFilter> DataFilter { get; set; }
     }
 
 

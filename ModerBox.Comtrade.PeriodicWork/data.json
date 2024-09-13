@@ -2,6 +2,8 @@
     "OrthogonalData": [
         {
             "Name": "DCFieldCurrent",
+            "DisplayName": "直流场电流模拟量（内置录波）",
+            "Child": "Child0",
             "AnalogName": [
                 "IDEL1",
                 "IDEL2",
@@ -30,6 +32,8 @@
         },
         {
             "Name": "DCFieldVoltage",
+            "DisplayName": "直流场电压模拟量（内置录波）",
+            "Child": "Child0",
             "AnalogName": [
                 "UDL",
                 "UDM",
@@ -58,6 +62,8 @@
         },
         {
             "Name": "DCFieldVoltage_PCP_CCP",
+            "DisplayName": "直流场电压模拟量（内置录波）",
+            "Child": "Child0",
             "AnalogName": [
                 "UDL_IN",
                 "UDM_IN",
@@ -80,6 +86,8 @@
         },
         {
             "Name": "ConverterTransformer",
+            "DisplayName": "换流变模拟量（内置录波）",
+            "Child": "Child2",
             "AnalogName": [
                 "YY换流变中性点电流",
                 "YD换流变中性点电流"
@@ -101,6 +109,8 @@
         },
         {
             "Name": "ConverterTransformer2",
+            "DisplayName": "换流变2",
+            "Child": "Child2",
             "AnalogName": [
                 "网侧开关1分支A相电流",
                 "网侧开关1分支B相电流",
@@ -160,6 +170,7 @@
     "NonOrthogonalData": [
         {
             "Name": "DCField",
+            "DisplayName": "直流场",
             "AnalogData": [
                 {
                     "DisplayName": "Z1.T3(R1)",
@@ -1114,6 +1125,7 @@
         },
         {
             "Name": "ConverterTransformer1",
+            "DisplayName": "换流变1",
             "AnalogData": [
                 {
                     "DisplayName": "UAC_L1",
@@ -1659,6 +1671,46 @@
                 "P2CPR2A",
                 "P2CPR2B",
                 "P2CPR2C"
+            ]
+        }
+    ],
+    "DataFilter": [
+        {
+            "Name": "SmallSetValueZeroDriftInspection",
+            "DataNames": [
+                {
+                    "Name": "DCFieldCurrent",
+                    "Type": "OrthogonalData"
+                },
+                {
+                    "Name": "DCFieldVoltage",
+                    "Type": "OrthogonalData"
+                },
+                {
+                    "Name": "DCFieldVoltage_PCP_CCP",
+                    "Type": "OrthogonalData"
+                },
+                {
+                    "Name": "ConverterTransformer",
+                    "Type": "OrthogonalData"
+                }
+            ]
+        },
+        {
+            "Name": "AnalogInspection",
+            "DataNames": [
+                {
+                    "Name": "DCField",
+                    "Type": "NonOrthogonalData"
+                },
+                {
+                    "Name": "ConverterTransformer1",
+                    "Type": "NonOrthogonalData"
+                },
+                {
+                    "Name": "ConverterTransformer2",
+                    "Type": "OrthogonalData"
+                },
             ]
         }
     ]
