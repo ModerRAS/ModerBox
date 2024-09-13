@@ -38,18 +38,15 @@ jobs:
         vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nightly-win-x64
         vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish --framework net8.0-x64-desktop
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --publish --channel nightly-win-x64 --releaseName "ModerBox $Version" --tag v$Version --token ${{ secrets.GITHUB_TOKEN }}
-    - name: Get Minio Server
-      id: get-server
+    - name: Minio Deploy
+      env:
+        BUILD_NUMBER: ${{github.run_number}}
+        MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+        MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       shell: pwsh
       run: |
         $env:MINIO_SERVER = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
-        Write-Output "::set-output name=MINIO_SERVER::$env:MINIO_SERVER"
-    - name: Minio Deploy
-      uses: lovellfelix/minio-deploy-action@v1
-      with:
-        endpoint: ${{ steps.get-server.outputs.MINIO_SERVER }}
-        access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-        secret_key: ${{ secrets.MINIO_SECRET_KEY }}
-        bucket: 'moderbox'
-        source_dir: 'Releases'
-        target_dir: '/'
+        Invoke-WebRequest -Uri https://dl.min.io/client/mc/release/windows-amd64/mc.exe -OutFile C:\tools\mc.exe
+        echo "C:\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
+        mc alias set myminio $env:MINIO_SERVER $env:MINIO_ACCESS_KEY $env:MINIO_SECRET_KEY
+        mc cp --recursive Releases\ myminio/moderbox/
