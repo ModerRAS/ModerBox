@@ -10,4 +10,18 @@
     <PackageReference Include="Akka" Version="1.5.28" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="data.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Protocol\" />
+  </ItemGroup>
+
 </Project>
