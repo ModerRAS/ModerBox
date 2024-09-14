@@ -8,20 +8,23 @@
 
   <ItemGroup>
     <PackageReference Include="Akka" Version="1.5.28" />
+    <PackageReference Include="CsvHelper" Version="33.0.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ModerBox.Common\ModerBox.Common.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="data.json">
+    <None Update="PeriodicWorkData.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Protocol\" />
+    <Folder Include="DTO\" />
+    <Folder Include="Model\" />
   </ItemGroup>
 
 </Project>

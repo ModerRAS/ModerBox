@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Comtrade.PeriodicWork {
-    public class NonOrthogonalDataActor {
+namespace ModerBox.Comtrade.PeriodicWork.Actor
+{
+    public class NonOrthogonalDataActor
+    {
     }
 }
