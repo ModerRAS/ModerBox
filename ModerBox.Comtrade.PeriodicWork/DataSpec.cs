@@ -11,6 +11,7 @@ namespace ModerBox.Comtrade.PeriodicWork {
         public string Child {  get; set; }
         public List<string> AnalogName { get; set; }
         public List<string> DeviceName { get; set; }
+        public bool Transpose { get; set; }
     }
 
     public class AnalogDataItem {
@@ -28,6 +29,8 @@ namespace ModerBox.Comtrade.PeriodicWork {
         public string DisplayName { get; set; }
         public List<AnalogDataItem> AnalogData { get; set; }
         public List<string> DeviceName { get; set; }
+        public List<string> AnalogName { get; set; }
+        public bool Transpose { get; set; }
     }
 
     public class DataNames {
