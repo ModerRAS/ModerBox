@@ -4,6 +4,7 @@
             "Name": "DCFieldCurrent",
             "DisplayName": "直流场电流模拟量（内置录波）",
             "Child": "Child0",
+            "Transpose": false,
             "AnalogName": [
                 "IDEL1",
                 "IDEL2",
@@ -34,6 +35,7 @@
             "Name": "DCFieldVoltage",
             "DisplayName": "直流场电压模拟量（内置录波）",
             "Child": "Child0",
+            "Transpose": false,
             "AnalogName": [
                 "UDL",
                 "UDM",
@@ -62,8 +64,9 @@
         },
         {
             "Name": "DCFieldVoltage_PCP_CCP",
-            "DisplayName": "直流场电压模拟量（内置录波）",
+            "DisplayName": "直流场电压模拟量（内置录波）_PCP_CCP",
             "Child": "Child0",
+            "Transpose": false,
             "AnalogName": [
                 "UDL_IN",
                 "UDM_IN",
@@ -88,6 +91,7 @@
             "Name": "ConverterTransformer",
             "DisplayName": "换流变模拟量（内置录波）",
             "Child": "Child2",
+            "Transpose": false,
             "AnalogName": [
                 "YY换流变中性点电流",
                 "YD换流变中性点电流"
@@ -171,6 +175,7 @@
         {
             "Name": "DCField",
             "DisplayName": "直流场",
+            "Transpose": true,
             "AnalogData": [
                 {
                     "DisplayName": "Z1.T3(R1)",
@@ -1121,11 +1126,68 @@
                 "P2PPRA",
                 "P2PPRB",
                 "P2PPRC"
+            ],
+            "AnalogName": [
+                "Z1.T3(R1)",
+                "Z1.T4(L2)",
+                "Z1.T5(F1)",
+                "Z2.T3(R1)",
+                "Z2.T4(L2)",
+                "Z2.T5(F1)",
+                "P1Udl",
+                "P1Udn",
+                "P1Udm",
+                "P2Udl",
+                "P2Udn",
+                "P2Udm",
+                "IDNC1",
+                "IDNE1",
+                "IDNC2",
+                "IDNE2",
+                "IDME",
+                "IDGND_M",
+                "IDGND_P",
+                "IDEL1_M",
+                "IDEL1_P",
+                "IDEL2_M",
+                "IDEL2_P",
+                "P1IDL",
+                "P1IDC1P",
+                "P1IDC1N",
+                "P1IDC2P",
+                "P1IDC2N",
+                "P1ICN",
+                "P1IAN",
+                "P1IZT1",
+                "P1IZ1T11",
+                "P1IZ1T12",
+                "P1IZ1T2",
+                "P1IZ2T1",
+                "P1IZ2T2",
+                "P2IDL",
+                "P2IDC1P",
+                "P2IDC1N",
+                "P2IDC2P",
+                "P2IDC2N",
+                "P2ICN",
+                "P2IAN",
+                "P2IZT1",
+                "P2IZ1T11",
+                "P2IZ1T12",
+                "P2IZ1T2",
+                "P2IZ2T1",
+                "P2IZ2T2",
+                "P1INBS",
+                "P2INBS",
+                "INBGS",
+                "IDEE1",
+                "IDEE2"
             ]
         },
         {
             "Name": "ConverterTransformer1",
             "DisplayName": "换流变1",
+            "Transpose": true,
             "AnalogData": [
                 {
                     "DisplayName": "UAC_L1",
@@ -1671,6 +1733,29 @@
                 "P2CPR2A",
                 "P2CPR2B",
                 "P2CPR2C"
+            ],
+            "AnalogName": [
+                "UAC_L1",
+                "UAC_L2",
+                "UAC_L3",
+                "IVY_L1",
+                "IVY_L2",
+                "IVY_L3",
+                "IVD1_L1",
+                "IVD1_L2",
+                "IVD1_L3",
+                "IVD0_L1",
+                "IVD0_L2",
+                "IVD0_L3",
+                "UVY_L1",
+                "UVY_L2",
+                "UVY_L3",
+                "UVD1_L1",
+                "UVD1_L2",
+                "UVD1_L3",
+                "UVD0_L1",
+                "UVD0_L2",
+                "UVD0_L3"
             ]
         }
     ],
@@ -1710,7 +1795,7 @@
                 {
                     "Name": "ConverterTransformer2",
                     "Type": "OrthogonalData"
-                },
+                }
             ]
         }
     ]

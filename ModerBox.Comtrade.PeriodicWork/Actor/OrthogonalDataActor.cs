@@ -1,4 +1,5 @@
 ﻿using Akka.Actor;
+using ModerBox.Common;
 using ModerBox.Comtrade.PeriodicWork.Protocol;
 
 namespace ModerBox.Comtrade.PeriodicWork.Actor
@@ -7,16 +8,18 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor
     {
 
         public int DeviceCount { get; set; }
-        public int FinishedDeviceCount { get; set; } = 0;
+        public DynamicTable<double> Data { get; set; } = new DynamicTable<double>();
+        public OrthogonalDataItem OrthogonalDataItem { get; set; }
+        public IActorRef Parent { get; set; }
 
         public OrthogonalDataActor()
         {
-            Receive<OrthogonalDataProtocol>(s => {
+            Receive<OrthogonalDataSenderProtocol>(s => {
                 PreProcessing(s.FolderPath, s.OrthogonalData);
+                Parent = Sender;
+                OrthogonalDataItem = s.OrthogonalData;
             });
-            Receive<GetAnalogFromFileReceiverProtocol>(s => {
-                
-            });
+            Receive<GetAnalogFromFileReceiverProtocol>(Processing);
         }
 
         public void PreProcessing(string FolderPath, OrthogonalDataItem orthogonalDataItem)
@@ -36,7 +39,16 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor
         }
 
         public void Processing(GetAnalogFromFileReceiverProtocol receiverProtocol) {
-            
+            foreach (var e in receiverProtocol.AnalogInfosMax) {
+                Data.InsertData(e.Key, receiverProtocol.Sender.DeviceName, e.Value);
+            }
+            if (Data.CountCol() == DeviceCount) {
+                var recv = new OrthogonalDataReceiverProtocol() {
+                    Data = Data,
+                    OrthogonalData = OrthogonalDataItem,
+                };
+                Parent.Tell(recv);
+            }
         }
     }
 }

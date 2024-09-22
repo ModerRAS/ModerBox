@@ -12,16 +12,23 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor {
         public ComtradeReaderActor() {
             Receive<GetAnalogFromFileSenderProtocol>(Processing);
         }
-        public async void Processing(GetAnalogFromFileSenderProtocol senderProtocol) {
+        public void Processing(GetAnalogFromFileSenderProtocol senderProtocol) {
+            // 计算文件名
             var FileNameFilter = senderProtocol.WithPole 
                 ? Util.GetFilenameKeywordWithPole(senderProtocol.DeviceName) 
                 : Util.GetFilenameKeyword(senderProtocol.DeviceName);
+            // 根据过滤器过滤文件
             var files = FileHelper.FilterFiles(senderProtocol.FolderPath, new List<string> { FileNameFilter, senderProtocol.Child });
+            // 获取文件中以cfg结尾的文件
             var file = (from e in files
-                       where e.EndsWith(".cfg")
+                       where e.ToLower().EndsWith(".cfg")
                        select e).FirstOrDefault();
-            var comtradeInfo = await Comtrade.ReadComtradeCFG(file);
-            await Comtrade.ReadComtradeDAT(comtradeInfo);
+            // 读取波形
+            var comtradeInfoTask = Comtrade.ReadComtradeCFG(file);
+            comtradeInfoTask.Wait();
+            var comtradeInfo = comtradeInfoTask.Result;
+            Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
+            // 根据要求筛选波形
             var matchedObjects = from a in comtradeInfo.AData
                                  join b in senderProtocol.AnalogName on a.Name equals b
                                  select (b, a);
@@ -33,6 +40,7 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor {
             foreach (var matchedObject in matchedObjects) {
                 sendMaxDict.Add(matchedObject.b, MathHelper.GetMax(matchedObject.a.Data));
             }
+            // 构造返回协议，包含所需的波形和它的最大值
             var receive = new GetAnalogFromFileReceiverProtocol() {
                 AnalogInfos = sendDict,
                 AnalogInfosMax = sendMaxDict,
