@@ -29,6 +29,20 @@ namespace ModerBox.Common {
             colKeys.Add(colKey);
         }
 
+        public int CountRow() {
+            return table.Count;
+        }
+
+        public int CountCol() {
+            var max = 0;
+            foreach (var e in table) {
+                if (e.Value.Count > max) {
+                    max = e.Value.Count;
+                }
+            }
+            return max;
+        }
+
         // 获取指定位置的数据
         public T GetData(string rowKey, string colKey) {
             if (table.ContainsKey(rowKey) && table[rowKey].ContainsKey(colKey)) {
@@ -81,7 +95,7 @@ namespace ModerBox.Common {
             int colIndex = 2;
 
             // 写入列标题
-            foreach (var col in colKeys) {
+            foreach (var col in colKeys.OrderBy(s => s)) {
                 worksheet.Cell(1, colIndex).Value = col;
                 colIndex++;
             }
@@ -122,6 +136,87 @@ namespace ModerBox.Common {
                 rowIndex++;
             }
         }
-    }
 
+        // 将数据导出到新的Excel文件，带有转置和排序功能
+        public void ExportToExcel(string filePath, bool transpose = false, List<string> rowOrder = null, List<string> colOrder = null) {
+            using (var workbook = new XLWorkbook()) {
+                ExportToWorksheet(workbook, "TableData", transpose, rowOrder, colOrder);
+                workbook.SaveAs(filePath);
+            }
+        }
+
+        // 重载：将数据导出到指定的Workbook和工作表，带有转置和排序功能
+        public void ExportToExcel(XLWorkbook workbook, string sheetName, bool transpose = false, List<string> rowOrder = null, List<string> colOrder = null) {
+            ExportToWorksheet(workbook, sheetName, transpose, rowOrder, colOrder);
+        }
+
+        // 实际导出数据到工作表的方法
+        private void ExportToWorksheet(XLWorkbook workbook, string sheetName, bool transpose = false, List<string> rowOrder = null, List<string> colOrder = null) {
+            var worksheet = workbook.Worksheets.Add(sheetName);
+
+            // 根据是否转置来决定行和列的顺序
+            var rows = transpose ? colKeys : rowKeys;
+            var cols = transpose ? rowKeys : colKeys;
+
+            // 如果提供了自定义的排序顺序，按照排序顺序导出
+            if (rowOrder != null) {
+                rows = new HashSet<string>(rowOrder.Where(rowKeys.Contains));
+            }
+            if (colOrder != null) {
+                cols = new HashSet<string>(colOrder.Where(colKeys.Contains));
+            }
+
+            int rowIndex = 1;
+            int colIndex = 2;
+
+            // 写入列标题
+            foreach (var col in cols) {
+                worksheet.Cell(1, colIndex).Value = col;
+                colIndex++;
+            }
+
+            rowIndex = 2;
+
+            // 写入行标题和数据
+            foreach (var row in rows) {
+                worksheet.Cell(rowIndex, 1).Value = row;
+                colIndex = 2;
+                foreach (var col in cols) {
+                    // 判断是正常导出还是转置导出
+                    string actualRow = transpose ? col : row;
+                    string actualCol = transpose ? row : col;
+
+                    if (table.ContainsKey(actualRow) && table[actualRow].ContainsKey(actualCol)) {
+                        T value = table[actualRow][actualCol];
+                        // 使用 typeof 和 switch 处理不同类型
+                        switch (value) {
+                            case int intValue:
+                                worksheet.Cell(rowIndex, colIndex).Value = intValue;
+                                break;
+                            case double doubleValue:
+                                worksheet.Cell(rowIndex, colIndex).Value = doubleValue;
+                                break;
+                            case string stringValue:
+                                worksheet.Cell(rowIndex, colIndex).Value = stringValue;
+                                break;
+                            case DateTime dateTimeValue:
+                                worksheet.Cell(rowIndex, colIndex).Value = dateTimeValue;
+                                break;
+                            case null:
+                                worksheet.Cell(rowIndex, colIndex).Value = string.Empty;
+                                break;
+                            default:
+                                worksheet.Cell(rowIndex, colIndex).Value = value?.ToString();
+                                break;
+                        }
+                    }
+                    colIndex++;
+                }
+                rowIndex++;
+            }
+
+
+        }
+
+    }
 }
