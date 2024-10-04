@@ -28,6 +28,9 @@
 			<TabItem Header="滤波器分合闸波形检测">
 				<view:FilterWaveformSwitchInterval></view:FilterWaveformSwitchInterval>
 			</TabItem>
+			<TabItem Header="内置录波定期工作">
+				<view:PeriodicWork></view:PeriodicWork>
+			</TabItem>
 		</TabControl>
 		
 	</StackPanel>
