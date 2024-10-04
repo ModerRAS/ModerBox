@@ -155,22 +155,22 @@ namespace ModerBox.Common {
             var worksheet = workbook.Worksheets.Add(sheetName);
 
             // 根据是否转置来决定行和列的顺序
-            var rows = transpose ? colKeys : rowKeys;
-            var cols = transpose ? rowKeys : colKeys;
+            var rows = new List<string>();
+            var cols = new List<string>();
 
             // 如果提供了自定义的排序顺序，按照排序顺序导出
             if (rowOrder != null) {
-                rows = new HashSet<string>(rowOrder.Where(rowKeys.Contains));
+                rows = rowOrder;
             }
             if (colOrder != null) {
-                cols = new HashSet<string>(colOrder.Where(colKeys.Contains));
+                cols = colOrder;
             }
 
             int rowIndex = 1;
             int colIndex = 2;
 
             // 写入列标题
-            foreach (var col in cols) {
+            foreach (var col in transpose ? rows : cols) {
                 worksheet.Cell(1, colIndex).Value = col;
                 colIndex++;
             }
@@ -178,16 +178,13 @@ namespace ModerBox.Common {
             rowIndex = 2;
 
             // 写入行标题和数据
-            foreach (var row in rows) {
+            foreach (var row in transpose ? cols : rows) {
                 worksheet.Cell(rowIndex, 1).Value = row;
                 colIndex = 2;
-                foreach (var col in cols) {
-                    // 判断是正常导出还是转置导出
-                    string actualRow = transpose ? col : row;
-                    string actualCol = transpose ? row : col;
+                foreach (var col in transpose ? rows : cols) {
 
-                    if (table.ContainsKey(actualRow) && table[actualRow].ContainsKey(actualCol)) {
-                        T value = table[actualRow][actualCol];
+                    if (table.ContainsKey(transpose ? col : row) && table[transpose ? col : row].ContainsKey(transpose ? row : col)) {
+                        T value = table[transpose ? col : row][transpose ? row : col];
                         // 使用 typeof 和 switch 处理不同类型
                         switch (value) {
                             case int intValue:

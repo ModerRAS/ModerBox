@@ -64,8 +64,8 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor {
                 XLWorkbook,
                 receiverProtocol.OrthogonalData.DisplayName,
                 receiverProtocol.OrthogonalData.Transpose,
-                receiverProtocol.OrthogonalData.DeviceName,
-                receiverProtocol.OrthogonalData.AnalogName
+                receiverProtocol.OrthogonalData.AnalogName,
+                receiverProtocol.OrthogonalData.DeviceName
                 );
             FinishedActorsCount++;
 
@@ -83,8 +83,8 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor {
                 XLWorkbook, 
                 receiverProtocol.NonOrthogonalData.DisplayName,
                 receiverProtocol.NonOrthogonalData.Transpose,
-                receiverProtocol.NonOrthogonalData.DeviceName,
-                receiverProtocol.NonOrthogonalData.AnalogName
+                receiverProtocol.NonOrthogonalData.AnalogName,
+                receiverProtocol.NonOrthogonalData.DeviceName
                 );
             FinishedActorsCount++;
 
