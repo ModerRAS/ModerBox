@@ -48,7 +48,7 @@ namespace ModerBox.Common {
             if (table.ContainsKey(rowKey) && table[rowKey].ContainsKey(colKey)) {
                 return table[rowKey][colKey];
             }
-            return default(T); // 如果没有数据，返回默认值
+            return default; // 如果没有数据，返回默认值
         }
 
         // 输出表格
