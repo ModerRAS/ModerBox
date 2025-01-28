@@ -155,8 +155,8 @@ namespace ModerBox.Common {
             var worksheet = workbook.Worksheets.Add(sheetName);
 
             // 根据是否转置来决定行和列的顺序
-            var rows = new List<string>();
-            var cols = new List<string>();
+            var rows = rowKeys.ToList();
+            var cols = colKeys.ToList();
 
             // 如果提供了自定义的排序顺序，按照排序顺序导出
             if (rowOrder != null) {
