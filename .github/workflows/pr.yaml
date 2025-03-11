@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - master
-
 jobs:
   build-and-test:
     runs-on: windows-latest
@@ -31,7 +30,7 @@ jobs:
 
       - name: Generate Coverage Report
         run: |
-          reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coverage-report -reporttypes:HtmlInline_AzurePipelines
+          reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coverage-report -reporttypes:HtmlInline_AzurePipelines,Cobertura
 
       - name: Upload Coverage Report as Artifact
         uses: actions/upload-artifact@v4
@@ -40,9 +39,12 @@ jobs:
           path: coverage-report
 
       - name: Check Coverage Threshold
+        id: check-coverage
         run: |
           $COVERAGE = Select-String -Path coverage-report/Cobertura.xml -Pattern 'line-rate="([0-9.]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
           $THRESHOLD = 0.8  # 80% minimum coverage
+          echo "coverage=$COVERAGE" >> $GITHUB_ENV
+          echo "::set-output name=coverage::$COVERAGE"
           if ([double]$COVERAGE -lt $THRESHOLD) {
             echo "::error::Code coverage ($COVERAGE) is below the required threshold ($THRESHOLD)."
             exit 1
@@ -53,7 +55,7 @@ jobs:
         with:
           message: |
             ✅ **Code Coverage Report**
-            - **Coverage Threshold:** 80%
+            - **Minimum Required Coverage:** 80%
             - **Current Coverage:** ${{ steps.check-coverage.outputs.coverage }}%
             
             📄 **[View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})**
