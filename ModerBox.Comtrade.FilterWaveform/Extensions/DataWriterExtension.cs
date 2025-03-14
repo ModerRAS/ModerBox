@@ -1,13 +1,18 @@
 ﻿using ModerBox.Common;
+using ModerBox.Comtrade.FilterWaveform.Enums;
+using ModerBox.Comtrade.FilterWaveform.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Comtrade.FilterWaveform {
-    public static class DataWriterExtension {
-        public static void WriteACFilterWaveformSwitchIntervalData(this DataWriter dataWriter, List<ACFilterSheetSpec> data, string SheetName) {
+namespace ModerBox.Comtrade.FilterWaveform.Extensions
+{
+    public static class DataWriterExtension
+    {
+        public static void WriteACFilterWaveformSwitchIntervalData(this DataWriter dataWriter, List<ACFilterSheetSpec> data, string SheetName)
+        {
             var total = new List<List<string>>() {
                 new List<string>() {
                     "名称",
@@ -22,7 +27,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
             total.AddRange(data
                 .OrderBy(o => o.Time)
                 .ThenBy(o => o.Name)
-                .Select(d => {
+                .Select(d =>
+                {
                     return new List<string>() {
                     d.Name,
                     d.Time.ToString("yyyy/MM/dd HH:mm:ss.fff"),
