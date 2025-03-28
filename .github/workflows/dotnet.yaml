@@ -50,4 +50,4 @@ jobs:
       shell: pwsh
       run: |
         $env:MINIO_SERVER = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
-        vpk upload s3 --bucket moderbox --endpoint $env:MINIO_SERVER --keyId $env:MINIO_ACCESS_KEY --secret $env:MINIO_SECRET_KEY
+        vpk upload s3 --channel nightly-win-x64 --bucket moderbox --endpoint $env:MINIO_SERVER --keyId $env:MINIO_ACCESS_KEY --secret $env:MINIO_SECRET_KEY
