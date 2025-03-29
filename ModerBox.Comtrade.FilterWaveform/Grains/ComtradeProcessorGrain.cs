@@ -15,8 +15,10 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains {
         public List<ACFilter> ACFilterData { get; set; }
         public ComtradeInfo comtradeInfo { get; set; }
         public ACFilterSheetSpec retData { get; set; }
+        public Guid Guid { get; set; }
         public async Task Init(List<ACFilter> ACFilterData) {
             this.ACFilterData = ACFilterData;
+            Guid = Guid.NewGuid();
         }
         public async Task<FilterSwitchingTimeDTO> ProcessSwitchingTime() {
             var matchedObjects = from a in comtradeInfo.DData.AsParallel()
@@ -25,7 +27,8 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains {
             var TimeUnit = comtradeInfo.Samp / 1000;
             foreach (var obj in matchedObjects) {
                 if (obj.a.IsTR) {
-                    var analyzer = GrainFactory.GetGrain<FilterSwitchingTimeAnalyzerGrain>(Guid.NewGuid());
+                    Console.WriteLine();
+                    var analyzer = GrainFactory.GetGrain<IFilterSwitchingTimeAnalyzerGrain>(Guid);
                     await analyzer.Init(comtradeInfo);
                     var switchingTime = await analyzer.Analyzer(obj.a, obj.b);
                     switchingTime.DigitalInfo = obj.a;
@@ -33,7 +36,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains {
                     return switchingTime;
                 }
             }
-            return null;
+            throw new FileNotFoundException();
         }
 
         public async Task<FilterSwitchingTimeDTO> ProcessVoltageZeroTime() {
@@ -46,12 +49,13 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains {
         public async Task<ACFilterSheetSpec> Process(string cfgPath) {
             try {
                 retData = new ACFilterSheetSpec();
-                var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
+                comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
                 await Comtrade.ReadComtradeDAT(comtradeInfo);
+                retData.Time = comtradeInfo.dt1;
                 var filterSwitching = await ProcessSwitchingTime();
                 retData = retData.MergeFilterSwitchingTimeDTO(filterSwitching);
                 var plotData = comtradeInfo.ClipComtradeWithFilters(filterSwitching.ACFilter, retData);
-                var plot = GrainFactory.GetGrain<PlotGrain>(Guid.NewGuid());
+                var plot = GrainFactory.GetGrain<IPlotGrain>(Guid);
                 await plot.Init(ACFilterData);
                 retData.SignalPicture = await plot.Process(plotData);
                 return retData;
