@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Numerics;
 
-namespace ModerBox.Comtrade {
+namespace ModerBox.Comtrade.Harmonic {
     public class Harmonic {
         public ComtradeInfo comtradeInfo { get; set; }
         public List<HarmonicData> Datas { get; set; } = new List<HarmonicData>();

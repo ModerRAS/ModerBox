@@ -40,8 +40,8 @@
   <ItemGroup>
     <ProjectReference Include="..\ModerBox.Common\ModerBox.Common.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.Harmonic\ModerBox.Comtrade.Harmonic.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade.PeriodicWork\ModerBox.Comtrade.PeriodicWork.csproj" />
-    <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
   </ItemGroup>
 
   <ItemGroup>

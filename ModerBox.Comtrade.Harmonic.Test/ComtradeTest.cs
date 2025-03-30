@@ -1,7 +1,7 @@
 using ModerBox.Common;
 using System.Diagnostics;
 
-namespace ModerBox.Comtrade.Test {
+namespace ModerBox.Comtrade.Harmonic.Test {
     [TestClass]
     public class ComtradeTest {
         [TestMethod]
