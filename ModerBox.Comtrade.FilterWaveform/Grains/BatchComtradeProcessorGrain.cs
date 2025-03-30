@@ -3,6 +3,7 @@ using ModerBox.Comtrade.FilterWaveform.Interfaces;
 using ModerBox.Comtrade.FilterWaveform.Models;
 using ModerBox.Comtrade.FilterWaveform.Services;
 using Newtonsoft.Json;
+using Orleans.Concurrency;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform.Grains {
+    [StatelessWorker]
     public class BatchComtradeProcessorGrain : Grain, IBatchComtradeProcessorGrain {
 
         public PlotService PlotService { get; set; }
