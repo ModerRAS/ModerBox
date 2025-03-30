@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Comtrade.Test {
+namespace ModerBox.Comtrade.Harmonic.Test {
     [TestClass]
     public class TestHarmonic {
         [TestMethod]

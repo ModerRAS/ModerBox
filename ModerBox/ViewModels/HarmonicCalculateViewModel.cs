@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using ModerBox.Common;
-using ModerBox.Comtrade;
+using ModerBox.Comtrade.Harmonic;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;

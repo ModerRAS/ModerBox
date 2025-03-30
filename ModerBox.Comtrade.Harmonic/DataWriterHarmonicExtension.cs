@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Comtrade {
+namespace ModerBox.Comtrade.Harmonic {
     public static class DataWriterHarmonicExtension {
         public static void WriteHarmonicData(this DataWriter dataWriter, List<HarmonicData> data, string SheetName) {
             var total = new List<List<string>>() {

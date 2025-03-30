@@ -1,4 +1,4 @@
-﻿namespace ModerBox.Comtrade {
+﻿namespace ModerBox.Comtrade.Harmonic {
     public class Util {
         public static IEnumerable<double[]> ChunkArray(double[] array, int chunkSize) {
             return array

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Comtrade {
+namespace ModerBox.Comtrade.Harmonic {
     public class HarmonicData {
         public DateTime Time { get; set; }
         public string Name { get; set; }
