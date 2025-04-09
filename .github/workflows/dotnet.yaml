@@ -50,6 +50,5 @@ jobs:
       shell: pwsh
       run: |
         $env:MINIO_SERVER = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
-        Write-Host "MINIO_SERVER=$env:MINIO_SERVER"
         mc alias set myminio $env:MINIO_SERVER $env:MINIO_ACCESS_KEY $env:MINIO_SECRET_KEY
         mc cp --recursive Releases\ myminio/moderbox/
