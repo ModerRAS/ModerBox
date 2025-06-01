@@ -72,8 +72,11 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor
                                   where s.DataNames.Any(l => l.Equals(e.Key))
                                   select s.DisplayName).FirstOrDefault();
 
-                Data.InsertData(DisplayName, receiverProtocol.Sender.DeviceName, e.Value);
+                if (!string.IsNullOrEmpty(DisplayName)) {
+                    Data.InsertData(DisplayName, receiverProtocol.Sender.DeviceName, e.Value);
+                }
             }
+            
             if (++FinishedCount == Actors.Count) {
                 var recv = new NonOrthogonalDataReceiverProtocol() {
                     Data = Data,
