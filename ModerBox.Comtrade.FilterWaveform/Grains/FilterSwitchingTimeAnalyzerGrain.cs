@@ -3,7 +3,6 @@ using ModerBox.Comtrade.FilterWaveform.Extensions;
 using ModerBox.Comtrade.FilterWaveform.Interfaces;
 using ModerBox.Comtrade.FilterWaveform.Models;
 using Orleans;
-using Orleans.Concurrency;
 using ScottPlot.TickGenerators;
 using System;
 using System.Collections.Generic;
@@ -13,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform.Grains
 {
-    [StatelessWorker]
     public class FilterSwitchingTimeAnalyzerGrain : Grain, IFilterSwitchingTimeAnalyzerGrain {
         public ComtradeInfo comtradeInfo { get; set; }
         public double TimeUnit { get; set; }
