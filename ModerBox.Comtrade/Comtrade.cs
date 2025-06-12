@@ -96,49 +96,25 @@ namespace ModerBox.Comtrade {
                 using StreamReader streamReader = new StreamReader(text, Encoding.Default);
                 for (int i = 0; i < fI.EndSamp; i++) {
                     string text2 = await streamReader.ReadLineAsync();
-                    string[] array2 = new string[] { ",", " ", "\t" };
-                    string[] array3 = text2.Split(array2, StringSplitOptions.RemoveEmptyEntries);
-                    for (int j = 0; j < fI.AnalogCount; j++) {
-                        AnalogInfo analogInfo = fI.AData[j];
-                        double num = double.Parse(array3[j + 2]) * analogInfo.Mul + analogInfo.Add;
-                        if (i == 0) {
-                            array[j] = num;
-                            analogInfo.Data[i] = num;
-                            analogInfo.MaxValue = analogInfo.Data[i];
-                            analogInfo.MinValue = analogInfo.Data[i];
-                        } else {
-                            analogInfo.Data[i] = num;
-                            analogInfo.MaxValue = Math.Max(analogInfo.Data[i], analogInfo.MaxValue);
-                            analogInfo.MinValue = Math.Min(analogInfo.Data[i], analogInfo.MinValue);
-                        }
-                    }
-                    for (int k = 0; k < fI.DigitalCount; k++) {
-                        DigitalInfo digitalInfo = fI.DData[k];
-                        digitalInfo.Data[i] = int.Parse(array3[k + 2 + fI.AnalogCount]);
-                    }
+                    if (string.IsNullOrEmpty(text2)) continue;
+                    ParseAsciiLine(text2, fI, i, array);
                 }
                 //streamReader.Close();
                 return;
             }
             string text3 = Path.ChangeExtension(fI.FileName, "dat");
-            FileStream fileStream = new FileStream(text3, FileMode.Open);
-            BinaryReader binaryReader = new BinaryReader(fileStream, Encoding.Default);
-            int num3 = fI.DigitalCount / 16;
-            if (fI.DigitalCount % 16 > 0) {
-                num3 = fI.DigitalCount / 16 + 1;
-            }
-            int num4 = (8 + fI.AnalogCount * 2 + num3 * 2) * fI.EndSamp;
-            byte[] array4 = binaryReader.ReadBytes(num4);
-            binaryReader.Close();
-            fileStream.Close();
-            int num5 = 0;
+            using FileStream fileStream = new FileStream(text3, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using BinaryReader binaryReader = new BinaryReader(fileStream, Encoding.Default);
+            int num3 = (fI.DigitalCount + 15) / 16;
             for (int l = 0; l < fI.EndSamp; l++) {
-                num5 += 8;
+                if (fileStream.Position + 8 + fI.AnalogCount * 2 + num3 * 2 > fileStream.Length) {
+                    break;
+                }
+                binaryReader.ReadUInt32(); // Sample number
+                binaryReader.ReadUInt32(); // Timestamp
                 for (int m = 0; m < fI.AnalogCount; m++) {
-                    if (num5 + 2 > array4.Length) break;
                     AnalogInfo analogInfo2 = fI.AData[m];
-                    double num6 = (double)BitConverter.ToInt16(array4, num5) * analogInfo2.Mul + analogInfo2.Add;
-                    num5 += 2;
+                    double num6 = (double)binaryReader.ReadInt16() * analogInfo2.Mul + analogInfo2.Add;
                     if (l == 0) {
                         array[m] = num6;
                         analogInfo2.Data[l] = num6;
@@ -150,17 +126,77 @@ namespace ModerBox.Comtrade {
                         analogInfo2.MinValue = Math.Min(analogInfo2.Data[l], analogInfo2.MinValue);
                     }
                 }
-                int num8 = 0;
-                for (int n = 0; n < fI.DigitalCount; n++) {
-                    if (num5 + 2 > array4.Length) break;
-                    ushort num9 = BitConverter.ToUInt16(array4, num5);
-                    DigitalInfo digitalInfo2 = fI.DData[n];
-                    digitalInfo2.Data[l] = (num9 >> num8) & 1;
-                    num8++;
-                    if (num8 == 16 || n == fI.DigitalCount - 1) {
-                        num5 += 2;
-                        num8 = 0;
+                for (int word = 0; word < num3; word++) {
+                    ushort digitalValues = binaryReader.ReadUInt16();
+                    for (int bit = 0; bit < 16; bit++) {
+                        int n = word * 16 + bit;
+                        if (n < fI.DigitalCount) {
+                            fI.DData[n].Data[l] = (digitalValues >> bit) & 1;
+                        }
                     }
+                }
+            }
+        }
+
+        private static ReadOnlySpan<char> GetNextToken(ref ReadOnlySpan<char> span) {
+            int start = 0;
+            while (start < span.Length) {
+                char c = span[start];
+                if (c != ' ' && c != ',' && c != '\t')
+                    break;
+                start++;
+            }
+            span = span.Slice(start);
+
+            int end = 0;
+            while (end < span.Length) {
+                char c = span[end];
+                if (c == ' ' || c == ',' || c == '\t')
+                    break;
+                end++;
+            }
+
+            ReadOnlySpan<char> token = span.Slice(0, end);
+            span = span.Slice(end);
+            return token;
+        }
+
+        private static void ParseAsciiLine(string line, ComtradeInfo fI, int sampleIndex, double[] firstSampleAnalogValues) {
+            ReadOnlySpan<char> span = line.AsSpan();
+
+            // Skip sample number
+            GetNextToken(ref span);
+
+            // Skip timestamp
+            GetNextToken(ref span);
+
+            // Parse analog values
+            for (int j = 0; j < fI.AnalogCount; j++) {
+                ReadOnlySpan<char> valueSpan = GetNextToken(ref span);
+                if (valueSpan.IsEmpty) return; // End of line or malformed
+
+                if (double.TryParse(valueSpan, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsedValue)) {
+                    AnalogInfo analogInfo = fI.AData[j];
+                    double num = parsedValue * analogInfo.Mul + analogInfo.Add;
+                    analogInfo.Data[sampleIndex] = num;
+                    if (sampleIndex == 0) {
+                        firstSampleAnalogValues[j] = num;
+                        analogInfo.MaxValue = num;
+                        analogInfo.MinValue = num;
+                    } else {
+                        analogInfo.MaxValue = Math.Max(num, analogInfo.MaxValue);
+                        analogInfo.MinValue = Math.Min(num, analogInfo.MinValue);
+                    }
+                }
+            }
+
+            // Parse digital values
+            for (int k = 0; k < fI.DigitalCount; k++) {
+                ReadOnlySpan<char> valueSpan = GetNextToken(ref span);
+                if (valueSpan.IsEmpty) return; // End of line or malformed
+
+                if (int.TryParse(valueSpan, out int parsedValue)) {
+                    fI.DData[k].Data[sampleIndex] = parsedValue;
                 }
             }
         }
