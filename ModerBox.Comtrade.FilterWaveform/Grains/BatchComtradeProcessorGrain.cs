@@ -48,7 +48,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains {
                 //}).ToList();
                 var AllData = new List<ACFilterSheetSpec>();
                 foreach (var e in AllDataPath) {
-                    var grain = GrainFactory.GetGrain<IComtradeProcessorGrain>(Guid.NewGuid());
+                    var grain = GrainFactory.GetGrain<ComtradeProcessorGrain>(Guid.NewGuid());
                     var PerData = await grain.Process(e);
                     _observer?.Notify(count++);
                     if (PerData is not null) {
