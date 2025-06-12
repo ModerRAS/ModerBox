@@ -34,6 +34,18 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// </summary>
         public double PhaseCTimeInterval { get; set; }
         /// <summary>
+        /// 获取或设置A相在合闸时，电流出现点与最近电压过零点的时间差（单位：毫秒）。
+        /// </summary>
+        public double PhaseAVoltageZeroCrossingDiff { get; set; }
+        /// <summary>
+        /// 获取或设置B相在合闸时，电流出现点与最近电压过零点的时间差（单位：毫秒）。
+        /// </summary>
+        public double PhaseBVoltageZeroCrossingDiff { get; set; }
+        /// <summary>
+        /// 获取或设置C相在合闸时，电流出现点与最近电压过零点的时间差（单位：毫秒）。
+        /// </summary>
+        public double PhaseCVoltageZeroCrossingDiff { get; set; }
+        /// <summary>
         /// 获取或设置工作状态（正常或异常）。
         /// </summary>
         public WorkType WorkType { get; set; }

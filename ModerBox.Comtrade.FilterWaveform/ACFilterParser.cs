@@ -110,21 +110,54 @@ namespace ModerBox.Comtrade.FilterWaveform {
                             retData.SwitchType = SwitchType.Open;
                         }
                         if (retData.SwitchType == SwitchType.Close) {
+                            // 【保留】原有的合闸时间计算逻辑
                             if (UseSlidingWindowAlgorithm) {
-                                //【新】合闸就要分闸消失到电流出现
                                 Parallel.Invoke(
                                     () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
                                     () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit,
                                     () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit
                                     );
                             } else {
-                                //【旧】合闸就要分闸消失到电流出现
                                 Parallel.Invoke(
                                     () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
                                     () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit,
                                     () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit
                                     );
                             }
+
+                            // 【新增】电压过零点与电流出现点的时间差计算
+                            var voltageZeroCrossingAction = new Action(() => {
+                                // A相
+                                var currentStartA = UseSlidingWindowAlgorithm ? comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(obj.b.PhaseACurrentWave) : comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseACurrentWave)?.DetectCurrentStartIndex() ?? 0;
+                                if (currentStartA > 0) {
+                                    var voltageZeroCrossingsA = comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseAVoltageWave)?.DetectVoltageZeroCrossings();
+                                    if (voltageZeroCrossingsA != null && voltageZeroCrossingsA.Any()) {
+                                        var nearestZCA = voltageZeroCrossingsA.OrderBy(z => Math.Abs(z - currentStartA)).First();
+                                        retData.PhaseAVoltageZeroCrossingDiff = (currentStartA - nearestZCA) / TimeUnit;
+                                    }
+                                }
+
+                                // B相
+                                var currentStartB = UseSlidingWindowAlgorithm ? comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(obj.b.PhaseBCurrentWave) : comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseBCurrentWave)?.DetectCurrentStartIndex() ?? 0;
+                                if (currentStartB > 0) {
+                                    var voltageZeroCrossingsB = comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseBVoltageWave)?.DetectVoltageZeroCrossings();
+                                    if (voltageZeroCrossingsB != null && voltageZeroCrossingsB.Any()) {
+                                        var nearestZCB = voltageZeroCrossingsB.OrderBy(z => Math.Abs(z - currentStartB)).First();
+                                        retData.PhaseBVoltageZeroCrossingDiff = (currentStartB - nearestZCB) / TimeUnit;
+                                    }
+                                }
+
+                                // C相
+                                var currentStartC = UseSlidingWindowAlgorithm ? comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(obj.b.PhaseCCurrentWave) : comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseCCurrentWave)?.DetectCurrentStartIndex() ?? 0;
+                                if (currentStartC > 0) {
+                                    var voltageZeroCrossingsC = comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseCVoltageWave)?.DetectVoltageZeroCrossings();
+                                    if (voltageZeroCrossingsC != null && voltageZeroCrossingsC.Any()) {
+                                        var nearestZCC = voltageZeroCrossingsC.OrderBy(z => Math.Abs(z - currentStartC)).First();
+                                        retData.PhaseCVoltageZeroCrossingDiff = (currentStartC - nearestZCC) / TimeUnit;
+                                    }
+                                }
+                            });
+                            voltageZeroCrossingAction.Invoke();
                         } else {
                             if (UseSlidingWindowAlgorithm) {
                                 //【新】分闸就要合闸消失到电流消失
