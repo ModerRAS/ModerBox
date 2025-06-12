@@ -189,6 +189,40 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         /// <summary>
+        /// 【新算法】计算合闸时间间隔，即从分闸指令到电流出现（使用滑动窗口算法）的采样点数。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="PhaseSwitchOpen">分闸开关信号的通道名称。</param>
+        /// <param name="PhaseCurrentWave">相应相的电流波形通道名称。</param>
+        /// <returns>时间间隔对应的采样点数。如果任一信号未找到或无效，则返回0。</returns>
+        public static int SwitchCloseTimeIntervalWithSlidingWindow(this ComtradeInfo comtradeInfo, string PhaseSwitchOpen, string PhaseCurrentWave) {
+            var phaseA = comtradeInfo.DData.GetACFilterDigital(PhaseSwitchOpen);
+            if (phaseA is null) return 0;
+            var first = phaseA.GetFirstChangePoint();
+            var startIndex = comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(PhaseCurrentWave);
+            if (first <= 0 || startIndex <= 0) return 0;
+            var timeTick = startIndex - first;
+            return timeTick;
+        }
+
+        /// <summary>
+        /// 【新算法】计算分闸时间间隔，即从合闸指令到电流消失（使用滑动窗口算法）的采样点数。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="PhaseSwitchClose">合闸开关信号的通道名称。</param>
+        /// <param name="PhaseCurrentWave">相应相的电流波形通道名称。</param>
+        /// <returns>时间间隔对应的采样点数。如果任一信号未找到或无效，则返回0。</returns>
+        public static int SwitchOpenTimeIntervalWithSlidingWindow(this ComtradeInfo comtradeInfo, string PhaseSwitchClose, string PhaseCurrentWave) {
+            var phaseA = comtradeInfo.DData.GetACFilterDigital(PhaseSwitchClose);
+            if (phaseA is null) return 0;
+            var first = phaseA.GetFirstChangePoint();
+            var startIndex = comtradeInfo.DetectCurrentStopIndexWithSlidingWindow(PhaseCurrentWave);
+            if (first <= 0 || startIndex <= 0) return 0;
+            var timeTick = startIndex - first;
+            return timeTick;
+        }
+
+        /// <summary>
         /// 根据起始和结束索引，裁剪指定的多个数字通道数据。
         /// </summary>
         /// <param name="comtradeInfo">COMTRADE数据对象。</param>
@@ -297,6 +331,110 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     aCFilter.PhaseCVoltageWave
                 }, startIndex, endIndex)
             };
+        }
+
+        /// <summary>
+        /// 【新算法】使用滑动窗口标准差算法，检测并返回电流消失（变为零）的采样点索引。
+        /// 此方法比基于单点阈值的方法更鲁棒，因为它分析的是波形的波动性而不是瞬时值。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象，包含采样率信息。</param>
+        /// <param name="channelName">要分析的模拟电流通道的名称。</param>
+        /// <returns>电流消失点的索引；如果未检测到，则返回-1。</returns>
+        public static int DetectCurrentStopIndexWithSlidingWindow(this ComtradeInfo comtradeInfo, string channelName) {
+            var analogInfo = comtradeInfo.AData.GetACFilterAnalog(channelName);
+            if (analogInfo is null || analogInfo.Data.Length == 0) {
+                return 0;
+            }
+
+            var samplingRate = comtradeInfo.Samp;
+            if (samplingRate <= 0) {
+                return -1;
+            }
+
+            var waveform = analogInfo.Data;
+            int windowSize = (int)(samplingRate / 50.0);
+            if (windowSize < 20) windowSize = 20;
+
+            const double StdDevThreshold = 0.1;
+
+            if (waveform.Length < windowSize) {
+                return -1;
+            }
+
+            for (int i = 0; i < waveform.Length - windowSize; i++) {
+                var window = new ReadOnlySpan<double>(waveform, i, windowSize);
+                if (CalculateStandardDeviation(window) < StdDevThreshold) {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// 【新算法】使用滑动窗口标准差算法，检测并返回电流出现（从零变为非零）的采样点索引。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象，包含采样率信息。</param>
+        /// <param name="channelName">要分析的模拟电流通道的名称。</param>
+        /// <returns>电流出现点的索引；如果未检测到，则返回-1。</returns>
+        public static int DetectCurrentStartIndexWithSlidingWindow(this ComtradeInfo comtradeInfo, string channelName) {
+            var analogInfo = comtradeInfo.AData.GetACFilterAnalog(channelName);
+            if (analogInfo is null || analogInfo.Data.Length == 0) {
+                return 0;
+            }
+
+            var samplingRate = comtradeInfo.Samp;
+            if (samplingRate <= 0) {
+                return -1;
+            }
+
+            var waveform = analogInfo.Data;
+            int windowSize = (int)(samplingRate / 50.0);
+            if (windowSize < 20) windowSize = 20;
+
+            const double StdDevThreshold = 0.1;
+
+            if (waveform.Length < windowSize) {
+                return -1;
+            }
+
+            for (int i = 0; i < waveform.Length - windowSize; i++) {
+                var window = new ReadOnlySpan<double>(waveform, i, windowSize);
+                if (CalculateStandardDeviation(window) > StdDevThreshold) {
+                    for (int j = i; j > 0; j--) {
+                        if (Math.Abs(waveform[j]) < Jitter && Math.Abs(waveform[j - 1]) < Jitter) {
+                            return j;
+                        }
+                    }
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// 计算一组双精度浮点数的标准差。
+        /// </summary>
+        /// <param name="data">包含数据样本的只读跨度。</param>
+        /// <returns>数据的标准差。</returns>
+        private static double CalculateStandardDeviation(ReadOnlySpan<double> data) {
+            if (data.Length <= 1) {
+                return 0;
+            }
+
+            double sum = 0;
+            foreach (var value in data) {
+                sum += value;
+            }
+            double mean = sum / data.Length;
+
+            double sumOfSquares = 0;
+            foreach (var value in data) {
+                sumOfSquares += Math.Pow(value - mean, 2);
+            }
+
+            return Math.Sqrt(sumOfSquares / (data.Length - 1));
         }
 
     }

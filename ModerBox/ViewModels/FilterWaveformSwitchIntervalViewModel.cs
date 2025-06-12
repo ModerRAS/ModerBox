@@ -42,12 +42,19 @@ namespace ModerBox.ViewModels {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
         }
+
+        private bool _useNewAlgorithm = true;
+        public bool UseNewAlgorithm {
+            get => _useNewAlgorithm;
+            set => this.RaiseAndSetIfChanged(ref _useNewAlgorithm, value);
+        }
         public FilterWaveformSwitchIntervalViewModel() {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
             RunCalculate = ReactiveCommand.CreateFromTask(RunCalculateTask);
             ProgressMax = 100;
             Progress = 0;
+            UseNewAlgorithm = true;
         }
 
         private async Task SelectSourceTask() {
@@ -73,7 +80,7 @@ namespace ModerBox.ViewModels {
             await Task.Run(async () => {
                 try {
 
-                    var parser = new ACFilterParser(SourceFolder);
+                    var parser = new ACFilterParser(SourceFolder, UseNewAlgorithm);
                     var Data = await parser.ParseAllComtrade((_progress) => Progress = (int)(_progress * 100.0 / parser.Count));
                     var writer = new DataWriter();
                     writer.WriteACFilterWaveformSwitchIntervalData(Data, "分合闸动作时间");
