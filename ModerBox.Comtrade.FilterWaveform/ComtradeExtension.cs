@@ -5,8 +5,20 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform {
+    /// <summary>
+    /// 提供用于处理COMTRADE数据（特别是与交流滤波器相关的）的扩展方法。
+    /// </summary>
     public static class ComtradeExtension {
+        /// <summary>
+        /// 定义用于判断电流是否为零的抖动阈值。
+        /// </summary>
         public static readonly double Jitter = 0.03;
+        /// <summary>
+        /// 从数字通道列表中根据名称查找并返回指定的 <see cref="DigitalInfo"/>。
+        /// </summary>
+        /// <param name="DData">数字通道信息列表。</param>
+        /// <param name="ACFilterData">要查找的通道名称。</param>
+        /// <returns>匹配的 <see cref="DigitalInfo"/> 对象，如果未找到则返回 null。</returns>
         public static DigitalInfo GetACFilterDigital(this List<DigitalInfo> DData, string ACFilterData) {
             foreach (var a in DData) {
                 if (a.Name.Equals(ACFilterData)) {
@@ -15,14 +27,25 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
             return null;
         }
-        public static AnalogInfo GetACFilterAnalog(this List<AnalogInfo> DData, string ACFilterData) {
-            foreach (var a in DData) {
+        /// <summary>
+        /// 从模拟通道列表中根据名称查找并返回指定的 <see cref="AnalogInfo"/>。
+        /// </summary>
+        /// <param name="AData">模拟通道信息列表。</param>
+        /// <param name="ACFilterData">要查找的通道名称。</param>
+        /// <returns>匹配的 <see cref="AnalogInfo"/> 对象，如果未找到则返回 null。</returns>
+        public static AnalogInfo GetACFilterAnalog(this List<AnalogInfo> AData, string ACFilterData) {
+            foreach (var a in AData) {
                 if (a.Name.Equals(ACFilterData)) {
                     return a;
                 }
             }
             return null;
         }
+        /// <summary>
+        /// 获取数字信号首次发生变化的采样点索引。
+        /// </summary>
+        /// <param name="digitalInfo">要分析的数字通道信息。</param>
+        /// <returns>首次变化的点的索引；如果信号没有变化，则返回-1；如果输入为null，则返回0。</returns>
         public static int GetFirstChangePoint(this DigitalInfo digitalInfo) {
             if(digitalInfo is null) {
                 return 0;
@@ -36,6 +59,11 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return -1;
         }
 
+        /// <summary>
+        /// 获取数字信号总共发生变化的次数。
+        /// </summary>
+        /// <param name="digitalInfo">要分析的数字通道信息。</param>
+        /// <returns>信号变化的次数；如果输入为null，则返回0。</returns>
         public static int GetChangePointCount(this DigitalInfo digitalInfo) {
             if(digitalInfo is null) {
                 return 0;
@@ -51,6 +79,11 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return count;
         }
 
+        /// <summary>
+        /// 检测并返回电流消失（变为零）的采样点索引。
+        /// </summary>
+        /// <param name="analogInfo">要分析的模拟电流通道信息。</param>
+        /// <returns>电流消失点的索引；如果未检测到，则返回-1；如果输入为null，则返回0。</returns>
         public static int DetectCurrentStopIndex(this AnalogInfo analogInfo) {
             if(analogInfo is null) {
                 return 0;
@@ -85,6 +118,11 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return -1; // 未检测到断路器分闸点
         }
 
+        /// <summary>
+        /// 检测并返回电流出现（从零变为非零）的采样点索引。
+        /// </summary>
+        /// <param name="analogInfo">要分析的模拟电流通道信息。</param>
+        /// <returns>电流出现点的索引；如果未检测到，则返回-1；如果输入为null，则返回0。</returns>
         public static int DetectCurrentStartIndex(this AnalogInfo analogInfo) {
             if(analogInfo is null) {
                 return 0;
@@ -117,6 +155,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
             return -1; // 未检测到交流电流开始点
         }
+        /// <summary>
+        /// 计算合闸时间间隔，即从分闸指令（数字信号变化）到电流出现（模拟信号变化）的采样点数。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="PhaseSwitchOpen">分闸开关信号的通道名称。</param>
+        /// <param name="PhaseCurrentWave">相应相的电流波形通道名称。</param>
+        /// <returns>时间间隔对应的采样点数。如果任一信号未找到或无效，则返回0。</returns>
         public static int SwitchCloseTimeInterval(this ComtradeInfo comtradeInfo, string PhaseSwitchOpen, string PhaseCurrentWave) {
             var phaseA = comtradeInfo.DData.GetACFilterDigital(PhaseSwitchOpen);
             var first = phaseA.GetFirstChangePoint();
@@ -126,6 +171,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var timeTick = startIndex - first;
             return timeTick;
         }
+        /// <summary>
+        /// 计算分闸时间间隔，即从合闸指令（数字信号变化）到电流消失（模拟信号变化）的采样点数。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="PhaseSwitchClose">合闸开关信号的通道名称。</param>
+        /// <param name="PhaseCurrentWave">相应相的电流波形通道名称。</param>
+        /// <returns>时间间隔对应的采样点数。如果任一信号未找到或无效，则返回0。</returns>
         public static int SwitchOpenTimeInterval(this ComtradeInfo comtradeInfo, string PhaseSwitchClose, string PhaseCurrentWave) {
             var phaseA = comtradeInfo.DData.GetACFilterDigital(PhaseSwitchClose);
             var first = phaseA.GetFirstChangePoint();
@@ -136,6 +188,14 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return timeTick;
         }
 
+        /// <summary>
+        /// 根据起始和结束索引，裁剪指定的多个数字通道数据。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="DigitalDataNames">要裁剪的数字通道名称列表。</param>
+        /// <param name="startIndex">裁剪的起始采样点索引。</param>
+        /// <param name="endIndex">裁剪的结束采样点索引。</param>
+        /// <returns>一个包含通道名称和裁剪后数据数组的元组列表。</returns>
         public static List<(string, int[])> ClipDigitalData(this ComtradeInfo comtradeInfo, List<string> DigitalDataNames, int startIndex, int endIndex) {
             var result = new List<(string, int[])>(DigitalDataNames.Count);
             foreach (var name in DigitalDataNames) {
@@ -148,6 +208,14 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return result;
         }
 
+        /// <summary>
+        /// 根据起始和结束索引，裁剪指定的多个模拟通道数据。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="AnalogDataNames">要裁剪的模拟通道名称列表。</param>
+        /// <param name="startIndex">裁剪的起始采样点索引。</param>
+        /// <param name="endIndex">裁剪的结束采样点索引。</param>
+        /// <returns>一个包含通道名称和裁剪后数据数组的元组列表。</returns>
         public static List<(string, double[])> ClipAnalogData(this ComtradeInfo comtradeInfo, List<string> AnalogDataNames, int startIndex, int endIndex) {
             var result = new List<(string, double[])>(AnalogDataNames.Count);
             foreach (var name in AnalogDataNames) {
@@ -160,6 +228,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return result;
         }
 
+        /// <summary>
+        /// 根据滤波器配置中的开关信号，确定整个COMTRADE文件中需要关注的起始和结束采样点。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="aCFilter">交流滤波器配置。</param>
+        /// <returns>一个包含起始和结束索引的元组。</returns>
         public static (int, int) GetComtradeStartAndEnd(this ComtradeInfo comtradeInfo, ACFilter aCFilter) {
             int minChangePoint = int.MaxValue;
             int maxChangePoint = 0;
@@ -188,6 +262,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return (startIndex, endIndex);
         }
 
+        /// <summary>
+        /// 根据给定的滤波器配置，裁剪COMTRADE数据并封装为 <see cref="PlotDataDTO"/>。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="aCFilter">交流滤波器配置。</param>
+        /// <param name="aCFilterSheetSpec">分析结果规约（此参数当前未被使用，但保留以兼容未来扩展）。</param>
+        /// <returns>一个包含用于绘图的裁剪后数据的 <see cref="PlotDataDTO"/> 对象。</returns>
         public static PlotDataDTO ClipComtradeWithFilters(this ComtradeInfo comtradeInfo, ACFilter aCFilter, ACFilterSheetSpec aCFilterSheetSpec) {
 
             var (startIndex, endIndex) = comtradeInfo.GetComtradeStartAndEnd(aCFilter);

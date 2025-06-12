@@ -9,22 +9,49 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform {
+    /// <summary>
+    /// 提供解析交流滤波器COMTRADE文件的功能。
+    /// </summary>
     public class ACFilterParser {
+        /// <summary>
+        /// 获取包含COMTRADE文件的目录路径。
+        /// </summary>
         public string ACFilterPath { get; init; }
+        /// <summary>
+        /// 获取或设置从JSON配置文件加载的交流滤波器配置列表。
+        /// </summary>
         public List<ACFilter> ACFilterData { get; set; }
+        /// <summary>
+        /// 获取或设置所有待处理的COMTRADE配置文件（.cfg）的路径列表。
+        /// </summary>
         public List<string> AllDataPath { get; set; }
+        /// <summary>
+        /// 获取待处理文件的总数。
+        /// </summary>
         public int Count { get => AllDataPath.Count; }
+        /// <summary>
+        /// 初始化 <see cref="ACFilterParser"/> 类的新实例。
+        /// </summary>
+        /// <param name="aCFilterPath">包含COMTRADE文件的目录路径。</param>
         public ACFilterParser(string aCFilterPath) {
             ACFilterPath = aCFilterPath;
             AllDataPath = ACFilterPath
                 .GetAllFiles()
                 .FilterCfgFiles();
         }
+        /// <summary>
+        /// 从嵌入的 "ACFilterData.json" 资源中异步加载滤波器配置数据。
+        /// </summary>
         public async Task GetFilterData() {
             var dataJson = await File.ReadAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ACFilterData.json"));
             ACFilterData = JsonConvert.DeserializeObject<List<ACFilter>>(dataJson);
         }
         
+        /// <summary>
+        /// 异步解析指定路径下的所有COMTRADE文件。
+        /// </summary>
+        /// <param name="Notify">一个回调操作，用于在处理每个文件后通知进度。</param>
+        /// <returns>一个包含所有文件分析结果的 <see cref="ACFilterSheetSpec"/> 列表。</returns>
         public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify) {
             try {
                 var count = 0;
@@ -51,6 +78,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 return null;
             }
         }
+        /// <summary>
+        /// 异步解析单个COMTRADE文件。
+        /// </summary>
+        /// <param name="cfgPath">COMTRADE配置文件的路径 (.cfg)。</param>
+        /// <param name="plotter">用于生成波形图的 <see cref="ACFilterPlotter"/> 实例。</param>
+        /// <returns>分析结果 <see cref="ACFilterSheetSpec"/>，如果文件无效或不包含相关数据，则返回 null。</returns>
         public async Task<ACFilterSheetSpec?> ParsePerComtrade(string cfgPath, ACFilterPlotter plotter) {
             try {
                 var retData = new ACFilterSheetSpec();
