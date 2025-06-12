@@ -437,5 +437,30 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return Math.Sqrt(sumOfSquares / (data.Length - 1));
         }
 
+        /// <summary>
+        /// 检测并返回模拟信号中所有电压过零点的采样索引列表。
+        /// 过零点被定义为波形值改变符号的位置。
+        /// </summary>
+        /// <param name="analogInfo">要分析的模拟电压通道信息。</param>
+        /// <returns>一个包含所有过零点采样索引的列表。</returns>
+        public static List<int> DetectVoltageZeroCrossings(this AnalogInfo analogInfo) {
+            var zeroCrossings = new List<int>();
+            if (analogInfo is null || analogInfo.Data.Length < 2) {
+                return zeroCrossings;
+            }
+
+            for (int i = 0; i < analogInfo.Data.Length - 1; i++) {
+                // 当相邻两个点的乘积为负数时，说明它们之间发生了过零
+                if (analogInfo.Data[i] * analogInfo.Data[i + 1] < 0) {
+                    // 为了更精确，可以选择离零更近的那个点作为过零点
+                    if (Math.Abs(analogInfo.Data[i]) < Math.Abs(analogInfo.Data[i + 1])) {
+                        zeroCrossings.Add(i);
+                    } else {
+                        zeroCrossings.Add(i + 1);
+                    }
+                }
+            }
+            return zeroCrossings;
+        }
     }
 }

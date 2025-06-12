@@ -25,6 +25,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     "A相分合闸时间/ms",
                     "B相分合闸时间/ms",
                     "C相分合闸时间/ms",
+                    "A相合闸电压过零点差/ms",
+                    "B相合闸电压过零点差/ms",
+                    "C相合闸电压过零点差/ms",
                     "波形有无异常",
                 }
             };
@@ -39,6 +42,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     d.PhaseATimeInterval.ToString(),
                     d.PhaseBTimeInterval.ToString(),
                     d.PhaseCTimeInterval.ToString(),
+                    d.SwitchType == SwitchType.Close ? d.PhaseAVoltageZeroCrossingDiff.ToString("F3") : "",
+                    d.SwitchType == SwitchType.Close ? d.PhaseBVoltageZeroCrossingDiff.ToString("F3") : "",
+                    d.SwitchType == SwitchType.Close ? d.PhaseCVoltageZeroCrossingDiff.ToString("F3") : "",
                     d.WorkType == WorkType.Ok ? "无" : "有",
                 };
                 }));
