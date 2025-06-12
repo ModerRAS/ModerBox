@@ -1,22 +1,23 @@
-using Akka.Actor;
-using ModerBox.Common;
-using ModerBox.Comtrade.PeriodicWork.Actor;
-using ModerBox.Comtrade.PeriodicWork.Protocol;
+using ModerBox.Comtrade.PeriodicWork.Services;
 using Newtonsoft.Json;
+using ModerBox.Common;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ModerBox.Comtrade.PeriodicWork.Test {
     [TestClass]
     public class UnitTest1 {
-        private ActorSystem _actorSystem;
+        private PeriodicWork _periodicWork;
+        private OrthogonalDataService _orthogonalDataService;
+        private NonOrthogonalDataService _nonOrthogonalDataService;
 
         [TestInitialize]
         public void Setup() {
-            _actorSystem = ActorSystem.Create("PeriodicWorkActorSystem");
-        }
-
-        [TestCleanup]
-        public async Task Cleanup() {
-            await _actorSystem.SafeTerminate();
+            _periodicWork = new PeriodicWork();
+            _orthogonalDataService = new OrthogonalDataService();
+            _nonOrthogonalDataService = new NonOrthogonalDataService();
         }
 
         [TestMethod]
@@ -28,90 +29,38 @@ namespace ModerBox.Comtrade.PeriodicWork.Test {
 
         [TestMethod]
         public async Task TestMonthlyWork() {
-            try {
-                var DataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-                var MonthlyWork = _actorSystem.ActorOf<PeriodicWorkActor>();
-                
-                var result = await MonthlyWork.SafeAsk<string>(new WorkDataProtocol() {
-                    Data = DataSpec,
-                    DataFilterName = "SmallSetValueZeroDriftInspection",
-                    FolderPath = "testdata",
-                    ExportPath = "export.xlsx"
-                });
-                
-                Assert.AreEqual("finish", result);
-                Console.WriteLine(result);
-            } catch (TimeoutException ex) {
-                Assert.Fail($"测试超时: {ex.Message}");
-            } catch (Exception ex) {
-                Console.WriteLine($"测试异常: {ex.Message}");
-                throw;
-            }
+            await _periodicWork.DoPeriodicWork("testdata", "export.xlsx", "SmallSetValueZeroDriftInspection");
+            Assert.IsTrue(File.Exists("export.xlsx"));
         }
 
         [TestMethod]
         public async Task TestQuarterlyWork() {
-            try {
-                var DataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-                var MonthlyWork = _actorSystem.ActorOf<PeriodicWorkActor>();
-                
-                var result = await MonthlyWork.SafeAsk<string>(new WorkDataProtocol() {
-                    Data = DataSpec,
-                    DataFilterName = "AnalogInspection",
-                    FolderPath = "testdata",
-                    ExportPath = "export2.xlsx"
-                });
-                
-                Assert.AreEqual("finish", result);
-                Console.WriteLine(result);
-            } catch (TimeoutException ex) {
-                Assert.Fail($"测试超时: {ex.Message}");
-            } catch (Exception ex) {
-                Console.WriteLine($"测试异常: {ex.Message}");
-                throw;
-            }
+            await _periodicWork.DoPeriodicWork("testdata", "export2.xlsx", "AnalogInspection");
+            Assert.IsTrue(File.Exists("export2.xlsx"));
         }
 
         [TestMethod]
         public async Task TestOrthogonalData() {
-            try {
-                var DataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-                var OrthogonalDataActor = _actorSystem.ActorOf<OrthogonalDataActor>();
-                
-                var result = await OrthogonalDataActor.SafeAsk<OrthogonalDataReceiverProtocol>(new OrthogonalDataSenderProtocol() {
-                    FolderPath = "testdata",
-                    OrthogonalData = DataSpec.OrthogonalData.FirstOrDefault()
-                });
-                
-                Assert.IsNotNull(result, "OrthogonalData 结果不应为空");
-                Console.WriteLine($"OrthogonalData 测试完成，数据行数: {result.Data?.CountRow() ?? 0}");
-            } catch (TimeoutException ex) {
-                Assert.Fail($"测试超时: {ex.Message}");
-            } catch (Exception ex) {
-                Console.WriteLine($"测试异常: {ex.Message}");
-                throw;
-            }
+            var dataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
+            var orthogonalDataItem = dataSpec.OrthogonalData.FirstOrDefault();
+            Assert.IsNotNull(orthogonalDataItem, "OrthogonalDataItem不应为空");
+
+            var result = await _orthogonalDataService.ProcessingAsync("testdata", orthogonalDataItem);
+
+            Assert.IsNotNull(result, "OrthogonalData 结果不应为空");
+            Assert.IsTrue(result.CountRow() > 0, "OrthogonalData应返回一些行");
         }
 
         [TestMethod]
         public async Task TestNonOrthogonalData() {
-            try {
-                var DataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-                var NonOrthogonalDataActor = _actorSystem.ActorOf<NonOrthogonalDataActor>();
-                
-                var result = await NonOrthogonalDataActor.SafeAsk<NonOrthogonalDataReceiverProtocol>(new NonOrthogonalDataSenderProtocol() {
-                    FolderPath = "testdata",
-                    NonOrthogonalData = DataSpec.NonOrthogonalData.FirstOrDefault()
-                });
-                
-                Assert.IsNotNull(result, "NonOrthogonalData 结果不应为空");
-                Console.WriteLine($"NonOrthogonalData 测试完成，数据行数: {result.Data?.CountRow() ?? 0}");
-            } catch (TimeoutException ex) {
-                Assert.Fail($"测试超时: {ex.Message}");
-            } catch (Exception ex) {
-                Console.WriteLine($"测试异常: {ex.Message}");
-                throw;
-            }
+            var dataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
+            var nonOrthogonalDataItem = dataSpec.NonOrthogonalData.FirstOrDefault();
+            Assert.IsNotNull(nonOrthogonalDataItem, "NonOrthogonalDataItem不应为空");
+
+            var result = await _nonOrthogonalDataService.ProcessingAsync("testdata", nonOrthogonalDataItem);
+
+            Assert.IsNotNull(result, "NonOrthogonalData 结果不应为空");
+            Assert.IsTrue(result.CountRow() > 0, "NonOrthogonalData应返回一些行");
         }
     }
 }
