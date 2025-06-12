@@ -1,37 +1,63 @@
-﻿using Akka.Actor;
+﻿using ClosedXML.Excel;
 using ModerBox.Common;
-using ModerBox.Comtrade.PeriodicWork.Actor;
-using ModerBox.Comtrade.PeriodicWork.Protocol;
+using ModerBox.Comtrade.PeriodicWork.Services;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.PeriodicWork {
     public class PeriodicWork {
-        ActorSystem ActorSystem = ActorSystem.Create("PeriodicWorkActorSystem");
+        private readonly OrthogonalDataService _orthogonalDataService;
+        private readonly NonOrthogonalDataService _nonOrthogonalDataService;
 
         public PeriodicWork() {
-            
-        }
-        public async Task DoMonthlyWork() {
-            var DataSpec = JsonConvert.DeserializeObject<DataSpec>(await File.ReadAllTextAsync("PeriodicWorkData.json"));
-            var orthogonalData = ActorSystem.ActorOf<OrthogonalDataActor>();
-            orthogonalData.Ask<DynamicTable<double>>(new OrthogonalDataItem());
+            _orthogonalDataService = new OrthogonalDataService();
+            _nonOrthogonalDataService = new NonOrthogonalDataService();
         }
 
-        public async Task DoPeriodicWork(string FolderPath, string ExportPath, string DataFilterName) {
-            var actorSystem = ActorSystem.Create("PeriodicWorkActorSystem");
-            var DataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-            var PeriodicWork = actorSystem.ActorOf<PeriodicWorkActor>();
-            var result = await PeriodicWork.Ask<string>(new WorkDataProtocol() {
-                Data = DataSpec,
-                DataFilterName = DataFilterName,
-                FolderPath = FolderPath,
-                ExportPath = ExportPath
-            });
+        public async Task DoPeriodicWork(string folderPath, string exportPath, string dataFilterName) {
+            var dataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
+            var dataFilters = dataSpec.DataFilter.FirstOrDefault(d => d.Name == dataFilterName);
+
+            if (dataFilters == null) {
+                return;
+            }
+
+            using (var workbook = new XLWorkbook()) {
+                foreach (var dataFilter in dataFilters.DataNames) {
+                    if (dataFilter.Type.Equals("OrthogonalData")) {
+                        var orthogonalDataItem = dataSpec.OrthogonalData.FirstOrDefault(d => d.Name == dataFilter.Name);
+                        if (orthogonalDataItem != null) {
+                            var table = await _orthogonalDataService.ProcessingAsync(folderPath, orthogonalDataItem);
+                            table.ExportToExcel(
+                                workbook,
+                                orthogonalDataItem.DisplayName,
+                                orthogonalDataItem.Transpose,
+                                orthogonalDataItem.AnalogName,
+                                orthogonalDataItem.DeviceName
+                            );
+                        }
+                    }
+                    else if (dataFilter.Type.Equals("NonOrthogonalData")) {
+                        var nonOrthogonalDataItem = dataSpec.NonOrthogonalData.FirstOrDefault(d => d.Name == dataFilter.Name);
+                        if (nonOrthogonalDataItem != null) {
+                            var table = await _nonOrthogonalDataService.ProcessingAsync(folderPath, nonOrthogonalDataItem);
+                            table.ExportToExcel(
+                                workbook,
+                                nonOrthogonalDataItem.DisplayName,
+                                nonOrthogonalDataItem.Transpose,
+                                nonOrthogonalDataItem.AnalogName,
+                                nonOrthogonalDataItem.DeviceName
+                            );
+                        }
+                    }
+                }
+
+                if (workbook.Worksheets.Any()) {
+                    workbook.SaveAs(exportPath);
+                }
+            }
         }
     }
 }

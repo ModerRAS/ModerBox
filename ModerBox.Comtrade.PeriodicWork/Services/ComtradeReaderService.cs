@@ -1,40 +1,40 @@
-﻿using Akka.Actor;
+﻿
 using ModerBox.Common;
 using ModerBox.Comtrade.PeriodicWork.Protocol;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Comtrade.PeriodicWork.Actor {
-    public class ComtradeReaderActor : ReceiveActor {
-        public ComtradeReaderActor() {
-            ReceiveAsync<GetAnalogFromFileSenderProtocol>(ProcessingAsync);
-        }
-        
-        public async Task ProcessingAsync(GetAnalogFromFileSenderProtocol senderProtocol) {
+namespace ModerBox.Comtrade.PeriodicWork.Services {
+    public class ComtradeReaderService
+    {
+        public async Task<GetAnalogFromFileReceiverProtocol> ProcessingAsync(GetAnalogFromFileSenderProtocol senderProtocol) {
             try {
                 // 计算文件名
-                var FileNameFilter = senderProtocol.WithPole 
-                    ? Util.GetFilenameKeywordWithPole(senderProtocol.DeviceName) 
+                var FileNameFilter = senderProtocol.WithPole
+                    ? Util.GetFilenameKeywordWithPole(senderProtocol.DeviceName)
                     : Util.GetFilenameKeyword(senderProtocol.DeviceName);
                 // 根据过滤器过滤文件
                 var files = FileHelper.FilterFiles(senderProtocol.FolderPath, new List<string> { FileNameFilter, senderProtocol.Child });
                 // 获取文件中以cfg结尾的文件
                 var file = (from e in files
-                           where e.ToLower().EndsWith(".cfg")
-                           select e).FirstOrDefault();
-                           
+                            where e.ToLower().EndsWith(".cfg")
+                            select e).FirstOrDefault();
+
                 if (file == null) {
                     Console.WriteLine($"没有找到匹配的 .cfg 文件: {FileNameFilter}, {senderProtocol.Child}");
-                    return;
+                    return new GetAnalogFromFileReceiverProtocol() {
+                        AnalogInfos = new Dictionary<string, AnalogInfo>(),
+                        AnalogInfosMax = new Dictionary<string, double>(),
+                        Sender = senderProtocol,
+                    };
                 }
-                
+
                 // 读取波形 - 使用异步方法避免阻塞
                 var comtradeInfo = await Comtrade.ReadComtradeCFG(file);
                 await Comtrade.ReadComtradeDAT(comtradeInfo);
-                
+
                 // 根据要求筛选波形
                 var matchedObjects = from a in comtradeInfo.AData
                                      join b in senderProtocol.AnalogName on a.Name equals b
@@ -53,7 +53,7 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor {
                     AnalogInfosMax = sendMaxDict,
                     Sender = senderProtocol,
                 };
-                Sender.Tell(receive);
+                return receive;
             } catch (Exception ex) {
                 Console.WriteLine($"ComtradeReaderActor 处理异常: {ex.Message}");
                 // 发送错误消息，避免父 Actor 永远等待
@@ -62,7 +62,7 @@ namespace ModerBox.Comtrade.PeriodicWork.Actor {
                     AnalogInfosMax = new Dictionary<string, double>(),
                     Sender = senderProtocol,
                 };
-                Sender.Tell(errorReceive);
+                return errorReceive;
             }
         }
     }
