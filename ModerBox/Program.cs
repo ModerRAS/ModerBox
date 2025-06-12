@@ -8,8 +8,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Coravel;
-using Orleans.Hosting;
-using Orleans.Serialization;
 
 namespace ModerBox {
     internal sealed class Program {
@@ -18,24 +16,12 @@ namespace ModerBox {
         // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
         // yet and stuff might break.
         [STAThread]
-        public static async Task Main(string[] args) {
+        public static void Main(string[] args) {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             VelopackApp.Build().Run();
             Env.host = Host.CreateDefaultBuilder()
-                .UseOrleans(silo =>
-                {
-                    silo.UseLocalhostClustering()
-                    .AddMemoryGrainStorageAsDefault()
-                    .AddMemoryGrainStorage("PubSubStore")
-                    .ConfigureLogging(logging => logging.AddConsole());
-                })
                 .ConfigureServices(service => {
                     service.AddSingleton(service);
-                    service.AddSerializer(serializerBuilder =>
-                    {
-                        serializerBuilder.AddJsonSerializer(
-                            isSupported: type => type.Namespace.StartsWith("ModerBox.Comtrade.FilterWaveform"));
-                    });
                     service.AddScheduler();
                 })
                 .ConfigureLogging(logging => {
@@ -48,9 +34,7 @@ namespace ModerBox {
 #if DEBUG
                     logging.AddDebug();
 #endif
-                })
-                .UseConsoleLifetime()
-                .Build();
+                }).Build();
             Env.host.Services.UseScheduler(scheduler => {
                 // Easy peasy 👇
                 scheduler
@@ -63,7 +47,7 @@ namespace ModerBox {
                     })
                     .EveryFiveMinutes().RunOnceAtStart();
             });
-            await Env.host.StartAsync();
+            Env.host.RunAsync();
             BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
         }

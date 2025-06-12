@@ -14,21 +14,9 @@ using System.Text;
 using System.Threading.Tasks;
 using ModerBox.Comtrade.FilterWaveform;
 using static ModerBox.Common.Util;
-using ModerBox.Comtrade.FilterWaveform.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-using Orleans;
-using ModerBox.Comtrade.FilterWaveform.Grains;
-using Orleans.Hosting;
-using ModerBox.Comtrade.FilterWaveform.Interfaces;
-using Avalonia.Threading;
 
-namespace ModerBox.ViewModels
-{
-    public class FilterWaveformSwitchIntervalViewModel : ViewModelBase, IProcessObserver {
-        private int count;
-        public void Notify(int progress) {
-            Progress = (int)(_progress * 100.0 / count);
-        }
+namespace ModerBox.ViewModels {
+    public class FilterWaveformSwitchIntervalViewModel : ViewModelBase {
         public ReactiveCommand<Unit, Unit> SelectSource { get; }
         public ReactiveCommand<Unit, Unit> SelectTarget { get; }
         public ReactiveCommand<Unit, Unit> RunCalculate { get; }
@@ -84,21 +72,9 @@ namespace ModerBox.ViewModels
             Progress = 0;
             await Task.Run(async () => {
                 try {
-                    //IClusterClient client = Env.host.Services.GetRequiredService<IClusterClient>();
-                    IGrainFactory grainFactory = Env.host.Services.GetRequiredService<IGrainFactory>();
-                    var parser = grainFactory.GetGrain<IBatchComtradeProcessorGrain>(Guid.NewGuid());
-                    await parser.Init(SourceFolder);
-                    var observer = this;
-                    var observerRef = grainFactory.CreateObjectReference<IProcessObserver>(observer);
-                    count = parser.Count().GetAwaiter().GetResult();
-                    var Data = await parser.Process(observerRef);
 
-                    /*
-                     * (_progress) => {
-                        var count = parser.Count().GetAwaiter().GetResult();
-                        Progress = (int)(_progress * 100.0 / count);
-                    }
-                     */
+                    var parser = new ACFilterParser(SourceFolder);
+                    var Data = await parser.ParseAllComtrade((_progress) => Progress = (int)(_progress * 100.0 / parser.Count));
                     var writer = new DataWriter();
                     writer.WriteACFilterWaveformSwitchIntervalData(Data, "分合闸动作时间");
                     writer.SaveAs(TargetFile);
