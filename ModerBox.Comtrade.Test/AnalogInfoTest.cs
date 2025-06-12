@@ -13,9 +13,9 @@ namespace ModerBox.Comtrade.Test {
             Assert.AreEqual(0, analogInfo.Mul);
             Assert.AreEqual(0, analogInfo.Add);
             Assert.AreEqual(0, analogInfo.Skew);
-            Assert.AreEqual(0, analogInfo.Primary);
-            Assert.AreEqual(0, analogInfo.Secondary);
-            Assert.IsFalse(analogInfo.Ps);
+            Assert.AreEqual(1, analogInfo.Primary);
+            Assert.AreEqual(1, analogInfo.Secondary);
+            Assert.IsTrue(analogInfo.Ps);
         }
 
         [TestMethod]
