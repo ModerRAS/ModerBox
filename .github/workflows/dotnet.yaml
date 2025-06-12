@@ -31,9 +31,9 @@ jobs:
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
         R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
       shell: pwsh
       run: |
-        $env:S3_ENDPOINT = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
         # 安装AWS CLI工具（用于访问R2）
         if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
           Write-Host "Installing AWS CLI..."
@@ -199,9 +199,9 @@ jobs:
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
         R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
       shell: pwsh
       run: |
-        $env:S3_ENDPOINT = .\scipts\GetParsedTxtRecordValue.ps1 moderbox.miaostay.com mirror
         dotnet tool install -g vpk
         $Version = Get-Date -Format "yyyy.M.$env:BUILD_NUMBER"
         vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nightly-win-x64
