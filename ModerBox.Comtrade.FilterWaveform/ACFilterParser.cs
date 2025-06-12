@@ -26,6 +26,10 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// </summary>
         public List<string> AllDataPath { get; set; }
         /// <summary>
+        /// 获取或设置是否使用滑动窗口算法。
+        /// </summary>
+        public bool UseSlidingWindowAlgorithm { get; set; }
+        /// <summary>
         /// 获取待处理文件的总数。
         /// </summary>
         public int Count { get => AllDataPath.Count; }
@@ -33,11 +37,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// 初始化 <see cref="ACFilterParser"/> 类的新实例。
         /// </summary>
         /// <param name="aCFilterPath">包含COMTRADE文件的目录路径。</param>
-        public ACFilterParser(string aCFilterPath) {
+        /// <param name="useSlidingWindowAlgorithm">是否使用滑动窗口算法。如果为 true，则使用基于标准差的新算法；否则使用基于阈值的旧算法。</param>
+        public ACFilterParser(string aCFilterPath, bool useSlidingWindowAlgorithm = false) {
             ACFilterPath = aCFilterPath;
             AllDataPath = ACFilterPath
                 .GetAllFiles()
                 .FilterCfgFiles();
+            UseSlidingWindowAlgorithm = useSlidingWindowAlgorithm;
         }
         /// <summary>
         /// 从嵌入的 "ACFilterData.json" 资源中异步加载滤波器配置数据。
@@ -104,22 +110,37 @@ namespace ModerBox.Comtrade.FilterWaveform {
                             retData.SwitchType = SwitchType.Open;
                         }
                         if (retData.SwitchType == SwitchType.Close) {
-                            //合闸就要分闸消失到电流出现
-                            Parallel.Invoke(
-                                () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
-                                () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit,
-                                () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit
-                                );
-                            
+                            if (UseSlidingWindowAlgorithm) {
+                                //【新】合闸就要分闸消失到电流出现
+                                Parallel.Invoke(
+                                    () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
+                                    () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit,
+                                    () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit
+                                    );
+                            } else {
+                                //【旧】合闸就要分闸消失到电流出现
+                                Parallel.Invoke(
+                                    () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
+                                    () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseBSwitchOpen, obj.b.PhaseBCurrentWave) / TimeUnit,
+                                    () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(obj.b.PhaseCSwitchOpen, obj.b.PhaseCCurrentWave) / TimeUnit
+                                    );
+                            }
                         } else {
-                            //分闸就要合闸消失到电流消失
-                            Parallel.Invoke(
-                                () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit,
-                                () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit,
-                                () => retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit
-                                );
-                            
-
+                            if (UseSlidingWindowAlgorithm) {
+                                //【新】分闸就要合闸消失到电流消失
+                                Parallel.Invoke(
+                                    () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeIntervalWithSlidingWindow(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit,
+                                    () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeIntervalWithSlidingWindow(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit,
+                                    () => retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeIntervalWithSlidingWindow(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit
+                                    );
+                            } else {
+                                //【旧】分闸就要合闸消失到电流消失
+                                Parallel.Invoke(
+                                    () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit,
+                                    () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit,
+                                    () => retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit
+                                    );
+                            }
                         }
                         var PhaseASwitchClose = 0;
                         var PhaseBSwitchClose = 0;
