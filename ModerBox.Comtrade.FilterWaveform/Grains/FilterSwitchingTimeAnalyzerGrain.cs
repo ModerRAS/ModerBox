@@ -38,19 +38,21 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains
                 if (retData.SwitchType == SwitchType.Close)
                 {
                     //合闸就要分闸消失到电流出现
-
-                    retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(b.PhaseASwitchOpen, b.PhaseACurrentWave) / TimeUnit;
-                    retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(b.PhaseBSwitchOpen, b.PhaseBCurrentWave) / TimeUnit;
-                    retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(b.PhaseCSwitchOpen, b.PhaseCCurrentWave) / TimeUnit;
+                    Parallel.Invoke(
+                        () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeInterval(b.PhaseASwitchOpen, b.PhaseACurrentWave) / TimeUnit,
+                        () => retData.PhaseBTimeInterval = comtradeInfo.SwitchCloseTimeInterval(b.PhaseBSwitchOpen, b.PhaseBCurrentWave) / TimeUnit,
+                        () => retData.PhaseCTimeInterval = comtradeInfo.SwitchCloseTimeInterval(b.PhaseCSwitchOpen, b.PhaseCCurrentWave) / TimeUnit
+                        );
 
                 }
                 else
                 {
                     //分闸就要合闸消失到电流消失
-
-                    retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(b.PhaseASwitchClose, b.PhaseACurrentWave) / TimeUnit;
-                    retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(b.PhaseBSwitchClose, b.PhaseBCurrentWave) / TimeUnit;
-                    retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(b.PhaseCSwitchClose, b.PhaseCCurrentWave) / TimeUnit;
+                    Parallel.Invoke(
+                        () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(b.PhaseASwitchClose, b.PhaseACurrentWave) / TimeUnit,
+                        () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(b.PhaseBSwitchClose, b.PhaseBCurrentWave) / TimeUnit,
+                        () => retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeInterval(b.PhaseCSwitchClose, b.PhaseCCurrentWave) / TimeUnit
+                        );
 
 
                 }
@@ -60,13 +62,14 @@ namespace ModerBox.Comtrade.FilterWaveform.Grains
                 var PhaseASwitchOpen = 0;
                 var PhaseBSwitchOpen = 0;
                 var PhaseCSwitchOpen = 0;
-                PhaseASwitchClose = comtradeInfo.DData.GetACFilterDigital(b.PhaseASwitchClose).GetChangePointCount();
-                PhaseBSwitchClose = comtradeInfo.DData.GetACFilterDigital(b.PhaseBSwitchClose).GetChangePointCount();
-                PhaseCSwitchClose = comtradeInfo.DData.GetACFilterDigital(b.PhaseCSwitchClose).GetChangePointCount();
-                PhaseASwitchOpen = comtradeInfo.DData.GetACFilterDigital(b.PhaseASwitchOpen).GetChangePointCount();
-                PhaseBSwitchOpen = comtradeInfo.DData.GetACFilterDigital(b.PhaseBSwitchOpen).GetChangePointCount();
-                PhaseCSwitchOpen = comtradeInfo.DData.GetACFilterDigital(b.PhaseCSwitchOpen).GetChangePointCount();
-
+                Parallel.Invoke(
+                    () => PhaseASwitchClose = comtradeInfo.DData.GetACFilterDigital(b.PhaseASwitchClose).GetChangePointCount(),
+                    () => PhaseBSwitchClose = comtradeInfo.DData.GetACFilterDigital(b.PhaseBSwitchClose).GetChangePointCount(),
+                    () => PhaseCSwitchClose = comtradeInfo.DData.GetACFilterDigital(b.PhaseCSwitchClose).GetChangePointCount(),
+                    () => PhaseASwitchOpen = comtradeInfo.DData.GetACFilterDigital(b.PhaseASwitchOpen).GetChangePointCount(),
+                    () => PhaseBSwitchOpen = comtradeInfo.DData.GetACFilterDigital(b.PhaseBSwitchOpen).GetChangePointCount(),
+                    () => PhaseCSwitchOpen = comtradeInfo.DData.GetACFilterDigital(b.PhaseCSwitchOpen).GetChangePointCount()
+                    );
                 if (PhaseASwitchClose > 1 || PhaseBSwitchClose > 1 || PhaseCSwitchClose > 1 ||
                     PhaseASwitchOpen > 1 || PhaseBSwitchOpen > 1 || PhaseCSwitchOpen > 1 ||
                     retData.PhaseATimeInterval <= 0 ||
