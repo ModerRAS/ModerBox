@@ -23,7 +23,7 @@ namespace ModerBox.Comtrade.Test {
             var datPath = Path.Combine(TestDataDir, "test.dat");
 
             var cfgContent = "station_name,device_id,2013\n" +
-                             "2,1A,1D\n" +
+                             "3,2A,1D\n" +
                              "1,IA,A,,A,1,0,0,0,1,1,P\n" +
                              "2,VA,A,,V,1,0,0,0,1,1,P\n" +
                              "1,STATUS,,0\n" +
@@ -67,7 +67,7 @@ namespace ModerBox.Comtrade.Test {
 
         private async Task CreateBinaryComtradeFiles(string cfgPath, string datPath) {
             var cfgContent = "station_name,device_id,2013\n" +
-                             "2,1A,1D\n" +
+                             "3,2A,1D\n" +
                              "1,IA,A,,A,1,0,0,0,1,1,P\n" +
                              "2,VA,A,,V,1,0,0,0,1,1,P\n" +
                              "1,STATUS,,0\n" +
