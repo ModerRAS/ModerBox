@@ -1,12 +1,8 @@
-﻿using Orleans;
-using Orleans.CodeGeneration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace ModerBox.Comtrade {
     [Serializable]
-
-    [GenerateSerializer]
     public class ComtradeInfo {
         public ComtradeInfo(string name) {
             this.FileName = name;
@@ -57,47 +53,32 @@ namespace ModerBox.Comtrade {
             return num;
         }
 
-
-        [Id(0)]
         public string FileName;
 
-        [Id(1)]
         public int AnalogCount;
 
-        [Id(2)]
         public int DigitalCount;
 
-        [Id(3)]
         public int Hz = 50;
 
-        [Id(4)]
         public double Samp;
 
-        [Id(5)]
         public int EndSamp;
 
-        [Id(6)]
         public DateTime dt1;
 
-        [Id(7)]
         public DateTime dt0;
 
-        [Id(8)]
         public string ASCII;
 
-        [Id(9)]
         public List<AnalogInfo> AData = new List<AnalogInfo>();
 
-        [Id(10)]
         public List<DigitalInfo> DData = new List<DigitalInfo>();
 
-        [Id(11)]
         public double[] Samps;
 
-        [Id(12)]
         public int[] EndSamps;
 
-        [Id(13)]
         public double[] TimeMs;
     }
 }
