@@ -1,7 +1,6 @@
 ﻿using ModerBox.Comtrade.FilterWaveform.Enums;
 using ModerBox.Comtrade.FilterWaveform.Interfaces;
 using ModerBox.Comtrade.FilterWaveform.Models;
-using Orleans.Concurrency;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform.Grains {
-    [StatelessWorker]
     public class PlotGrain : Grain, IPlotGrain {
         public List<ACFilter> ACFilterData { get; set; }
 
