@@ -8,18 +8,25 @@ namespace ModerBox.Comtrade.FilterWaveform {
     public static class ComtradeExtension {
         public static readonly double Jitter = 0.03;
         public static DigitalInfo GetACFilterDigital(this List<DigitalInfo> DData, string ACFilterData) {
-            var matchedObjects = from a in DData
-                                 where a.Name.Equals(ACFilterData)
-                                 select a;
-            return matchedObjects.FirstOrDefault();
+            foreach (var a in DData) {
+                if (a.Name.Equals(ACFilterData)) {
+                    return a;
+                }
+            }
+            return null;
         }
         public static AnalogInfo GetACFilterAnalog(this List<AnalogInfo> DData, string ACFilterData) {
-            var matchedObjects = from a in DData
-                                 where a.Name.Equals(ACFilterData)
-                                 select a;
-            return matchedObjects.FirstOrDefault();
+            foreach (var a in DData) {
+                if (a.Name.Equals(ACFilterData)) {
+                    return a;
+                }
+            }
+            return null;
         }
         public static int GetFirstChangePoint(this DigitalInfo digitalInfo) {
+            if(digitalInfo is null) {
+                return 0;
+            }
             var start = digitalInfo.Data[0];
             for (var i = 1; i < digitalInfo.Data.Length; i++) {
                 if (digitalInfo.Data[i] != start) {
@@ -30,6 +37,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         public static int GetChangePointCount(this DigitalInfo digitalInfo) {
+            if(digitalInfo is null) {
+                return 0;
+            }
             var start = digitalInfo.Data[0];
             var count = 0;
             for (var i = 1; i < digitalInfo.Data.Length; i++) {
@@ -42,6 +52,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         public static int DetectCurrentStopIndex(this AnalogInfo analogInfo) {
+            if(analogInfo is null) {
+                return 0;
+            }
             var waveform = analogInfo.Data;
             int zeroThreshold = 50; // 设置连续0值的样本数量阈值
             var count = 0;
@@ -73,6 +86,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         public static int DetectCurrentStartIndex(this AnalogInfo analogInfo) {
+            if(analogInfo is null) {
+                return 0;
+            }
             var waveform = analogInfo.Data;
             int nonZeroThreshold = 50; // 设置连续非0值的样本数量阈值
 
@@ -106,6 +122,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var first = phaseA.GetFirstChangePoint();
             var phaseACurrent = comtradeInfo.AData.GetACFilterAnalog(PhaseCurrentWave);
             var startIndex = phaseACurrent.DetectCurrentStartIndex();
+            if (first == 0 || startIndex == 0) return 0;
             var timeTick = startIndex - first;
             return timeTick;
         }
@@ -114,45 +131,60 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var first = phaseA.GetFirstChangePoint();
             var phaseACurrent = comtradeInfo.AData.GetACFilterAnalog(PhaseCurrentWave);
             var startIndex = phaseACurrent.DetectCurrentStopIndex();
+            if(first == 0 || startIndex == 0) return 0;
             var timeTick = startIndex - first;
             return timeTick;
         }
 
         public static List<(string, int[])> ClipDigitalData(this ComtradeInfo comtradeInfo, List<string> DigitalDataNames, int startIndex, int endIndex) {
-
-            var GetDigitalData = (string name) => {
-                return (name, new Span<int>(comtradeInfo.DData.GetACFilterDigital(name).Data, startIndex, endIndex - startIndex).ToArray());
-            };
-            return DigitalDataNames.Select(GetDigitalData).ToList();
+            var result = new List<(string, int[])>(DigitalDataNames.Count);
+            foreach (var name in DigitalDataNames) {
+                var digital = comtradeInfo.DData.GetACFilterDigital(name);
+                if (digital != null) {
+                    var clippedData = new Span<int>(digital.Data, startIndex, endIndex - startIndex).ToArray();
+                    result.Add((name, clippedData));
+                }
+            }
+            return result;
         }
 
         public static List<(string, double[])> ClipAnalogData(this ComtradeInfo comtradeInfo, List<string> AnalogDataNames, int startIndex, int endIndex) {
-
-            var GetAnalogData = (string name) => {
+            var result = new List<(string, double[])>(AnalogDataNames.Count);
+            foreach (var name in AnalogDataNames) {
                 var analog = comtradeInfo.AData.GetACFilterAnalog(name);
-                var tmp = analog.Data;
-                return (name, new Span<double>(tmp, startIndex, endIndex - startIndex).ToArray());
-            };
-            return AnalogDataNames.Select(GetAnalogData).ToList();
+                if (analog != null) {
+                    var clippedData = new Span<double>(analog.Data, startIndex, endIndex - startIndex).ToArray();
+                    result.Add((name, clippedData));
+                }
+            }
+            return result;
         }
 
         public static (int, int) GetComtradeStartAndEnd(this ComtradeInfo comtradeInfo, ACFilter aCFilter) {
-            int first = 0;
-            int end = 0;
-            var SwitchChange = new List<int>();
+            int minChangePoint = int.MaxValue;
+            int maxChangePoint = 0;
 
-            Parallel.Invoke(
-                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchClose).GetFirstChangePoint()),
-                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseBSwitchClose).GetFirstChangePoint()),
-                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseCSwitchClose).GetFirstChangePoint()),
-                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseASwitchOpen).GetFirstChangePoint()),
-                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseBSwitchOpen).GetFirstChangePoint()),
-                () => SwitchChange.Add(comtradeInfo.DData.GetACFilterDigital(aCFilter.PhaseCSwitchOpen).GetFirstChangePoint())
-                );
-            first = SwitchChange.Min();
-            end = SwitchChange.Max();
-            var startIndex = first - 100 > 0 ? first - 100 : 0;
-            var endIndex = end + 300 < comtradeInfo.DData.FirstOrDefault().Data.Length ? end + 300 : comtradeInfo.DData.FirstOrDefault().Data.Length;
+            void FindMinMax(string digitalName) {
+                var digitalInfo = comtradeInfo.DData.GetACFilterDigital(digitalName);
+                if (digitalInfo != null) {
+                    var changePoint = digitalInfo.GetFirstChangePoint();
+                    if (changePoint != -1) {
+                        if (changePoint < minChangePoint) minChangePoint = changePoint;
+                        if (changePoint > maxChangePoint) maxChangePoint = changePoint;
+                    }
+                }
+            }
+
+            FindMinMax(aCFilter.PhaseASwitchClose);
+            FindMinMax(aCFilter.PhaseBSwitchClose);
+            FindMinMax(aCFilter.PhaseCSwitchClose);
+            FindMinMax(aCFilter.PhaseASwitchOpen);
+            FindMinMax(aCFilter.PhaseBSwitchOpen);
+            FindMinMax(aCFilter.PhaseCSwitchOpen);
+
+            var startIndex = minChangePoint - 100 > 0 ? minChangePoint - 100 : 0;
+            var dataLength = comtradeInfo.DData.Count > 0 ? comtradeInfo.DData[0].Data.Length : 0;
+            var endIndex = maxChangePoint + 300 < dataLength ? maxChangePoint + 300 : dataLength;
             return (startIndex, endIndex);
         }
 
