@@ -2,13 +2,16 @@ using SkiaSharp;
 using System;
 
 namespace ModerBox.Comtrade.FilterWaveform {
+    /// <summary>
+    /// 提供图像处理相关的实用工具方法。
+    /// </summary>
     public static class ImageUtils {
         /// <summary>
         /// 使用 SkiaSharp 将两个 PNG 格式的字节数组拼接为一张图片，并返回拼接后的字节数组。
         /// </summary>
-        /// <param name="pngBytes1">第一张图片的字节数组。</param>
-        /// <param name="pngBytes2">第二张图片的字节数组。</param>
-        /// <returns>拼接后图片的 PNG 格式字节数组。</returns>
+        /// <param name="pngBytes1">第一张图片（置于顶部）的PNG格式字节数组。</param>
+        /// <param name="pngBytes2">第二张图片（置于底部）的PNG格式字节数组。</param>
+        /// <returns>拼接后新图片的PNG格式字节数组。</returns>
         public static byte[] CombineImages(byte[] pngBytes1, byte[] pngBytes2) {
             // 使用 SkiaSharp 将字节数组转换为 SKBitmap 对象
             using (var bmp1 = SKBitmap.Decode(pngBytes1))
