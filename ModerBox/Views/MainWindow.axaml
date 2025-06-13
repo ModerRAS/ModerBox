@@ -1,38 +1,55 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ModerBox.ViewModels"
-		xmlns:view="clr-namespace:ModerBox.Views.UserControls"
+        xmlns:views="clr-namespace:ModerBox.Views.UserControls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="ModerBox.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="ModerBox">
 
+    <Window.DataTemplates>
+        <DataTemplate DataType="{x:Type vm:HomePageViewModel}">
+            <views:HomePage/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HarmonicCalculateViewModel}">
+            <views:HarmonicCalculate/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:FilterWaveformSwitchIntervalViewModel}">
+            <views:FilterWaveformSwitchInterval/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PeriodicWorkViewModel}">
+            <views:PeriodicWork/>
+        </DataTemplate>
+    </Window.DataTemplates>
+
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
-		
     </Design.DataContext>
 
-	<StackPanel>
-		<TabControl Margin="5">
-			<TabItem Header="首页">
-				<view:HomePage></view:HomePage>
-			</TabItem>
-			<TabItem Header="谐波计算">
-				<view:HarmonicCalculate></view:HarmonicCalculate>
-			</TabItem>
-			<TabItem Header="滤波器分合闸波形检测">
-				<view:FilterWaveformSwitchInterval></view:FilterWaveformSwitchInterval>
-			</TabItem>
-			<TabItem Header="内置录波定期工作">
-				<view:PeriodicWork></view:PeriodicWork>
-			</TabItem>
-		</TabControl>
-		
-	</StackPanel>
-	
+    <ui:NavigationView MenuItemsSource="{Binding Pages}"
+                    SelectedItem="{Binding CurrentPage}"
+                    IsBackButtonVisible="False"
+                    IsSettingsVisible="False">
+        <ui:NavigationView.MenuItemTemplate>
+            <DataTemplate DataType="{x:Type vm:ViewModelBase}">
+                <ui:NavigationViewItem>
+                    <ui:NavigationViewItem.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="16"/>
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ui:NavigationViewItem.Content>
+                </ui:NavigationViewItem>
+            </DataTemplate>
+        </ui:NavigationView.MenuItemTemplate>
+
+        <ContentControl Content="{Binding CurrentPage}" />
+    </ui:NavigationView>
+
 </Window>

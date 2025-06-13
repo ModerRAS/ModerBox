@@ -1,5 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="using:FluentAvalonia.Styling"
              x:Class="ModerBox.App"
              xmlns:local="using:ModerBox"
              RequestedThemeVariant="Default">
@@ -11,5 +12,6 @@
   
     <Application.Styles>
         <FluentTheme />
+        <fa:FluentAvaloniaTheme />
     </Application.Styles>
 </Application>

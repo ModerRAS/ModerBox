@@ -58,6 +58,7 @@ namespace ModerBox.ViewModels {
             data.DataFilter.ForEach(x => {
                 Works.Add(x.Name);
             });
+            SelectedWork = Works.FirstOrDefault() ?? string.Empty;
         }
 
         private async Task SelectSourceTask() {
