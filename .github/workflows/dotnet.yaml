@@ -12,10 +12,13 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        # Velopack requires full history to determine version
+        fetch-depth: 0
     - name: Install .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 9.0.x
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.1
     - name: Restore dependencies
@@ -24,8 +27,8 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
-    - name: Publish Application
-      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish -r win-x64 --self-contained false
+    - name: Publish Application (Native AOT)
+      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish -r win-x64 -p:PublishAot=true -p:StripSymbols=true
     - name: Clean Old Releases from R2
       env:
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -205,6 +208,6 @@ jobs:
         dotnet tool install -g vpk
         $Version = Get-Date -Format "yyyy.M.$env:BUILD_NUMBER"
         vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nightly-win-x64
-        vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish --framework net8.0-x64-desktop
+        vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --publish --channel nightly-win-x64 --releaseName "ModerBox $Version" --tag v$Version --token ${{ secrets.GITHUB_TOKEN }}
         vpk upload s3 --channel nightly-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
