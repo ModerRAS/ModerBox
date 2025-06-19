@@ -32,6 +32,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Coravel" Version="6.0.2" />
     <PackageReference Include="FluentAvaloniaUI" Version="2.3.0" />
+    <PackageReference Include="VC-LTL" Version="5.2.1" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
 	  <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.6" />
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
