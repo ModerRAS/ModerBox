@@ -2,9 +2,15 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using ModerBox.ViewModels;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ModerBox {
     public class ViewLocator : IDataTemplate {
+        // 告诉修剪器保留视图的公有构造函数，防止 NativeAOT 剪裁导致 Type.GetType 失效。
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.HomePage))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.PeriodicWork))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.HarmonicCalculate))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.FilterWaveformSwitchInterval))]
 
         public Control? Build(object? data) {
             if (data is null)
