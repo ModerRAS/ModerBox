@@ -11,13 +11,25 @@ namespace ModerBox {
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.PeriodicWork))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.HarmonicCalculate))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.FilterWaveformSwitchInterval))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.GroundCurrentBalance))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.CurrentDifferenceAnalysis))]
 
         public Control? Build(object? data) {
             if (data is null)
                 return null;
 
-            var name = data.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-            var type = Type.GetType(name);
+            var fullName = data.GetType().FullName!;
+            
+            // 先尝试标准的ViewModel -> View映射
+            var viewName = fullName.Replace("ViewModel", "View", StringComparison.Ordinal);
+            var type = Type.GetType(viewName);
+            
+            // 如果找不到，尝试UserControls命名空间中的控件（去掉ViewModel后缀）
+            if (type == null) {
+                var userControlName = fullName.Replace("ModerBox.ViewModels.", "ModerBox.Views.UserControls.")
+                                            .Replace("ViewModel", "", StringComparison.Ordinal);
+                type = Type.GetType(userControlName);
+            }
 
             if (type != null) {
                 var control = (Control)Activator.CreateInstance(type)!;
@@ -25,7 +37,7 @@ namespace ModerBox {
                 return control;
             }
 
-            return new TextBlock { Text = "Not Found: " + name };
+            return new TextBlock { Text = "Not Found: " + viewName };
         }
 
         public bool Match(object? data) {

@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="ModerBox.Views.UserControls.CurrentDifferenceAnalysis"
+             x:DataType="vm:CurrentDifferenceAnalysisViewModel">
+  
+  <Design.DataContext>
+    <vm:CurrentDifferenceAnalysisViewModel/>
+  </Design.DataContext>
+
+  <ScrollViewer>
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,*">
+      
+      <!-- 标题 -->
+      <TextBlock Grid.Row="0" 
+                 Text="电流差值分析" 
+                 FontSize="24" 
+                 FontWeight="Bold" 
+                 Margin="0,0,0,20"/>
+
+      <!-- 配置区域 -->
+      <Border Grid.Row="1" 
+              Background="LightBlue" 
+              CornerRadius="8" 
+              Padding="15" 
+              Margin="0,0,0,15">
+        <StackPanel>
+          <TextBlock Text="分析配置" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
+          
+          <!-- 源文件夹选择 -->
+          <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,5">
+            <TextBlock Grid.Column="0" Text="源文件夹:" VerticalAlignment="Center" Width="100"/>
+            <TextBox Grid.Column="1" 
+                     Text="{Binding SourceFolder}" 
+                     IsReadOnly="True" 
+                     Margin="10,0"/>
+            <Button Grid.Column="2" 
+                    Content="选择文件夹" 
+                    Command="{Binding SelectSourceFolderCommand}"
+                    Margin="10,0,0,0"/>
+          </Grid>
+
+          <!-- 目标文件选择 -->
+          <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,5">
+            <TextBlock Grid.Column="0" Text="导出文件:" VerticalAlignment="Center" Width="100"/>
+            <TextBox Grid.Column="1" 
+                     Text="{Binding TargetFile}" 
+                     IsReadOnly="True" 
+                     Margin="10,0"/>
+            <Button Grid.Column="2" 
+                    Content="选择位置" 
+                    Command="{Binding SelectTargetFileCommand}"
+                    Margin="10,0,0,0"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+             <!-- 操作按钮 -->
+       <StackPanel Grid.Row="2" 
+                   Orientation="Horizontal" 
+                   HorizontalAlignment="Center" 
+                   Margin="0,0,0,15">
+         <Button Content="开始计算" 
+                 Command="{Binding CalculateCommand}"
+                 IsEnabled="{Binding !IsProcessing}"
+                 Padding="20,8" 
+                 Margin="0,0,10,0"/>
+         <Button Content="导出超长折线图" 
+                 Command="{Binding ExportChartCommand}"
+                 Padding="20,8" 
+                 Margin="10,0,10,0"/>
+         <Button Content="导出前100差值点" 
+                 Command="{Binding ExportTop100Command}"
+                 Padding="20,8" 
+                 Margin="10,0,0,0"/>
+       </StackPanel>
+
+      <!-- 状态信息 -->
+      <Grid Grid.Row="3" 
+            ColumnDefinitions="*,Auto" 
+            Margin="0,0,0,15">
+        <TextBlock Grid.Column="0" 
+                   Text="{Binding StatusMessage}" 
+                   VerticalAlignment="Center"/>
+        
+        <!-- 进度指示器 -->
+        <ProgressBar Grid.Column="1" 
+                     IsIndeterminate="{Binding IsProcessing}"
+                     IsVisible="{Binding IsProcessing}"
+                     Width="100" 
+                     Height="20"/>
+      </Grid>
+
+      <!-- 结果数据网格 -->
+      <DataGrid Grid.Row="4" 
+                ItemsSource="{Binding Results}"
+                AutoGenerateColumns="False"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="True"
+                GridLinesVisibility="All"
+                BorderThickness="1"
+                BorderBrush="Gray">
+        
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="120"/>
+          <DataGridTextColumn Header="时间点" Binding="{Binding TimePoint}" Width="80"/>
+          <DataGridTextColumn Header="IDEL1" Binding="{Binding IDEL1, StringFormat=F3}" Width="80"/>
+          <DataGridTextColumn Header="IDEL2" Binding="{Binding IDEL2, StringFormat=F3}" Width="80"/>
+          <DataGridTextColumn Header="IDEE1" Binding="{Binding IDEE1, StringFormat=F3}" Width="80"/>
+          <DataGridTextColumn Header="IDEE2" Binding="{Binding IDEE2, StringFormat=F3}" Width="80"/>
+          <DataGridTextColumn Header="差值1" Binding="{Binding Difference1, StringFormat=F3}" Width="80"/>
+          <DataGridTextColumn Header="差值2" Binding="{Binding Difference2, StringFormat=F3}" Width="80"/>
+          <DataGridTextColumn Header="差值的差值" Binding="{Binding DifferenceOfDifferences, StringFormat=F3}" Width="100"/>
+          <DataGridTextColumn Header="差值百分比(%)" Binding="{Binding DifferencePercentage, StringFormat=F2}" Width="120"/>
+        </DataGrid.Columns>
+      </DataGrid>
+
+    </Grid>
+  </ScrollViewer>
+
+</UserControl> 
