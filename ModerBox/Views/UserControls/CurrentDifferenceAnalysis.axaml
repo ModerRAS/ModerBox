@@ -16,10 +16,17 @@
       
       <!-- 标题 -->
       <TextBlock Grid.Row="0" 
-                 Text="电流差值分析" 
+                 Text="接地极电流差值分析" 
                  FontSize="24" 
                  FontWeight="Bold" 
-                 Margin="0,0,0,20"/>
+                 Margin="0,0,0,10"/>
+      
+      <!-- 功能描述 -->
+      <TextBlock Grid.Row="0" 
+                 Text="此功能用于扫描波形文件，匹配IDEL1、IDEL2、IDEE1、IDEE2通道，计算(IDEL1-IDEL2)-(IDEE1-IDEE2)差值并导出结果"
+                 FontSize="12" 
+                 Foreground="Gray"
+                 Margin="0,34,0,10"/>
 
       <!-- 配置区域 -->
       <Border Grid.Row="1" 
