@@ -1,0 +1,52 @@
+{
+  "OrthogonalData": [],
+  "NonOrthogonalData": [],
+  "ChannelDifferenceAnalysisData": [
+    {
+      "Name": "ChannelDifferenceAnalysis1",
+      "DisplayName": "通道差值分析-示例1",
+      "Child": "Child0",
+      "DeviceName": [
+        "S2P1A",
+        "S2P1B",
+        "S2P2A",
+        "S2P2B"
+      ],
+      "WithPole": false
+    },
+    {
+      "Name": "ChannelDifferenceAnalysis2", 
+      "DisplayName": "通道差值分析-示例2",
+      "Child": "Child1",
+      "DeviceName": [
+        "S1P1A",
+        "S1P1B"
+      ],
+      "WithPole": true
+    }
+  ],
+  "DataFilter": [
+    {
+      "Name": "ChannelDifferenceFilter",
+      "DataNames": [
+        {
+          "Name": "ChannelDifferenceAnalysis1",
+          "Type": "ChannelDifferenceAnalysisData"
+        }
+      ]
+    },
+    {
+      "Name": "MultiChannelDifferenceFilter",
+      "DataNames": [
+        {
+          "Name": "ChannelDifferenceAnalysis1",
+          "Type": "ChannelDifferenceAnalysisData"
+        },
+        {
+          "Name": "ChannelDifferenceAnalysis2",
+          "Type": "ChannelDifferenceAnalysisData"
+        }
+      ]
+    }
+  ]
+} 
