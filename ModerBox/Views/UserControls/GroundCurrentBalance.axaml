@@ -128,10 +128,10 @@
         <DataGrid.Columns>
           <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="150"/>
           <DataGridTextColumn Header="点序号" Binding="{Binding PointIndex}" Width="80"/>
-          <DataGridTextColumn Header="IDEL1_ABS" Binding="{Binding IDEL1_ABS, StringFormat=F3}" Width="100"/>
-          <DataGridTextColumn Header="IDEL2_ABS" Binding="{Binding IDEL2_ABS, StringFormat=F3}" Width="100"/>
-          <DataGridTextColumn Header="IDEE1_SW" Binding="{Binding IDEE1_SW, StringFormat=F3}" Width="100"/>
-          <DataGridTextColumn Header="IDEE2_SW" Binding="{Binding IDEE2_SW, StringFormat=F3}" Width="100"/>
+                          <DataGridTextColumn Header="IDEL1" Binding="{Binding IDEL1, StringFormat=F3}" Width="100"/>
+                <DataGridTextColumn Header="IDEL2" Binding="{Binding IDEL2, StringFormat=F3}" Width="100"/>
+                <DataGridTextColumn Header="IDEE1" Binding="{Binding IDEE1, StringFormat=F3}" Width="100"/>
+                <DataGridTextColumn Header="IDEE2" Binding="{Binding IDEE2, StringFormat=F3}" Width="100"/>
           <DataGridTextColumn Header="差值1" Binding="{Binding Difference1, StringFormat=F3}" Width="80"/>
           <DataGridTextColumn Header="差值2" Binding="{Binding Difference2, StringFormat=F3}" Width="80"/>
           <DataGridTextColumn Header="差值的差值" Binding="{Binding DifferenceBetweenDifferences, StringFormat=F3}" Width="100"/>

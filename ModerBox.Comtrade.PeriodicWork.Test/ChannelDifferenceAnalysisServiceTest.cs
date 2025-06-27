@@ -78,17 +78,17 @@ namespace ModerBox.Comtrade.PeriodicWork.Test {
         public void ChannelDifferenceAnalysisResult_ShouldCalculateDifferencesCorrectly() {
             // Arrange
             var result = new ChannelDifferenceAnalysisResult {
-                IDEL1_ABS = 10.5,
-                IDEL2_ABS = 20.3,
-                IDEE1_SW = 5.2,
-                IDEE2_SW = 8.1,
+                IDEL1 = 10.5,
+                IDEL2 = 20.3,
+                IDEE1 = 5.2,
+                IDEE2 = 8.1,
                 FileName = "test.cfg",
                 PointIndex = 1
             };
 
             // Act
-            result.Difference1 = result.IDEL1_ABS - result.IDEE1_SW; // 10.5 - 5.2 = 5.3
-            result.Difference2 = result.IDEL2_ABS - result.IDEE2_SW; // 20.3 - 8.1 = 12.2
+            result.Difference1 = result.IDEL1 - result.IDEE1; // 10.5 - 5.2 = 5.3
+            result.Difference2 = result.IDEL2 - result.IDEE2; // 20.3 - 8.1 = 12.2
             result.DifferenceBetweenDifferences = result.Difference1 - result.Difference2; // 5.3 - 12.2 = -6.9
             result.DifferencePercentage = (result.DifferenceBetweenDifferences / result.Difference1) * 100.0; // (-6.9 / 5.3) * 100 = -130.19
 
@@ -115,17 +115,17 @@ namespace ModerBox.Comtrade.PeriodicWork.Test {
         public void ChannelDifferenceAnalysisResult_ShouldHandleZeroDivision() {
             // Arrange
             var result = new ChannelDifferenceAnalysisResult {
-                IDEL1_ABS = 5.0,
-                IDEL2_ABS = 10.0,
-                IDEE1_SW = 5.0, // 使得Difference1为0
-                IDEE2_SW = 2.0,
+                IDEL1 = 5.0,
+                IDEL2 = 10.0,
+                IDEE1 = 5.0, // 使得Difference1为0
+                IDEE2 = 2.0,
                 FileName = "test_zero.cfg",
                 PointIndex = 1
             };
 
             // Act
-            result.Difference1 = result.IDEL1_ABS - result.IDEE1_SW; // 5.0 - 5.0 = 0
-            result.Difference2 = result.IDEL2_ABS - result.IDEE2_SW; // 10.0 - 2.0 = 8.0
+            result.Difference1 = result.IDEL1 - result.IDEE1; // 5.0 - 5.0 = 0
+            result.Difference2 = result.IDEL2 - result.IDEE2; // 10.0 - 2.0 = 8.0
             result.DifferenceBetweenDifferences = result.Difference1 - result.Difference2; // 0 - 8.0 = -8.0
             
             // 模拟服务中的除零处理逻辑

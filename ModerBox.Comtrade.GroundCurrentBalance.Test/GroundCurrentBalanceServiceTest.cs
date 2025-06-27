@@ -78,16 +78,16 @@ namespace ModerBox.Comtrade.GroundCurrentBalance.Test {
         public void GroundCurrentBalanceResult_CalculateBalanceStatus_Balanced() {
             // Arrange
             var result = new GroundCurrentBalanceResult {
-                IDEL1_ABS = 100.0,
-                IDEL2_ABS = 105.0,
-                IDEE1_SW = 98.0,
-                IDEE2_SW = 103.0,
+                IDEL1 = 100.0,
+                IDEL2 = 105.0,
+                IDEE1 = 98.0,
+                IDEE2 = 103.0,
                 BalanceThreshold = 5.0
             };
 
             // Act
-            result.Difference1 = result.IDEL1_ABS - result.IDEE1_SW; // 2.0
-            result.Difference2 = result.IDEL2_ABS - result.IDEE2_SW; // 2.0
+            result.Difference1 = result.IDEL1 - result.IDEE1; // 2.0
+            result.Difference2 = result.IDEL2 - result.IDEE2; // 2.0
             result.DifferenceBetweenDifferences = result.Difference1 - result.Difference2; // 0.0
             result.DifferencePercentage = (result.DifferenceBetweenDifferences / result.Difference1) * 100.0; // 0.0%
 
@@ -102,16 +102,16 @@ namespace ModerBox.Comtrade.GroundCurrentBalance.Test {
         public void GroundCurrentBalanceResult_CalculateBalanceStatus_Unbalanced() {
             // Arrange
             var result = new GroundCurrentBalanceResult {
-                IDEL1_ABS = 100.0,
-                IDEL2_ABS = 120.0,
-                IDEE1_SW = 90.0,
-                IDEE2_SW = 100.0,
+                IDEL1 = 100.0,
+                IDEL2 = 120.0,
+                IDEE1 = 90.0,
+                IDEE2 = 100.0,
                 BalanceThreshold = 5.0
             };
 
             // Act
-            result.Difference1 = result.IDEL1_ABS - result.IDEE1_SW; // 10.0
-            result.Difference2 = result.IDEL2_ABS - result.IDEE2_SW; // 20.0
+            result.Difference1 = result.IDEL1 - result.IDEE1; // 10.0
+            result.Difference2 = result.IDEL2 - result.IDEE2; // 20.0
             result.DifferenceBetweenDifferences = result.Difference1 - result.Difference2; // -10.0
             result.DifferencePercentage = (result.DifferenceBetweenDifferences / result.Difference1) * 100.0; // -100.0%
 

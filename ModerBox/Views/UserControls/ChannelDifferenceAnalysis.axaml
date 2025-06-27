@@ -16,7 +16,7 @@
             <StackPanel Spacing="5">
                 <TextBlock FontSize="18" FontWeight="Bold" Text="通道差值分析"/>
                 <TextBlock FontSize="12" Foreground="Gray" TextWrapping="Wrap"
-                          Text="此功能用于扫描波形文件，匹配IDEL1_ABS、IDEL2_ABS、IDEE1_SW、IDEE2_SW通道，并计算差值导出到Excel"/>
+                          Text="此功能用于扫描波形文件，匹配IDEL1、IDEL2、IDEE1、IDEE2通道，并计算差值导出到Excel"/>
             </StackPanel>
 
             <!-- 源文件夹选择 -->

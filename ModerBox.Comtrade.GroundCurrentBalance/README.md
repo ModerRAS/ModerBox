@@ -21,8 +21,8 @@
 - **IDEE2**: 第二路接地极电流开关值
 
 ### 计算公式
-1. **差值1**: `Difference1 = IDEL1_ABS - IDEE1_SW`
-2. **差值2**: `Difference2 = IDEL2_ABS - IDEE2_SW`
+1. **差值1**: `Difference1 = IDEL1 - IDEE1`
+2. **差值2**: `Difference2 = IDEL2 - IDEE2`
 3. **差值的差值**: `DifferenceBetweenDifferences = Difference1 - Difference2`
 4. **差值百分比**: `DifferencePercentage = (DifferenceBetweenDifferences / Difference1) × 100%`
 
@@ -78,10 +78,10 @@ workbook.SaveAs("接地极电流平衡分析报告.xlsx");
 Excel报告包含以下列：
 - **文件名**: 源波形文件名
 - **点序号**: 数据点在文件中的位置
-- **IDEL1_ABS**: 第一路接地极电流绝对值
-- **IDEL2_ABS**: 第二路接地极电流绝对值
-- **IDEE1_SW**: 第一路接地极电流开关值
-- **IDEE2_SW**: 第二路接地极电流开关值
+- **IDEL1**: 第一路接地极电流
+- **IDEL2**: 第二路接地极电流
+- **IDEE1**: 第一路接地极电流
+- **IDEE2**: 第二路接地极电流
 - **IDEL1-IDEE1**: 第一组差值
 - **IDEL2-IDEE2**: 第二组差值
 - **差值的差值**: 两组差值的差值

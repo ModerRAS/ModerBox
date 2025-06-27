@@ -25,10 +25,10 @@ namespace ModerBox.Comtrade.GroundCurrentBalance.Extensions {
             var headers = new string[] {
                 "文件名",
                 "点序号",
-                "IDEL1_ABS",
-                "IDEL2_ABS", 
-                "IDEE1_SW",
-                "IDEE2_SW",
+                "IDEL1",
+                "IDEL2",
+                "IDEE1",
+                "IDEE2",
                 "IDEL1-IDEE1",
                 "IDEL2-IDEE2",
                 "(IDEL1-IDEE1)-(IDEL2-IDEE2)",
@@ -49,10 +49,10 @@ namespace ModerBox.Comtrade.GroundCurrentBalance.Extensions {
             foreach (var result in results) {
                 worksheet.Cell(rowIndex, 1).Value = result.FileName;
                 worksheet.Cell(rowIndex, 2).Value = result.PointIndex;
-                worksheet.Cell(rowIndex, 3).Value = result.IDEL1_ABS;
-                worksheet.Cell(rowIndex, 4).Value = result.IDEL2_ABS;
-                worksheet.Cell(rowIndex, 5).Value = result.IDEE1_SW;
-                worksheet.Cell(rowIndex, 6).Value = result.IDEE2_SW;
+                worksheet.Cell(rowIndex, 3).Value = result.IDEL1;
+                worksheet.Cell(rowIndex, 4).Value = result.IDEL2;
+                worksheet.Cell(rowIndex, 5).Value = result.IDEE1;
+                worksheet.Cell(rowIndex, 6).Value = result.IDEE2;
                 worksheet.Cell(rowIndex, 7).Value = result.Difference1;
                 worksheet.Cell(rowIndex, 8).Value = result.Difference2;
                 worksheet.Cell(rowIndex, 9).Value = result.DifferenceBetweenDifferences;

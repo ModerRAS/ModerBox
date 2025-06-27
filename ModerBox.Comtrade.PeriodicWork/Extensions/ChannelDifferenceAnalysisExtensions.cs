@@ -47,10 +47,10 @@ namespace ModerBox.Comtrade.PeriodicWork.Extensions {
             foreach (var result in results) {
                 worksheet.Cell(rowIndex, 1).Value = result.FileName;
                 worksheet.Cell(rowIndex, 2).Value = result.PointIndex;
-                worksheet.Cell(rowIndex, 3).Value = result.IDEL1_ABS;
-                worksheet.Cell(rowIndex, 4).Value = result.IDEL2_ABS;
-                worksheet.Cell(rowIndex, 5).Value = result.IDEE1_SW;
-                worksheet.Cell(rowIndex, 6).Value = result.IDEE2_SW;
+                worksheet.Cell(rowIndex, 3).Value = result.IDEL1;
+                worksheet.Cell(rowIndex, 4).Value = result.IDEL2;
+                worksheet.Cell(rowIndex, 5).Value = result.IDEE1;
+                worksheet.Cell(rowIndex, 6).Value = result.IDEE2;
                 worksheet.Cell(rowIndex, 7).Value = result.Difference1;
                 worksheet.Cell(rowIndex, 8).Value = result.Difference2;
                 worksheet.Cell(rowIndex, 9).Value = result.DifferenceBetweenDifferences;

@@ -41,25 +41,25 @@ namespace ModerBox.Comtrade.PeriodicWork.Protocol {
         /// </summary>
         public int PointIndex { get; set; }
         
-        /// <summary>
-        /// IDEL1_ABS值
-        /// </summary>
-        public double IDEL1_ABS { get; set; }
-        
-        /// <summary>
-        /// IDEL2_ABS值
-        /// </summary>
-        public double IDEL2_ABS { get; set; }
-        
-        /// <summary>
-        /// IDEE1_SW值
-        /// </summary>
-        public double IDEE1_SW { get; set; }
-        
-        /// <summary>
-        /// IDEE2_SW值
-        /// </summary>
-        public double IDEE2_SW { get; set; }
+            /// <summary>
+    /// IDEL1值
+    /// </summary>
+    public double IDEL1 { get; set; }
+
+    /// <summary>
+    /// IDEL2值
+    /// </summary>
+    public double IDEL2 { get; set; }
+
+    /// <summary>
+    /// IDEE1值
+    /// </summary>
+    public double IDEE1 { get; set; }
+
+    /// <summary>
+    /// IDEE2值
+    /// </summary>
+    public double IDEE2 { get; set; }
         
         /// <summary>
         /// IDEL1 - IDEE1差值
