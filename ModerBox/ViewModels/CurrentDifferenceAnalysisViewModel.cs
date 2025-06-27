@@ -48,8 +48,7 @@ namespace ModerBox.ViewModels {
         public ICommand CalculateCommand { get; }
         public ICommand ExportChartCommand { get; }
         public ICommand ExportTop100Command { get; }
-
-
+        public ICommand ExportWaveformChartsCommand { get; }
 
         public CurrentDifferenceAnalysisViewModel() {
             SelectSourceFolderCommand = ReactiveCommand.CreateFromTask(SelectSourceFolder);
@@ -57,6 +56,7 @@ namespace ModerBox.ViewModels {
             CalculateCommand = ReactiveCommand.CreateFromTask(Calculate, this.WhenAnyValue(x => x.IsProcessing, processing => !processing));
             ExportChartCommand = ReactiveCommand.CreateFromTask(ExportChart);
             ExportTop100Command = ReactiveCommand.CreateFromTask(ExportTop100);
+            ExportWaveformChartsCommand = ReactiveCommand.CreateFromTask(ExportWaveformCharts);
         }
 
         private async Task SelectSourceFolder() {
@@ -371,6 +371,188 @@ namespace ModerBox.ViewModels {
                 }
             } catch (Exception ex) {
                 StatusMessage = $"导出前100差值点失败: {ex.Message}";
+            }
+        }
+
+        private async Task ExportWaveformCharts() {
+            if (!Results.Any()) {
+                StatusMessage = "没有数据可以导出波形图";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(SourceFolder)) {
+                StatusMessage = "请先选择源文件夹以重新读取波形数据";
+                return;
+            }
+
+            try {
+                StatusMessage = "正在选择波形图导出文件夹...";
+
+                var dialog = new OpenFolderDialog {
+                    Title = "选择波形图导出文件夹"
+                };
+
+                if (App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop) {
+                    var result = await dialog.ShowAsync(desktop.MainWindow);
+                    if (!string.IsNullOrEmpty(result)) {
+                        StatusMessage = "正在生成波形图...";
+                        await Task.Run(() => CreateWaveformCharts(result));
+                        StatusMessage = $"波形图已保存到: {result}";
+                    }
+                }
+            } catch (Exception ex) {
+                StatusMessage = $"导出波形图失败: {ex.Message}";
+            }
+        }
+
+        private void CreateWaveformCharts(string outputFolder) {
+            // 获取差值最大的100个点
+            var top100Points = Results
+                .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
+                .Take(100)
+                .ToList();
+
+            var chartCount = 0;
+            var totalCharts = top100Points.Count;
+
+            foreach (var point in top100Points) {
+                try {
+                    chartCount++;
+                    
+                    // 查找对应的CFG文件
+                    var cfgFiles = Directory.GetFiles(SourceFolder, "*.cfg", SearchOption.AllDirectories)
+                        .Where(f => Path.GetFileNameWithoutExtension(f) == point.FileName)
+                        .ToList();
+
+                    if (!cfgFiles.Any()) {
+                        continue;
+                    }
+
+                    var cfgFile = cfgFiles.First();
+                    
+                    // 读取Comtrade数据
+                    var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
+                    ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo);
+
+                    // 查找所需的通道
+                    var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
+                    var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL2"));
+                    var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE1"));
+                    var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE2"));
+
+                    if (idel1 == null || idel2 == null || idee1 == null || idee2 == null) {
+                        continue;
+                    }
+
+                    // 计算前后2000个点的范围
+                    int startIndex = Math.Max(0, point.TimePoint - 2000);
+                    int endIndex = Math.Min(comtradeInfo.EndSamp - 1, point.TimePoint + 2000);
+                    int rangeLength = endIndex - startIndex + 1;
+
+                    if (rangeLength <= 0) {
+                        continue;
+                    }
+
+                    // 创建时间轴（使用采样点索引）
+                    var timeAxis = Enumerable.Range(startIndex, rangeLength)
+                        .Select(i => (double)i)
+                        .ToArray();
+
+                    // 提取波形数据
+                    var idel1Data = new double[rangeLength];
+                    var idel2Data = new double[rangeLength];
+                    var idee1Data = new double[rangeLength];
+                    var idee2Data = new double[rangeLength];
+                    var diff1Data = new double[rangeLength];
+                    var diff2Data = new double[rangeLength];
+                    var diffOfDiffsData = new double[rangeLength];
+
+                    for (int i = 0; i < rangeLength; i++) {
+                        var dataIndex = startIndex + i;
+                        idel1Data[i] = idel1.Data[dataIndex];
+                        idel2Data[i] = idel2.Data[dataIndex];
+                        idee1Data[i] = idee1.Data[dataIndex];
+                        idee2Data[i] = idee2.Data[dataIndex];
+                        diff1Data[i] = idel1Data[i] - idel2Data[i];
+                        diff2Data[i] = idee1Data[i] - idee2Data[i];
+                        diffOfDiffsData[i] = diff1Data[i] - diff2Data[i];
+                    }
+
+                    // 创建波形图
+                    var plt = new Plot();
+
+                    // 添加原始波形
+                    var line1 = plt.Add.Scatter(timeAxis, idel1Data);
+                    line1.LegendText = "IDEL1";
+                    line1.MarkerSize = 0;
+                    line1.LineWidth = 1;
+
+                    var line2 = plt.Add.Scatter(timeAxis, idel2Data);
+                    line2.LegendText = "IDEL2";
+                    line2.MarkerSize = 0;
+                    line2.LineWidth = 1;
+
+                    var line3 = plt.Add.Scatter(timeAxis, idee1Data);
+                    line3.LegendText = "IDEE1";
+                    line3.MarkerSize = 0;
+                    line3.LineWidth = 1;
+
+                    var line4 = plt.Add.Scatter(timeAxis, idee2Data);
+                    line4.LegendText = "IDEE2";
+                    line4.MarkerSize = 0;
+                    line4.LineWidth = 1;
+
+                    // 添加差值波形
+                    var diffLine1 = plt.Add.Scatter(timeAxis, diff1Data);
+                    diffLine1.LegendText = "IDEL1-IDEL2";
+                    diffLine1.MarkerSize = 0;
+                    diffLine1.LineWidth = 2;
+
+                    var diffLine2 = plt.Add.Scatter(timeAxis, diff2Data);
+                    diffLine2.LegendText = "IDEE1-IDEE2";
+                    diffLine2.MarkerSize = 0;
+                    diffLine2.LineWidth = 2;
+
+                    var diffOfDiffLine = plt.Add.Scatter(timeAxis, diffOfDiffsData);
+                    diffOfDiffLine.LegendText = "(IDEL1-IDEL2)-(IDEE1-IDEE2)";
+                    diffOfDiffLine.MarkerSize = 0;
+                    diffOfDiffLine.LineWidth = 3;
+
+                    // 标记最大差值点
+                    var maxPointMarker = plt.Add.Scatter(new double[] { point.TimePoint }, new double[] { point.DifferenceOfDifferences });
+                    maxPointMarker.LegendText = $"最大差值点 (时间点:{point.TimePoint})";
+                    maxPointMarker.MarkerSize = 10;
+                    maxPointMarker.LineWidth = 0;
+
+                    // 设置图表属性和中文标题
+                    string titleText = $"差值波形图 - {point.FileName}\n最大差值点: {point.TimePoint}, 差值: {point.DifferenceOfDifferences:F3}\n时间范围: {startIndex} - {endIndex} (前后2000点)";
+                    plt.Title(titleText);
+                    plt.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titleText);
+                    
+                    string xLabelText = "采样点索引";
+                    plt.XLabel(xLabelText);
+                    plt.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabelText);
+                    
+                    string yLabelText = "电流值";
+                    plt.YLabel(yLabelText);
+                    plt.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabelText);
+                    
+                    plt.ShowLegend();
+
+                    // 自动设置所有文本元素的字体以支持中文
+                    plt.Font.Automatic();
+
+                    // 设置网格
+                    plt.Grid.MajorLineColor = ScottPlot.Color.FromHex("#E0E0E0");
+
+                    // 保存图片
+                    var fileName = $"排名{chartCount:D3}_波形图_{point.FileName}_时间点{point.TimePoint}_差值{point.DifferenceOfDifferences:F3}.png";
+                    var filePath = Path.Combine(outputFolder, fileName);
+                    plt.SavePng(filePath, 1600, 800);
+
+                } catch (Exception ex) {
+                    System.Diagnostics.Debug.WriteLine($"生成波形图失败 {point.FileName}-{point.TimePoint}: {ex.Message}");
+                }
             }
         }
     }
