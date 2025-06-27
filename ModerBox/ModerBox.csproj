@@ -38,6 +38,7 @@
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
 	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
 	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.6" />
+	  <PackageReference Include="ScottPlot" Version="5.0.55" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,6 +46,7 @@
     <ProjectReference Include="..\ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade.Harmonic\ModerBox.Comtrade.Harmonic.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade.PeriodicWork\ModerBox.Comtrade.PeriodicWork.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.GroundCurrentBalance\ModerBox.Comtrade.GroundCurrentBalance.csproj" />
   </ItemGroup>
 
   <ItemGroup>
