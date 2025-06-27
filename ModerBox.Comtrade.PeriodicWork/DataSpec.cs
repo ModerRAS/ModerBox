@@ -33,6 +33,14 @@ namespace ModerBox.Comtrade.PeriodicWork {
         public bool Transpose { get; set; }
     }
 
+    /// <summary>
+    /// 通道差值分析数据项
+    /// </summary>
+    public class ChannelDifferenceAnalysisDataItem {
+        public string Name { get; set; }
+        public string DisplayName { get; set; }
+    }
+
     public class DataNames {
         public string Name { get; set; }
         public string Type { get; set; }
@@ -45,6 +53,7 @@ namespace ModerBox.Comtrade.PeriodicWork {
     public class DataSpec {
         public List<OrthogonalDataItem> OrthogonalData { get; set; }
         public List<NonOrthogonalDataItem> NonOrthogonalData { get; set; }
+        public List<ChannelDifferenceAnalysisDataItem> ChannelDifferenceAnalysisData { get; set; }
         public List<DataFilter> DataFilter { get; set; }
     }
 

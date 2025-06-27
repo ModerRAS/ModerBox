@@ -17,7 +17,8 @@ namespace ModerBox.ViewModels {
                 new HomePageViewModel { Title = "首页", Icon = "Home" },
                 new HarmonicCalculateViewModel { Title = "谐波计算", Icon = "ShowResults" },
                 new FilterWaveformSwitchIntervalViewModel { Title = "滤波器分合闸波形检测", Icon = "Filter" },
-                new PeriodicWorkViewModel { Title = "内置录波定期工作", Icon = "Calendar" }
+                new PeriodicWorkViewModel { Title = "内置录波定期工作", Icon = "Calendar" },
+                new ChannelDifferenceAnalysisViewModel { Title = "通道差值分析", Icon = "Calculator" }
             };
             _currentPage = Pages.First();
         }
