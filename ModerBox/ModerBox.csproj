@@ -10,6 +10,15 @@
     <!-- NativeAOT settings -->
     <PublishAot>true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
+    <!-- 为ScottPlot等第三方库提供更好的AOT兼容性 -->
+    <TrimmerDefaultAction>copy</TrimmerDefaultAction>
+    <IlcDisableReflection>false</IlcDisableReflection>
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- 保留调试信息以便调试AOT问题 -->
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +28,14 @@
 
   <ItemGroup>
     <Content Include="Assets\avalonia-logo.ico" />
+  </ItemGroup>
+
+  <!-- Native AOT trimmer configuration -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="ScottPlot" />
+    <TrimmerRootAssembly Include="SkiaSharp" />
+    <TrimmerRootAssembly Include="System.Drawing.Common" />
+    <TrimmerRootAssembly Include="System.Text.Encoding.CodePages" />
   </ItemGroup>
 
   <ItemGroup>
