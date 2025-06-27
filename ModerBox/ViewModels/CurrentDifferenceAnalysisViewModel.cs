@@ -112,7 +112,7 @@ namespace ModerBox.ViewModels {
             }
 
             IsProcessing = true;
-            StatusMessage = "正在计算电流差值...";
+            StatusMessage = "正在计算接地极电流差值...";
             Results.Clear();
 
             try {
@@ -234,7 +234,7 @@ namespace ModerBox.ViewModels {
                     });
                 }
                 
-                dataWriter.WriteDoubleList(data, "电流差值分析");
+                dataWriter.WriteDoubleList(data, "接地极电流差值分析");
                 dataWriter.SaveAs(TargetFile);
             });
         }
@@ -295,7 +295,7 @@ namespace ModerBox.ViewModels {
             line4.LegendText = "差值百分比%";
             line4.MarkerSize = 1;
 
-            plt.Title("电流差值分析");
+            plt.Title("接地极电流差值分析");
             plt.Axes.Bottom.Label.Text = "时间点";
             plt.Axes.Left.Label.Text = "值";
             plt.ShowLegend();
@@ -432,7 +432,7 @@ namespace ModerBox.ViewModels {
                     
                     // 读取Comtrade数据
                     var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
-                    ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo);
+                    ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
 
                     // 查找所需的通道
                     var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
@@ -525,7 +525,7 @@ namespace ModerBox.ViewModels {
                     maxPointMarker.LineWidth = 0;
 
                     // 设置图表属性和中文标题
-                    string titleText = $"差值波形图 - {point.FileName}\n最大差值点: {point.TimePoint}, 差值: {point.DifferenceOfDifferences:F3}\n时间范围: {startIndex} - {endIndex} (前后2000点)";
+                    string titleText = $"接地极电流差值波形图 - {point.FileName}\n最大差值点: {point.TimePoint}, 差值: {point.DifferenceOfDifferences:F3}\n时间范围: {startIndex} - {endIndex} (前后2000点)";
                     plt.Title(titleText);
                     plt.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titleText);
                     
@@ -546,7 +546,7 @@ namespace ModerBox.ViewModels {
                     plt.Grid.MajorLineColor = ScottPlot.Color.FromHex("#E0E0E0");
 
                     // 保存图片
-                    var fileName = $"排名{chartCount:D3}_波形图_{point.FileName}_时间点{point.TimePoint}_差值{point.DifferenceOfDifferences:F3}.png";
+                    var fileName = $"排名{chartCount:D3}_接地极电流差值波形图_{point.FileName}_时间点{point.TimePoint}_差值{point.DifferenceOfDifferences:F3}.png";
                     var filePath = Path.Combine(outputFolder, fileName);
                     plt.SavePng(filePath, 1600, 800);
 
