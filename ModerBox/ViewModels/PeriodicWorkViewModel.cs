@@ -54,11 +54,24 @@ namespace ModerBox.ViewModels {
         }
 
         public async Task LoadData() {
-            var data = JsonConvert.DeserializeObject<ModerBox.Comtrade.PeriodicWork.DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-            data.DataFilter.ForEach(x => {
-                Works.Add(x.Name);
-            });
-            SelectedWork = Works.FirstOrDefault() ?? string.Empty;
+            try {
+                // 获取程序目录并构建JSON文件的完整路径
+                var appDirectory = AppContext.BaseDirectory;
+                var jsonFilePath = Path.Combine(appDirectory, "PeriodicWorkData.json");
+                
+                var data = JsonConvert.DeserializeObject<ModerBox.Comtrade.PeriodicWork.DataSpec>(File.ReadAllText(jsonFilePath));
+                if (data?.DataFilter != null) {
+                    data.DataFilter.ForEach(x => {
+                        Works.Add(x.Name);
+                    });
+                    SelectedWork = Works.FirstOrDefault() ?? string.Empty;
+                }
+            } catch (Exception ex) {
+                // 处理JSON文件读取或解析错误
+                Console.WriteLine($"无法读取配置文件 PeriodicWorkData.json: {ex.Message}");
+                Works.Add("配置文件读取失败");
+                SelectedWork = "配置文件读取失败";
+            }
         }
 
         private async Task SelectSourceTask() {
@@ -81,9 +94,16 @@ namespace ModerBox.ViewModels {
 
         private async Task RunCalculateTask() {
             Progress = 0;
-            
-            var periodicWork = new PeriodicWork();
-            await periodicWork.DoPeriodicWork(SourceFolder, TargetFile, SelectedWork);
+
+            try {
+                var periodicWork = new PeriodicWork();
+                await periodicWork.DoPeriodicWork(SourceFolder, TargetFile, SelectedWork);
+                Progress = 100;
+            } catch (Exception ex) {
+                // TODO: 在实际项目中，应该通过UI显示错误信息而不是控制台输出
+                Console.WriteLine($"执行定期工作失败: {ex.Message}");
+                Progress = 0;
+            }
         }
         private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
             // For learning purposes, we opted to directly get the reference

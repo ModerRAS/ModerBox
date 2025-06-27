@@ -51,6 +51,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="..\ModerBox.Comtrade.PeriodicWork\PeriodicWorkData.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>PeriodicWorkData.json</Link>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="Views\UserControls\FilterWaveformSwitchInterval.axaml.cs">
       <DependentUpon>FilterWaveformSwitchInterval.axaml</DependentUpon>
     </Compile>
