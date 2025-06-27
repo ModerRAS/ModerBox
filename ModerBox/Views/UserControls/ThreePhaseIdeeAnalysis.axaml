@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="ModerBox.Views.UserControls.ThreePhaseIdeeAnalysis"
+             x:DataType="vm:ThreePhaseIdeeAnalysisViewModel">
+  
+  <Design.DataContext>
+    <vm:ThreePhaseIdeeAnalysisViewModel/>
+  </Design.DataContext>
+
+  <ScrollViewer>
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,*">
+      
+      <!-- 标题 -->
+      <TextBlock Grid.Row="0" 
+                 Text="三相IDEE分析" 
+                 FontSize="24" 
+                 FontWeight="Bold" 
+                 Margin="0,0,0,10"/>
+      
+      <!-- 功能描述 -->
+      <TextBlock Grid.Row="0" 
+                 Text="此功能用于扫描波形文件，提取三相IDEE1、IDEE2数据，计算|IDEE1-IDEE2|差值绝对值和IDEE2数值，按文件生成汇总表格"
+                 FontSize="12" 
+                 Foreground="Gray"
+                 Margin="0,34,0,10"
+                 TextWrapping="Wrap"/>
+
+      <!-- 文件选择区域 -->
+      <Border Grid.Row="1" 
+              Background="LightGray" 
+              Padding="15" 
+              CornerRadius="5" 
+              Margin="0,10,0,10">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+          
+          <!-- 源文件夹选择 -->
+          <Grid Grid.Row="0" ColumnDefinitions="100,*,Auto" Margin="0,0,0,10">
+            <TextBlock Grid.Column="0" Text="源文件夹:" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" 
+                     Text="{Binding SourceFolder}" 
+                     IsReadOnly="True" 
+                     Margin="10,0,10,0"
+                     Watermark="点击右侧按钮选择包含波形文件的文件夹"/>
+            <Button Grid.Column="2" 
+                    Content="浏览..." 
+                    Command="{Binding SelectSourceFolderCommand}"
+                    MinWidth="80"/>
+          </Grid>
+
+          <!-- 目标文件选择 -->
+          <Grid Grid.Row="1" ColumnDefinitions="100,*,Auto" Margin="0,0,0,10">
+            <TextBlock Grid.Column="0" Text="导出文件:" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" 
+                     Text="{Binding TargetFile}" 
+                     IsReadOnly="True" 
+                     Margin="10,0,10,0"
+                     Watermark="点击右侧按钮选择Excel导出文件位置"/>
+            <Button Grid.Column="2" 
+                    Content="浏览..." 
+                    Command="{Binding SelectTargetFileCommand}"
+                    MinWidth="80"/>
+          </Grid>
+
+          <!-- 分析按钮 -->
+          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20" Margin="0,10,0,0">
+            <Button Content="开始分析" 
+                    Command="{Binding AnalyzeCommand}"
+                    IsEnabled="{Binding !IsProcessing}"
+                    MinWidth="120" 
+                    Height="35"/>
+            <Button Content="生成图表" 
+                    Command="{Binding GenerateChartCommand}"
+                    IsEnabled="{Binding Results.Count}"
+                    MinWidth="120" 
+                    Height="35"/>
+          </StackPanel>
+
+          <!-- 状态显示 -->
+          <TextBlock Grid.Row="3" 
+                     Text="{Binding StatusMessage}" 
+                     HorizontalAlignment="Center" 
+                     Margin="0,10,0,0"
+                     FontWeight="Medium"/>
+          
+        </Grid>
+      </Border>
+
+      <!-- 进度指示器 -->
+      <ProgressBar Grid.Row="2" 
+                   IsIndeterminate="{Binding IsProcessing}" 
+                   IsVisible="{Binding IsProcessing}"
+                   Height="4" 
+                   Margin="0,5,0,15"/>
+
+      <!-- 结果表格标题 -->
+      <TextBlock Grid.Row="3" 
+                 Text="分析结果预览" 
+                 FontSize="16" 
+                 FontWeight="Bold" 
+                 Margin="0,0,0,10"
+                 IsVisible="{Binding Results.Count}"/>
+
+      <!-- 结果表格 -->
+      <DataGrid Grid.Row="4" 
+                ItemsSource="{Binding Results}"
+                AutoGenerateColumns="False"
+                IsReadOnly="True"
+                GridLinesVisibility="All"
+                HeadersVisibility="All"
+                CanUserReorderColumns="True"
+                CanUserResizeColumns="True">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="文件名" 
+                              Binding="{Binding FileName}" 
+                              Width="200" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="A相|IDEE1-IDEE2|均值" 
+                              Binding="{Binding PhaseAIdeeAbsDifference, StringFormat=F3}" 
+                              Width="140" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="B相|IDEE1-IDEE2|均值" 
+                              Binding="{Binding PhaseBIdeeAbsDifference, StringFormat=F3}" 
+                              Width="140" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相|IDEE1-IDEE2|均值" 
+                              Binding="{Binding PhaseCIdeeAbsDifference, StringFormat=F3}" 
+                              Width="140" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="A相IDEE2均值" 
+                              Binding="{Binding PhaseAIdee2Value, StringFormat=F3}" 
+                              Width="120" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="B相IDEE2均值" 
+                              Binding="{Binding PhaseBIdee2Value, StringFormat=F3}" 
+                              Width="120" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相IDEE2均值" 
+                              Binding="{Binding PhaseCIdee2Value, StringFormat=F3}" 
+                              Width="120" 
+                              CanUserSort="True"/>
+        </DataGrid.Columns>
+      </DataGrid>
+
+    </Grid>
+  </ScrollViewer>
+
+</UserControl> 
