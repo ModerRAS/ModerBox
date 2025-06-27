@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reactive;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Controls;
@@ -115,69 +117,88 @@ namespace ModerBox.ViewModels {
 
             try {
                 var cfgFiles = Directory.GetFiles(SourceFolder, "*.cfg", SearchOption.AllDirectories);
+                StatusMessage = $"找到 {cfgFiles.Length} 个文件，开始并行处理...";
                 
-                foreach (var cfgFile in cfgFiles) {
-                    StatusMessage = $"处理文件: {Path.GetFileName(cfgFile)}";
-                    
-                    var comtradeInfo = await ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile);
-                    await ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo);
-                    
-                    // 查找所需的通道
-                    var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
-                    var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL2"));
-                    var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE1"));
-                    var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE2"));
+                // 使用线程安全的集合存储结果
+                var allResults = new ConcurrentBag<CurrentDifferenceResult>();
+                var processedCount = 0;
+                
+                // 并行处理所有文件 - 不在处理过程中更新UI
+                await Task.Run(() => {
+                    Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile => {
+                        try {
+                            var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
+                            ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
+                            
+                            // 查找所需的通道
+                            var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
+                            var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL2"));
+                            var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE1"));
+                            var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE2"));
 
-                    if (idel1 == null || idel2 == null || idee1 == null || idee2 == null) {
-                        continue; // 跳过没有所需通道的文件
-                    }
+                            if (idel1 == null || idel2 == null || idee1 == null || idee2 == null) {
+                                return; // 跳过没有所需通道的文件
+                            }
 
-                    // 计算每个时间点的差值
-                    for (int i = 0; i < comtradeInfo.EndSamp; i++) {
-                        var idel1_value = idel1.Data[i];
-                        var idel2_value = idel2.Data[i];
-                        var idee1_value = idee1.Data[i];
-                        var idee2_value = idee2.Data[i];
+                            // 计算每个时间点的差值
+                            for (int i = 0; i < comtradeInfo.EndSamp; i++) {
+                                var idel1_value = idel1.Data[i];
+                                var idel2_value = idel2.Data[i];
+                                var idee1_value = idee1.Data[i];
+                                var idee2_value = idee2.Data[i];
 
-                        // 计算差值
-                        var diff1 = idel1_value - idel2_value; // IDEL1 - IDEL2
-                        var diff2 = idee1_value - idee2_value; // IDEE1 - IDEE2
-                        var diffOfDiffs = diff1 - diff2; // 差值的差值
+                                // 计算差值
+                                var diff1 = idel1_value - idel2_value; // IDEL1 - IDEL2
+                                var diff2 = idee1_value - idee2_value; // IDEE1 - IDEE2
+                                var diffOfDiffs = diff1 - diff2; // 差值的差值
 
-                        // 计算百分比（以较大的绝对值作为基准）
-                        var maxAbsValue = Math.Max(Math.Abs(diff1), Math.Abs(diff2));
-                        var percentage = maxAbsValue > 0 ? Math.Abs(diffOfDiffs) / maxAbsValue * 100 : 0;
+                                // 计算百分比（以较大的绝对值作为基准）
+                                var maxAbsValue = Math.Max(Math.Abs(diff1), Math.Abs(diff2));
+                                var percentage = maxAbsValue > 0 ? Math.Abs(diffOfDiffs) / maxAbsValue * 100 : 0;
 
-                        Results.Add(new CurrentDifferenceResult {
-                            FileName = Path.GetFileNameWithoutExtension(cfgFile),
-                            TimePoint = i,
-                            IDEL1 = idel1_value,
-                            IDEL2 = idel2_value,
-                            IDEE1 = idee1_value,
-                            IDEE2 = idee2_value,
-                            Difference1 = diff1,
-                            Difference2 = diff2,
-                            DifferenceOfDifferences = diffOfDiffs,
-                            DifferencePercentage = percentage
-                        });
-                    }
-                }
+                                allResults.Add(new CurrentDifferenceResult {
+                                    FileName = Path.GetFileNameWithoutExtension(cfgFile),
+                                    TimePoint = i,
+                                    IDEL1 = idel1_value,
+                                    IDEL2 = idel2_value,
+                                    IDEE1 = idee1_value,
+                                    IDEE2 = idee2_value,
+                                    Difference1 = diff1,
+                                    Difference2 = diff2,
+                                    DifferenceOfDifferences = diffOfDiffs,
+                                    DifferencePercentage = percentage
+                                });
+                            }
+                            
+                            // 只计数，不更新UI避免影响并行性能
+                            Interlocked.Increment(ref processedCount);
+                            
+                        } catch (Exception ex) {
+                            // 记录单个文件处理失败，但不影响其他文件
+                            System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
+                        }
+                    });
+                });
 
-                // 筛选出前100个最大差值点用于界面显示
-                var allResults = Results.ToList();
-                var top100ForDisplay = allResults
+                StatusMessage = "处理完成，正在整理数据...";
+
+                // 转换为列表并使用并行排序获取前100个最大差值点
+                var finalResults = allResults.ToList();
+                var top100ForDisplay = finalResults
+                    .AsParallel()
                     .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
                     .Take(100)
                     .ToList();
 
+                // 将筛选后的结果添加到UI集合
                 Results.Clear();
                 foreach (var result in top100ForDisplay) {
                     Results.Add(result);
                 }
 
                 // 导出完整数据到Excel
-                await ExportToExcel(allResults);
-                StatusMessage = $"计算完成，共处理 {allResults.Count} 个数据点，界面显示前100个最大差值点";
+                await ExportToExcel(finalResults);
+                StatusMessage = $"计算完成，共处理 {finalResults.Count} 个数据点，界面显示前100个最大差值点";
 
             } catch (Exception ex) {
                 StatusMessage = $"计算失败: {ex.Message}";
