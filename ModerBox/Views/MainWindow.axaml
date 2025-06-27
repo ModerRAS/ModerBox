@@ -5,6 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="ModerBox.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -32,24 +33,26 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <ui:NavigationView MenuItemsSource="{Binding Pages}"
-                    SelectedItem="{Binding CurrentPage}"
-                    IsBackButtonVisible="False"
-                    IsSettingsVisible="False">
-        <ui:NavigationView.MenuItemTemplate>
-            <DataTemplate DataType="{x:Type vm:ViewModelBase}">
-                <ui:NavigationViewItem>
-                    <ui:NavigationViewItem.Content>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="16"/>
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ui:NavigationViewItem.Content>
-                </ui:NavigationViewItem>
-            </DataTemplate>
-        </ui:NavigationView.MenuItemTemplate>
+    <dialogHost:DialogHost Identifier="ErrorDialog">
+        <ui:NavigationView MenuItemsSource="{Binding Pages}"
+                        SelectedItem="{Binding CurrentPage}"
+                        IsBackButtonVisible="False"
+                        IsSettingsVisible="False">
+            <ui:NavigationView.MenuItemTemplate>
+                <DataTemplate DataType="{x:Type vm:ViewModelBase}">
+                    <ui:NavigationViewItem>
+                        <ui:NavigationViewItem.Content>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="16"/>
+                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ui:NavigationViewItem.Content>
+                    </ui:NavigationViewItem>
+                </DataTemplate>
+            </ui:NavigationView.MenuItemTemplate>
 
-        <ContentControl Content="{Binding CurrentPage}" />
-    </ui:NavigationView>
+            <ContentControl Content="{Binding CurrentPage}" />
+        </ui:NavigationView>
+    </dialogHost:DialogHost>
 
 </Window>
