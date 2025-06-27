@@ -1,18 +1,13 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Reactive;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Controls;
 using ReactiveUI;
-using ComtradeLib = ModerBox.Comtrade;
-using ModerBox.Common;
-using ScottPlot;
+using ModerBox.Comtrade.CurrentDifferenceAnalysis;
 
 namespace ModerBox.ViewModels {
     public class CurrentDifferenceAnalysisViewModel : ViewModelBase {
@@ -20,6 +15,9 @@ namespace ModerBox.ViewModels {
         private string _targetFile = string.Empty;
         private string _statusMessage = "准备就绪";
         private bool _isProcessing = false;
+
+        // 添加新的服务实例
+        private readonly CurrentDifferenceAnalysisFacade _analysisFacade;
 
         public string SourceFolder {
             get => _sourceFolder;
@@ -41,7 +39,7 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _isProcessing, value);
         }
 
-        public ObservableCollection<CurrentDifferenceResult> Results { get; } = new();
+        public ObservableCollection<ModerBox.Comtrade.CurrentDifferenceAnalysis.CurrentDifferenceResult> Results { get; } = new();
 
         public ICommand SelectSourceFolderCommand { get; }
         public ICommand SelectTargetFileCommand { get; }
@@ -51,6 +49,8 @@ namespace ModerBox.ViewModels {
         public ICommand ExportWaveformChartsCommand { get; }
 
         public CurrentDifferenceAnalysisViewModel() {
+            _analysisFacade = new CurrentDifferenceAnalysisFacade();
+            
             SelectSourceFolderCommand = ReactiveCommand.CreateFromTask(SelectSourceFolder);
             SelectTargetFileCommand = ReactiveCommand.CreateFromTask(SelectTargetFile);
             CalculateCommand = ReactiveCommand.CreateFromTask(Calculate, this.WhenAnyValue(x => x.IsProcessing, processing => !processing));
@@ -112,93 +112,21 @@ namespace ModerBox.ViewModels {
             }
 
             IsProcessing = true;
-            StatusMessage = "正在计算接地极电流差值...";
             Results.Clear();
 
             try {
-                var cfgFiles = Directory.GetFiles(SourceFolder, "*.cfg", SearchOption.AllDirectories);
-                StatusMessage = $"找到 {cfgFiles.Length} 个文件，开始并行处理...";
-                
-                // 使用线程安全的集合存储结果
-                var allResults = new ConcurrentBag<CurrentDifferenceResult>();
-                var processedCount = 0;
-                
-                // 并行处理所有文件 - 不在处理过程中更新UI
-                await Task.Run(() => {
-                    Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile => {
-                        try {
-                            var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
-                            ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
-                            
-                            // 查找所需的通道
-                            var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
-                            var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL2"));
-                            var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE1"));
-                            var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE2"));
+                // 使用新的服务执行完整的分析流程
+                var (allResults, top100Results) = await _analysisFacade.ExecuteFullAnalysisAsync(
+                    SourceFolder, 
+                    TargetFile, 
+                    message => StatusMessage = message);
 
-                            if (idel1 == null || idel2 == null || idee1 == null || idee2 == null) {
-                                return; // 跳过没有所需通道的文件
-                            }
-
-                            // 计算每个时间点的差值
-                            for (int i = 0; i < comtradeInfo.EndSamp; i++) {
-                                var idel1_value = idel1.Data[i];
-                                var idel2_value = idel2.Data[i];
-                                var idee1_value = idee1.Data[i];
-                                var idee2_value = idee2.Data[i];
-
-                                // 计算差值
-                                var diff1 = idel1_value - idel2_value; // IDEL1 - IDEL2
-                                var diff2 = idee1_value - idee2_value; // IDEE1 - IDEE2
-                                var diffOfDiffs = diff1 - diff2; // 差值的差值
-
-                                // 计算百分比（以较大的绝对值作为基准）
-                                var maxAbsValue = Math.Max(Math.Abs(diff1), Math.Abs(diff2));
-                                var percentage = maxAbsValue > 0 ? Math.Abs(diffOfDiffs) / maxAbsValue * 100 : 0;
-
-                                allResults.Add(new CurrentDifferenceResult {
-                                    FileName = Path.GetFileNameWithoutExtension(cfgFile),
-                                    TimePoint = i,
-                                    IDEL1 = idel1_value,
-                                    IDEL2 = idel2_value,
-                                    IDEE1 = idee1_value,
-                                    IDEE2 = idee2_value,
-                                    Difference1 = diff1,
-                                    Difference2 = diff2,
-                                    DifferenceOfDifferences = diffOfDiffs,
-                                    DifferencePercentage = percentage
-                                });
-                            }
-                            
-                            // 只计数，不更新UI避免影响并行性能
-                            Interlocked.Increment(ref processedCount);
-                            
-                        } catch (Exception ex) {
-                            // 记录单个文件处理失败，但不影响其他文件
-                            System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
-                        }
-                    });
-                });
-
-                StatusMessage = "处理完成，正在整理数据...";
-
-                // 转换为列表并使用并行排序获取前100个最大差值点
-                var finalResults = allResults.ToList();
-                var top100ForDisplay = finalResults
-                    .AsParallel()
-                    .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
-                    .Take(100)
-                    .ToList();
-
-                // 将筛选后的结果添加到UI集合
-                Results.Clear();
-                foreach (var result in top100ForDisplay) {
+                // 将前100个结果添加到UI集合
+                foreach (var result in top100Results) {
                     Results.Add(result);
                 }
 
-                // 导出完整数据到Excel
-                await ExportToExcel(finalResults);
-                StatusMessage = $"计算完成，共处理 {finalResults.Count} 个数据点，界面显示前100个最大差值点";
+                StatusMessage = $"计算完成，共处理 {allResults.Count} 个数据点，界面显示前100个最大差值点";
 
             } catch (Exception ex) {
                 StatusMessage = $"计算失败: {ex.Message}";
@@ -207,37 +135,7 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private async Task ExportToExcel(List<CurrentDifferenceResult>? resultsToExport = null) {
-            var dataToExport = resultsToExport ?? Results.ToList();
-            if (!dataToExport.Any()) return;
 
-            await Task.Run(() => {
-                var dataWriter = new DataWriter();
-                
-                // 创建表头
-                var data = new List<List<string>>();
-                data.Add(new List<string> { "文件名", "时间点", "IDEL1", "IDEL2", "IDEE1", "IDEE2", "IDEL1-IDEL2", "IDEE1-IDEE2", "(IDEL1-IDEL2)-(IDEE1-IDEE2)", "差值百分比%" });
-                
-                // 添加数据行
-                foreach (var result in dataToExport) {
-                    data.Add(new List<string> {
-                        result.FileName,
-                        result.TimePoint.ToString(),
-                        result.IDEL1.ToString("F3"),
-                        result.IDEL2.ToString("F3"),
-                        result.IDEE1.ToString("F3"),
-                        result.IDEE2.ToString("F3"),
-                        result.Difference1.ToString("F3"),
-                        result.Difference2.ToString("F3"),
-                        result.DifferenceOfDifferences.ToString("F3"),
-                        result.DifferencePercentage.ToString("F2")
-                    });
-                }
-                
-                dataWriter.WriteDoubleList(data, "接地极电流差值分析");
-                dataWriter.SaveAs(TargetFile);
-            });
-        }
 
         private async Task ExportChart() {
             if (!Results.Any()) {
@@ -260,7 +158,7 @@ namespace ModerBox.ViewModels {
                 if (App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop) {
                     var result = await dialog.ShowAsync(desktop.MainWindow);
                     if (!string.IsNullOrEmpty(result)) {
-                        await Task.Run(() => CreateChart(result));
+                        await _analysisFacade.GenerateLineChartAsync(Results.ToList(), result);
                         StatusMessage = $"图表已保存到: {result}";
                     }
                 }
@@ -269,40 +167,7 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private void CreateChart(string filePath) {
-            var plt = new Plot();
 
-            var timePoints = Results.Select(r => (double)r.TimePoint).ToArray();
-            var diff1Values = Results.Select(r => r.Difference1).ToArray();
-            var diff2Values = Results.Select(r => r.Difference2).ToArray();
-            var diffOfDiffsValues = Results.Select(r => r.DifferenceOfDifferences).ToArray();
-            var percentageValues = Results.Select(r => r.DifferencePercentage).ToArray();
-
-            // 添加四条线
-            var line1 = plt.Add.Scatter(timePoints, diff1Values);
-            line1.LegendText = "IDEL1-IDEL2";
-            line1.MarkerSize = 1;
-
-            var line2 = plt.Add.Scatter(timePoints, diff2Values);
-            line2.LegendText = "IDEE1-IDEE2";
-            line2.MarkerSize = 1;
-
-            var line3 = plt.Add.Scatter(timePoints, diffOfDiffsValues);
-            line3.LegendText = "(IDEL1-IDEL2)-(IDEE1-IDEE2)";
-            line3.MarkerSize = 1;
-
-            var line4 = plt.Add.Scatter(timePoints, percentageValues);
-            line4.LegendText = "差值百分比%";
-            line4.MarkerSize = 1;
-
-            plt.Title("接地极电流差值分析");
-            plt.Axes.Bottom.Label.Text = "时间点";
-            plt.Axes.Left.Label.Text = "值";
-            plt.ShowLegend();
-
-            // 设置超长的图表尺寸（长宽比 100:1）
-            plt.SavePng(filePath, 10000, 100);
-        }
 
         private async Task ExportTop100() {
             if (!Results.Any()) {
@@ -325,47 +190,7 @@ namespace ModerBox.ViewModels {
                 if (App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop) {
                     var result = await dialog.ShowAsync(desktop.MainWindow);
                     if (!string.IsNullOrEmpty(result)) {
-                        await Task.Run(() => {
-                            // 按文件名分组
-                            var groupedByFile = Results.GroupBy(r => r.FileName);
-                            
-                            var dataWriter = new DataWriter();
-                            var data = new List<List<string>>();
-                            
-                            // 创建表头
-                            data.Add(new List<string> { 
-                                "文件名", "时间点", "IDEL1", "IDEL2", "IDEE1", "IDEE2", 
-                                "IDEL1-IDEL2", "IDEE1-IDEE2", "(IDEL1-IDEL2)-(IDEE1-IDEE2)", "差值百分比%", "排名"
-                            });
-
-                            foreach (var fileGroup in groupedByFile) {
-                                // 按差值的绝对值排序，取前100个
-                                var top100 = fileGroup
-                                    .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
-                                    .Take(100)
-                                    .ToList();
-
-                                for (int i = 0; i < top100.Count; i++) {
-                                    var result = top100[i];
-                                    data.Add(new List<string> {
-                                        result.FileName,
-                                        result.TimePoint.ToString(),
-                                        result.IDEL1.ToString("F3"),
-                                        result.IDEL2.ToString("F3"),
-                                        result.IDEE1.ToString("F3"),
-                                        result.IDEE2.ToString("F3"),
-                                        result.Difference1.ToString("F3"),
-                                        result.Difference2.ToString("F3"),
-                                        result.DifferenceOfDifferences.ToString("F3"),
-                                        result.DifferencePercentage.ToString("F2"),
-                                        (i + 1).ToString() // 排名
-                                    });
-                                }
-                            }
-                            
-                            dataWriter.WriteDoubleList(data, "前100差值点");
-                            dataWriter.SaveAs(result);
-                        });
+                        await _analysisFacade.ExportTop100ByFileToExcelAsync(Results.ToList(), result);
                         StatusMessage = $"前100差值点已导出到: {result}";
                     }
                 }
@@ -396,7 +221,12 @@ namespace ModerBox.ViewModels {
                     var result = await dialog.ShowAsync(desktop.MainWindow);
                     if (!string.IsNullOrEmpty(result)) {
                         StatusMessage = "正在生成波形图...";
-                        await Task.Run(() => CreateWaveformCharts(result));
+                        await _analysisFacade.GenerateWaveformChartsAsync(
+                            Results.ToList(), 
+                            SourceFolder, 
+                            result, 
+                            100,
+                            message => StatusMessage = message);
                         StatusMessage = $"波形图已保存到: {result}";
                     }
                 }
@@ -405,168 +235,6 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private void CreateWaveformCharts(string outputFolder) {
-            // 获取差值最大的100个点
-            var top100Points = Results
-                .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
-                .Take(100)
-                .ToList();
 
-            var chartCount = 0;
-            var totalCharts = top100Points.Count;
-
-            foreach (var point in top100Points) {
-                try {
-                    chartCount++;
-                    
-                    // 查找对应的CFG文件
-                    var cfgFiles = Directory.GetFiles(SourceFolder, "*.cfg", SearchOption.AllDirectories)
-                        .Where(f => Path.GetFileNameWithoutExtension(f) == point.FileName)
-                        .ToList();
-
-                    if (!cfgFiles.Any()) {
-                        continue;
-                    }
-
-                    var cfgFile = cfgFiles.First();
-                    
-                    // 读取Comtrade数据
-                    var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
-                    ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
-
-                    // 查找所需的通道
-                    var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
-                    var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL2"));
-                    var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE1"));
-                    var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE2"));
-
-                    if (idel1 == null || idel2 == null || idee1 == null || idee2 == null) {
-                        continue;
-                    }
-
-                    // 计算前后2000个点的范围
-                    int startIndex = Math.Max(0, point.TimePoint - 2000);
-                    int endIndex = Math.Min(comtradeInfo.EndSamp - 1, point.TimePoint + 2000);
-                    int rangeLength = endIndex - startIndex + 1;
-
-                    if (rangeLength <= 0) {
-                        continue;
-                    }
-
-                    // 创建时间轴（使用采样点索引）
-                    var timeAxis = Enumerable.Range(startIndex, rangeLength)
-                        .Select(i => (double)i)
-                        .ToArray();
-
-                    // 提取波形数据
-                    var idel1Data = new double[rangeLength];
-                    var idel2Data = new double[rangeLength];
-                    var idee1Data = new double[rangeLength];
-                    var idee2Data = new double[rangeLength];
-                    var diff1Data = new double[rangeLength];
-                    var diff2Data = new double[rangeLength];
-                    var diffOfDiffsData = new double[rangeLength];
-
-                    for (int i = 0; i < rangeLength; i++) {
-                        var dataIndex = startIndex + i;
-                        idel1Data[i] = idel1.Data[dataIndex];
-                        idel2Data[i] = idel2.Data[dataIndex];
-                        idee1Data[i] = idee1.Data[dataIndex];
-                        idee2Data[i] = idee2.Data[dataIndex];
-                        diff1Data[i] = idel1Data[i] - idel2Data[i];
-                        diff2Data[i] = idee1Data[i] - idee2Data[i];
-                        diffOfDiffsData[i] = diff1Data[i] - diff2Data[i];
-                    }
-
-                    // 创建波形图
-                    var plt = new Plot();
-
-                    // 添加原始波形
-                    var line1 = plt.Add.Scatter(timeAxis, idel1Data);
-                    line1.LegendText = "IDEL1";
-                    line1.MarkerSize = 0;
-                    line1.LineWidth = 1;
-
-                    var line2 = plt.Add.Scatter(timeAxis, idel2Data);
-                    line2.LegendText = "IDEL2";
-                    line2.MarkerSize = 0;
-                    line2.LineWidth = 1;
-
-                    var line3 = plt.Add.Scatter(timeAxis, idee1Data);
-                    line3.LegendText = "IDEE1";
-                    line3.MarkerSize = 0;
-                    line3.LineWidth = 1;
-
-                    var line4 = plt.Add.Scatter(timeAxis, idee2Data);
-                    line4.LegendText = "IDEE2";
-                    line4.MarkerSize = 0;
-                    line4.LineWidth = 1;
-
-                    // 添加差值波形
-                    var diffLine1 = plt.Add.Scatter(timeAxis, diff1Data);
-                    diffLine1.LegendText = "IDEL1-IDEL2";
-                    diffLine1.MarkerSize = 0;
-                    diffLine1.LineWidth = 2;
-
-                    var diffLine2 = plt.Add.Scatter(timeAxis, diff2Data);
-                    diffLine2.LegendText = "IDEE1-IDEE2";
-                    diffLine2.MarkerSize = 0;
-                    diffLine2.LineWidth = 2;
-
-                    var diffOfDiffLine = plt.Add.Scatter(timeAxis, diffOfDiffsData);
-                    diffOfDiffLine.LegendText = "(IDEL1-IDEL2)-(IDEE1-IDEE2)";
-                    diffOfDiffLine.MarkerSize = 0;
-                    diffOfDiffLine.LineWidth = 3;
-
-                    // 标记最大差值点
-                    var maxPointMarker = plt.Add.Scatter(new double[] { point.TimePoint }, new double[] { point.DifferenceOfDifferences });
-                    maxPointMarker.LegendText = $"最大差值点 (时间点:{point.TimePoint})";
-                    maxPointMarker.MarkerSize = 10;
-                    maxPointMarker.LineWidth = 0;
-
-                    // 设置图表属性和中文标题
-                    string titleText = $"接地极电流差值波形图 - {point.FileName}\n最大差值点: {point.TimePoint}, 差值: {point.DifferenceOfDifferences:F3}\n时间范围: {startIndex} - {endIndex} (前后2000点)";
-                    plt.Title(titleText);
-                    plt.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titleText);
-                    
-                    string xLabelText = "采样点索引";
-                    plt.XLabel(xLabelText);
-                    plt.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabelText);
-                    
-                    string yLabelText = "电流值";
-                    plt.YLabel(yLabelText);
-                    plt.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabelText);
-                    
-                    plt.ShowLegend();
-
-                    // 自动设置所有文本元素的字体以支持中文
-                    plt.Font.Automatic();
-
-                    // 设置网格
-                    plt.Grid.MajorLineColor = ScottPlot.Color.FromHex("#E0E0E0");
-
-                    // 保存图片
-                    var fileName = $"排名{chartCount:D3}_接地极电流差值波形图_{point.FileName}_时间点{point.TimePoint}_差值{point.DifferenceOfDifferences:F3}.png";
-                    var filePath = Path.Combine(outputFolder, fileName);
-                    plt.SavePng(filePath, 1600, 800);
-
-                } catch (Exception ex) {
-                    System.Diagnostics.Debug.WriteLine($"生成波形图失败 {point.FileName}-{point.TimePoint}: {ex.Message}");
-                }
-            }
-        }
-    }
-
-    public class CurrentDifferenceResult {
-        public string FileName { get; set; } = string.Empty;
-        public int TimePoint { get; set; }
-        public double IDEL1 { get; set; }
-        public double IDEL2 { get; set; }
-        public double IDEE1 { get; set; }
-        public double IDEE2 { get; set; }
-        public double Difference1 { get; set; }
-        public double Difference2 { get; set; }
-        public double DifferenceOfDifferences { get; set; }
-        public double DifferencePercentage { get; set; }
     }
 } 
