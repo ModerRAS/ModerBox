@@ -111,10 +111,10 @@
           <DataGridTextColumn Header="IDEL2" Binding="{Binding IDEL2, StringFormat=F3}" Width="80"/>
           <DataGridTextColumn Header="IDEE1" Binding="{Binding IDEE1, StringFormat=F3}" Width="80"/>
           <DataGridTextColumn Header="IDEE2" Binding="{Binding IDEE2, StringFormat=F3}" Width="80"/>
-          <DataGridTextColumn Header="差值1" Binding="{Binding Difference1, StringFormat=F3}" Width="80"/>
-          <DataGridTextColumn Header="差值2" Binding="{Binding Difference2, StringFormat=F3}" Width="80"/>
-          <DataGridTextColumn Header="差值的差值" Binding="{Binding DifferenceOfDifferences, StringFormat=F3}" Width="100"/>
-          <DataGridTextColumn Header="差值百分比(%)" Binding="{Binding DifferencePercentage, StringFormat=F2}" Width="120"/>
+          <DataGridTextColumn Header="IDEL1-IDEL2" Binding="{Binding Difference1, StringFormat=F3}" Width="100"/>
+          <DataGridTextColumn Header="IDEE1-IDEE2" Binding="{Binding Difference2, StringFormat=F3}" Width="100"/>
+          <DataGridTextColumn Header="(IDEL1-IDEL2)-(IDEE1-IDEE2)" Binding="{Binding DifferenceOfDifferences, StringFormat=F3}" Width="180"/>
+          <DataGridTextColumn Header="差值百分比%" Binding="{Binding DifferencePercentage, StringFormat=F2}" Width="120"/>
         </DataGrid.Columns>
       </DataGrid>
 
