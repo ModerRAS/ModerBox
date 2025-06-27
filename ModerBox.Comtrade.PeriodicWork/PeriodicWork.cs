@@ -4,6 +4,7 @@ using ModerBox.Comtrade.PeriodicWork.Services;
 using ModerBox.Comtrade.PeriodicWork.Protocol;
 
 using Newtonsoft.Json;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,12 +22,17 @@ namespace ModerBox.Comtrade.PeriodicWork {
         }
 
         public async Task DoPeriodicWork(string folderPath, string exportPath, string dataFilterName) {
-            var dataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText("PeriodicWorkData.json"));
-            var dataFilters = dataSpec.DataFilter.FirstOrDefault(d => d.Name == dataFilterName);
+            try {
+                // 获取程序目录并构建JSON文件的完整路径
+                var appDirectory = AppContext.BaseDirectory;
+                var jsonFilePath = Path.Combine(appDirectory, "PeriodicWorkData.json");
+                
+                var dataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText(jsonFilePath));
+                var dataFilters = dataSpec?.DataFilter?.FirstOrDefault(d => d.Name == dataFilterName);
 
-            if (dataFilters == null) {
-                return;
-            }
+                if (dataFilters == null) {
+                    throw new InvalidOperationException($"找不到名为 '{dataFilterName}' 的数据筛选器配置");
+                }
 
             using (var workbook = new XLWorkbook()) {
                 foreach (var dataFilter in dataFilters.DataNames) {
@@ -62,6 +68,9 @@ namespace ModerBox.Comtrade.PeriodicWork {
                 if (workbook.Worksheets.Any()) {
                     workbook.SaveAs(exportPath);
                 }
+            }
+            } catch (Exception ex) {
+                throw new InvalidOperationException($"执行定期工作时发生错误: {ex.Message}", ex);
             }
         }
 
