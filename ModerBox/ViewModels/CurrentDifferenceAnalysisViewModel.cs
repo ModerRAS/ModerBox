@@ -216,7 +216,7 @@ namespace ModerBox.ViewModels {
                 
                 // 创建表头
                 var data = new List<List<string>>();
-                data.Add(new List<string> { "文件名", "时间点", "IDEL1", "IDEL2", "IDEE1", "IDEE2", "差值1", "差值2", "差值的差值", "差值百分比" });
+                data.Add(new List<string> { "文件名", "时间点", "IDEL1", "IDEL2", "IDEE1", "IDEE2", "IDEL1-IDEL2", "IDEE1-IDEE2", "(IDEL1-IDEL2)-(IDEE1-IDEE2)", "差值百分比%" });
                 
                 // 添加数据行
                 foreach (var result in dataToExport) {
@@ -280,19 +280,19 @@ namespace ModerBox.ViewModels {
 
             // 添加四条线
             var line1 = plt.Add.Scatter(timePoints, diff1Values);
-            line1.LegendText = "差值1 (IDEL1-IDEL2)";
+            line1.LegendText = "IDEL1-IDEL2";
             line1.MarkerSize = 1;
 
             var line2 = plt.Add.Scatter(timePoints, diff2Values);
-            line2.LegendText = "差值2 (IDEE1-IDEE2)";
+            line2.LegendText = "IDEE1-IDEE2";
             line2.MarkerSize = 1;
 
             var line3 = plt.Add.Scatter(timePoints, diffOfDiffsValues);
-            line3.LegendText = "差值的差值";
+            line3.LegendText = "(IDEL1-IDEL2)-(IDEE1-IDEE2)";
             line3.MarkerSize = 1;
 
             var line4 = plt.Add.Scatter(timePoints, percentageValues);
-            line4.LegendText = "差值百分比";
+            line4.LegendText = "差值百分比%";
             line4.MarkerSize = 1;
 
             plt.Title("电流差值分析");
@@ -335,7 +335,7 @@ namespace ModerBox.ViewModels {
                             // 创建表头
                             data.Add(new List<string> { 
                                 "文件名", "时间点", "IDEL1", "IDEL2", "IDEE1", "IDEE2", 
-                                "差值1", "差值2", "差值的差值", "差值百分比", "排名" 
+                                "IDEL1-IDEL2", "IDEE1-IDEE2", "(IDEL1-IDEL2)-(IDEE1-IDEE2)", "差值百分比%", "排名"
                             });
 
                             foreach (var fileGroup in groupedByFile) {
