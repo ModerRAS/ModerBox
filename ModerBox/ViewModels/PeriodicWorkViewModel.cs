@@ -1,6 +1,8 @@
 ﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using DialogHostAvalonia;
 using ModerBox.Common;
 using ModerBox.Comtrade.FilterWaveform;
 using ModerBox.Comtrade.PeriodicWork;
@@ -68,7 +70,7 @@ namespace ModerBox.ViewModels {
                 }
             } catch (Exception ex) {
                 // 处理JSON文件读取或解析错误
-                Console.WriteLine($"无法读取配置文件 PeriodicWorkData.json: {ex.Message}");
+                await ShowErrorMessageAsync("配置文件读取错误", $"无法读取配置文件 PeriodicWorkData.json:\n{ex.Message}");
                 Works.Add("配置文件读取失败");
                 SelectedWork = "配置文件读取失败";
             }
@@ -100,8 +102,7 @@ namespace ModerBox.ViewModels {
                 await periodicWork.DoPeriodicWork(SourceFolder, TargetFile, SelectedWork);
                 Progress = 100;
             } catch (Exception ex) {
-                // TODO: 在实际项目中，应该通过UI显示错误信息而不是控制台输出
-                Console.WriteLine($"执行定期工作失败: {ex.Message}");
+                await ShowErrorMessageAsync("执行失败", $"执行定期工作失败:\n{ex.Message}");
                 Progress = 0;
             }
         }
@@ -123,6 +124,34 @@ namespace ModerBox.ViewModels {
             });
 
             return files?.Count >= 1 ? files[0] : null;
+        }
+
+        private async Task ShowErrorMessageAsync(string title, string message) {
+            var errorDialog = new StackPanel {
+                Spacing = 10,
+                Children = {
+                    new TextBlock { 
+                        Text = title, 
+                        FontWeight = Avalonia.Media.FontWeight.Bold,
+                        FontSize = 16
+                    },
+                    new TextBlock { 
+                        Text = message,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                        MaxWidth = 400
+                    },
+                    new Button {
+                        Content = "确定",
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                        Margin = new Avalonia.Thickness(0, 10, 0, 0),
+                        Command = ReactiveCommand.Create(() => {
+                            DialogHost.Close("ErrorDialog");
+                        })
+                    }
+                }
+            };
+
+            await DialogHost.Show(errorDialog, "ErrorDialog");
         }
 
         private async Task<IStorageFile?> DoSaveFilePickerAsync() {

@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="using:FluentAvalonia.Styling"
+             xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              x:Class="ModerBox.App"
              xmlns:local="using:ModerBox"
              RequestedThemeVariant="Default">
@@ -13,5 +14,6 @@
     <Application.Styles>
         <FluentTheme />
         <fa:FluentAvaloniaTheme />
+        <dialogHostAvalonia:DialogHostStyles />
     </Application.Styles>
 </Application>
