@@ -126,15 +126,15 @@ namespace ModerBox.Comtrade.PeriodicWork.Services {
                     var result = new ChannelDifferenceAnalysisResult {
                         FileName = fileName,
                         PointIndex = i + 1, // 从1开始编号
-                        IDEL1_ABS = channelData["IDEL1"].Data[i],
-                        IDEL2_ABS = channelData["IDEL2"].Data[i],
-                        IDEE1_SW = channelData["IDEE1"].Data[i],
-                        IDEE2_SW = channelData["IDEE2"].Data[i]
+                        IDEL1 = channelData["IDEL1"].Data[i],
+                        IDEL2 = channelData["IDEL2"].Data[i],
+                        IDEE1 = channelData["IDEE1"].Data[i],
+                        IDEE2 = channelData["IDEE2"].Data[i]
                     };
 
                     // 计算差值
-                    result.Difference1 = result.IDEL1_ABS - result.IDEE1_SW;
-                    result.Difference2 = result.IDEL2_ABS - result.IDEE2_SW;
+                    result.Difference1 = result.IDEL1 - result.IDEE1;
+                    result.Difference2 = result.IDEL2 - result.IDEE2;
                     
                     // 计算差值的差值
                     result.DifferenceBetweenDifferences = result.Difference1 - result.Difference2;
