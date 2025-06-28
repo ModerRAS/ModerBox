@@ -11,6 +11,7 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
     {
         private readonly CurrentDifferenceAnalysisService _analysisService;
         private readonly ExcelExportService _excelService;
+        private readonly CsvExportService _csvService;
         private readonly ChartGenerationService _chartService;
 
         /// <summary>
@@ -20,18 +21,19 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         {
             _analysisService = new CurrentDifferenceAnalysisService();
             _excelService = new ExcelExportService();
+            _csvService = new CsvExportService();
             _chartService = new ChartGenerationService();
         }
 
         /// <summary>
-        /// 执行完整的分析流程
+        /// 执行完整的分析流程 - 使用CSV导出解决行数限制问题
         /// </summary>
         /// <param name="sourceFolder">源文件夹路径</param>
-        /// <param name="targetExcelFile">目标Excel文件路径</param>
+        /// <param name="targetCsvFile">目标CSV文件路径</param>
         /// <param name="progressCallback">进度回调函数</param>
         /// <returns>分析结果和前100个最大差值点</returns>
         public async Task<(List<CurrentDifferenceResult> AllResults, List<CurrentDifferenceResult> Top100Results)> 
-            ExecuteFullAnalysisAsync(string sourceFolder, string targetExcelFile, Action<string>? progressCallback = null)
+            ExecuteFullAnalysisAsync(string sourceFolder, string targetCsvFile, Action<string>? progressCallback = null)
         {
             // 1. 执行分析
             progressCallback?.Invoke("正在计算接地极电流差值...");
@@ -40,11 +42,11 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             // 2. 获取前100个最大差值点
             var top100Results = _analysisService.GetTopDifferencePoints(allResults, 100);
 
-            // 3. 导出到Excel
-            progressCallback?.Invoke("正在导出Excel文件...");
-            await _excelService.ExportFullResultsAsync(allResults, targetExcelFile);
+            // 3. 导出到CSV（解决Excel行数限制问题）
+            progressCallback?.Invoke("正在导出CSV文件...");
+            await _csvService.ExportFullResultsAsync(allResults, targetCsvFile);
 
-            progressCallback?.Invoke($"分析完成！共处理 {allResults.Count} 个数据点，界面显示前100个最大差值点");
+            progressCallback?.Invoke($"分析完成！共处理 {allResults.Count} 个数据点，界面显示前100个最大差值点。已导出到CSV文件（避免Excel行数限制）");
 
             return (allResults, top100Results);
         }
@@ -96,7 +98,18 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         }
 
         /// <summary>
-        /// 导出完整的分析结果到Excel
+        /// 导出完整的分析结果到CSV（推荐，无行数限制）
+        /// </summary>
+        /// <param name="results">分析结果列表</param>
+        /// <param name="filePath">导出文件路径</param>
+        /// <returns>导出任务</returns>
+        public async Task ExportFullResultsToCsvAsync(List<CurrentDifferenceResult> results, string filePath)
+        {
+            await _csvService.ExportFullResultsAsync(results, filePath);
+        }
+
+        /// <summary>
+        /// 导出完整的分析结果到Excel（不推荐，有行数限制）
         /// </summary>
         /// <param name="results">分析结果列表</param>
         /// <param name="filePath">导出文件路径</param>
@@ -104,6 +117,17 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         public async Task ExportFullResultsToExcelAsync(List<CurrentDifferenceResult> results, string filePath)
         {
             await _excelService.ExportFullResultsAsync(results, filePath);
+        }
+
+        /// <summary>
+        /// 导出按文件分组的前100个差值点到CSV
+        /// </summary>
+        /// <param name="results">分析结果列表</param>
+        /// <param name="filePath">导出文件路径</param>
+        /// <returns>导出任务</returns>
+        public async Task ExportTop100ByFileToCsvAsync(List<CurrentDifferenceResult> results, string filePath)
+        {
+            await _csvService.ExportTop100ByFileAsync(results, filePath);
         }
 
         /// <summary>
@@ -115,6 +139,17 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         public async Task ExportTop100ByFileToExcelAsync(List<CurrentDifferenceResult> results, string filePath)
         {
             await _excelService.ExportTop100ByFileAsync(results, filePath);
+        }
+
+        /// <summary>
+        /// 导出全局前100个最大差值点到CSV
+        /// </summary>
+        /// <param name="results">分析结果列表</param>
+        /// <param name="filePath">导出文件路径</param>
+        /// <returns>导出任务</returns>
+        public async Task ExportGlobalTop100ToCsvAsync(List<CurrentDifferenceResult> results, string filePath)
+        {
+            await _csvService.ExportGlobalTop100Async(results, filePath);
         }
 
         /// <summary>
@@ -145,17 +180,15 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         /// <param name="results">分析结果列表</param>
         /// <param name="sourceFolder">源文件夹路径</param>
         /// <param name="outputFolder">输出文件夹路径</param>
-        /// <param name="topCount">生成图表的数量</param>
         /// <param name="progressCallback">进度回调</param>
         /// <returns>生成任务</returns>
         public async Task GenerateWaveformChartsAsync(
             List<CurrentDifferenceResult> results, 
             string sourceFolder, 
             string outputFolder, 
-            int topCount = 100,
             Action<string>? progressCallback = null)
         {
-            await _chartService.GenerateWaveformChartsAsync(results, sourceFolder, outputFolder, topCount, progressCallback);
+            await _chartService.GenerateWaveformChartsAsync(results, sourceFolder, outputFolder, progressCallback);
         }
 
         /// <summary>

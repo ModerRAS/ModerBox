@@ -32,19 +32,17 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         /// <param name="results">分析结果列表</param>
         /// <param name="sourceFolder">源文件夹路径</param>
         /// <param name="outputFolder">输出文件夹路径</param>
-        /// <param name="topCount">生成图表的数量</param>
         /// <param name="progressCallback">进度回调</param>
         /// <returns>生成任务</returns>
         public async Task GenerateWaveformChartsAsync(
             List<CurrentDifferenceResult> results, 
             string sourceFolder, 
             string outputFolder, 
-            int topCount = 100,
             Action<string>? progressCallback = null)
         {
             if (!results.Any()) return;
 
-            await Task.Run(() => CreateWaveformCharts(results, sourceFolder, outputFolder, topCount, progressCallback));
+            await Task.Run(() => CreateWaveformCharts(results, sourceFolder, outputFolder, progressCallback));
         }
 
         /// <summary>
@@ -180,35 +178,35 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         /// <param name="results">分析结果</param>
         /// <param name="sourceFolder">源文件夹</param>
         /// <param name="outputFolder">输出文件夹</param>
-        /// <param name="topCount">生成数量</param>
         /// <param name="progressCallback">进度回调</param>
         private void CreateWaveformCharts(
             List<CurrentDifferenceResult> results, 
             string sourceFolder, 
             string outputFolder, 
-            int topCount,
             Action<string>? progressCallback)
         {
-            // 获取差值最大的N个点
-            var topPoints = results
+            // 每个文件只选择一个差值最大的点
+            var topPointsPerFile = results
+                .GroupBy(r => r.FileName)
+                .Select(g => g.OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences)).First())
                 .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
-                .Take(topCount)
                 .ToList();
 
             var chartCount = 0;
+            var totalCharts = topPointsPerFile.Count;
 
-            foreach (var point in topPoints)
+            foreach (var point in topPointsPerFile)
             {
                 try
                 {
                     chartCount++;
-                    progressCallback?.Invoke($"Generating chart {chartCount}/{topCount}...");
+                    progressCallback?.Invoke($"正在生成图表 {chartCount}/{totalCharts}...");
 
                     CreateSingleWaveformChart(point, sourceFolder, outputFolder, chartCount);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Failed to create waveform chart {chartCount}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"创建波形图失败 {chartCount}: {ex.Message}");
                 }
             }
         }
@@ -505,4 +503,4 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             }
         }
     }
-} 
+}
