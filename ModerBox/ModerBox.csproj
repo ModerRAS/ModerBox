@@ -7,8 +7,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
-    <!-- NativeAOT settings -->
-    <PublishAot>true</PublishAot>
+    <!-- 保留调试信息以便调试AOT问题 -->
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- NativeAOT settings -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <PublishTrimmed>true</PublishTrimmed>
     <!-- 为ScottPlot等第三方库提供更好的AOT兼容性 -->
     <TrimmerDefaultAction>copy</TrimmerDefaultAction>
@@ -16,9 +21,11 @@
     <EventSourceSupport>false</EventSourceSupport>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <!-- 保留调试信息以便调试AOT问题 -->
-    <DebugType>embedded</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <!-- ILC optimization settings to prevent hanging -->
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,11 +38,9 @@
   </ItemGroup>
 
   <!-- Native AOT trimmer configuration -->
-  <ItemGroup>
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
     <TrimmerRootAssembly Include="ScottPlot" />
-    <TrimmerRootAssembly Include="SkiaSharp" />
-    <TrimmerRootAssembly Include="System.Drawing.Common" />
-    <TrimmerRootAssembly Include="System.Text.Encoding.CodePages" />
+    <TrimmerRootAssembly Include="ScottPlot.Avalonia" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,6 +61,7 @@
 	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
 	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.6" />
 	      <PackageReference Include="ScottPlot" Version="5.0.55" />
+	      <PackageReference Include="ScottPlot.Avalonia" Version="5.0.55" />
     <PackageReference Include="DialogHost.Avalonia" Version="0.9.3" />
   </ItemGroup>
 
