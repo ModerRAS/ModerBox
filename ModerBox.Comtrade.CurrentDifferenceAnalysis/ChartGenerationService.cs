@@ -224,12 +224,150 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         {
             try
             {
-                // 创建简化版波形图以提高Native AOT兼容性
+                // 尝试重新读取Comtrade文件生成真实波形图
+                if (TryCreateRealWaveformChart(point, sourceFolder, outputFolder, rank))
+                {
+                    return; // 成功生成真实波形图
+                }
+                
+                // 如果失败，则生成简化版波形图
                 CreateMinimalWaveformChart(point, outputFolder, rank);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Waveform chart failed: {ex.Message}");
+                // 最后的备选方案
+                CreateMinimalWaveformChart(point, outputFolder, rank);
+            }
+        }
+
+        /// <summary>
+        /// 尝试创建真实的波形图
+        /// </summary>
+        /// <param name="point">差值点</param>
+        /// <param name="sourceFolder">源文件夹</param>
+        /// <param name="outputFolder">输出文件夹</param>
+        /// <param name="rank">排名</param>
+        /// <returns>是否成功创建</returns>
+        private bool TryCreateRealWaveformChart(CurrentDifferenceResult point, string sourceFolder, string outputFolder, int rank)
+        {
+            try
+            {
+                // 查找对应的CFG文件
+                var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+                    .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg") && 
+                               Path.GetFileNameWithoutExtension(f).Equals(point.FileName, StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+
+                if (!cfgFiles.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"No CFG file found for {point.FileName}");
+                    return false;
+                }
+
+                var cfgFile = cfgFiles.First();
+                
+                // 读取Comtrade文件
+                var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
+                ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
+
+                // 查找IDEL1, IDEL2, IDEE1, IDEE2通道
+                var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Equals("IDEL1", StringComparison.OrdinalIgnoreCase));
+                var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Equals("IDEL2", StringComparison.OrdinalIgnoreCase));
+                var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Equals("IDEE1", StringComparison.OrdinalIgnoreCase));
+                var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Equals("IDEE2", StringComparison.OrdinalIgnoreCase));
+
+                if (idel1 == null || idel2 == null || idee1 == null || idee2 == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Missing required channels in {point.FileName}");
+                    return false;
+                }
+
+                // 创建波形图
+                var plt = NativeAotCompatibilityHelper.CreateSafePlot();
+
+                // 计算显示范围（峰值点前后各200个采样点）
+                var centerIndex = point.TimePoint;
+                var startIndex = Math.Max(0, centerIndex - 200);
+                var endIndex = Math.Min(comtradeInfo.EndSamp - 1, centerIndex + 200);
+                var sampleCount = endIndex - startIndex + 1;
+
+                // 准备时间轴数据
+                var timeData = Enumerable.Range(startIndex, sampleCount).Select(i => (double)i).ToArray();
+
+                // 绘制各通道波形
+                var idel1Data = idel1.Data.Skip(startIndex).Take(sampleCount).ToArray();
+                var idel2Data = idel2.Data.Skip(startIndex).Take(sampleCount).ToArray();
+                var idee1Data = idee1.Data.Skip(startIndex).Take(sampleCount).ToArray();
+                var idee2Data = idee2.Data.Skip(startIndex).Take(sampleCount).ToArray();
+
+                // 添加波形线条
+                var line1 = plt.Add.Scatter(timeData, idel1Data);
+                line1.LegendText = "IDEL1";
+                line1.MarkerSize = 0;
+                line1.LineWidth = 1;
+                line1.Color = ScottPlot.Colors.Blue;
+
+                var line2 = plt.Add.Scatter(timeData, idel2Data);
+                line2.LegendText = "IDEL2";
+                line2.MarkerSize = 0;
+                line2.LineWidth = 1;
+                line2.Color = ScottPlot.Colors.Green;
+
+                var line3 = plt.Add.Scatter(timeData, idee1Data);
+                line3.LegendText = "IDEE1";
+                line3.MarkerSize = 0;
+                line3.LineWidth = 1;
+                line3.Color = ScottPlot.Colors.Red;
+
+                var line4 = plt.Add.Scatter(timeData, idee2Data);
+                line4.LegendText = "IDEE2";
+                line4.MarkerSize = 0;
+                line4.LineWidth = 1;
+                line4.Color = ScottPlot.Colors.Orange;
+
+                // 在峰值点添加标记
+                var peakMarker = plt.Add.Scatter(new double[] { centerIndex }, new double[] { point.DifferenceOfDifferences });
+                peakMarker.LegendText = $"峰值点 (差值:{point.DifferenceOfDifferences:F3})";
+                peakMarker.MarkerSize = 8;
+                peakMarker.MarkerShape = ScottPlot.MarkerShape.Cross;
+                peakMarker.Color = ScottPlot.Colors.Black;
+
+                // 设置标题和标签
+                NativeAotCompatibilityHelper.SafeSetTitle(plt, $"Top{rank} - {point.FileName} - 时间点:{point.TimePoint}");
+                NativeAotCompatibilityHelper.SafeSetXLabel(plt, "采样点");
+                NativeAotCompatibilityHelper.SafeSetYLabel(plt, "电流值");
+
+                // 显示图例
+                try
+                {
+                    plt.ShowLegend();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to show legend: {ex.Message}");
+                }
+
+                // 保存图片
+                var fileName = $"Waveform_{rank:D3}_{point.FileName}_{point.TimePoint}_Diff_{Math.Abs(point.DifferenceOfDifferences):F3}.png";
+                var filePath = Path.Combine(outputFolder, fileName);
+
+                var success = NativeAotCompatibilityHelper.SafeSavePng(plt, filePath, 1200, 800);
+                if (success)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Successfully saved waveform chart: {fileName}");
+                    return true;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to save waveform chart: {fileName}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error creating real waveform chart: {ex.Message}");
+                return false;
             }
         }
 
@@ -286,7 +424,7 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 var phaseADiff = results.Select(r => r.PhaseAIdeeAbsDifference).ToArray();
                 var phaseBDiff = results.Select(r => r.PhaseBIdeeAbsDifference).ToArray();
                 var phaseCDiff = results.Select(r => r.PhaseCIdeeAbsDifference).ToArray();
-                
+
                 // 新增：IDEE1值数据
                 var phaseAIdee1 = results.Select(r => r.PhaseAIdee1Value).ToArray();
                 var phaseBIdee1 = results.Select(r => r.PhaseBIdee1Value).ToArray();
