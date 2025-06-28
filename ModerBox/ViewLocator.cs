@@ -1,43 +1,36 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using ModerBox.ViewModels;
+using ModerBox.Views.UserControls;
 using System;
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 
 namespace ModerBox {
     public class ViewLocator : IDataTemplate {
-        // 告诉修剪器保留视图的公有构造函数，防止 NativeAOT 剪裁导致 Type.GetType 失效。
-        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.HomePage))]
-        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.PeriodicWork))]
-        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.HarmonicCalculate))]
-        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.FilterWaveformSwitchInterval))]
-
-        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(Views.UserControls.CurrentDifferenceAnalysis))]
+        // AOT 友好的静态视图映射
+        private static readonly Dictionary<Type, Func<Control>> ViewMappings = new() {
+            { typeof(HomePageViewModel), () => new HomePage() },
+            { typeof(PeriodicWorkViewModel), () => new PeriodicWork() },
+            { typeof(HarmonicCalculateViewModel), () => new HarmonicCalculate() },
+            { typeof(FilterWaveformSwitchIntervalViewModel), () => new FilterWaveformSwitchInterval() },
+            { typeof(CurrentDifferenceAnalysisViewModel), () => new CurrentDifferenceAnalysis() },
+            { typeof(ThreePhaseIdeeAnalysisViewModel), () => new ThreePhaseIdeeAnalysis() }
+        };
 
         public Control? Build(object? data) {
             if (data is null)
                 return null;
 
-            var fullName = data.GetType().FullName!;
+            var dataType = data.GetType();
             
-            // 先尝试标准的ViewModel -> View映射
-            var viewName = fullName.Replace("ViewModel", "View", StringComparison.Ordinal);
-            var type = Type.GetType(viewName);
-            
-            // 如果找不到，尝试UserControls命名空间中的控件（去掉ViewModel后缀）
-            if (type == null) {
-                var userControlName = fullName.Replace("ModerBox.ViewModels.", "ModerBox.Views.UserControls.")
-                                            .Replace("ViewModel", "", StringComparison.Ordinal);
-                type = Type.GetType(userControlName);
-            }
-
-            if (type != null) {
-                var control = (Control)Activator.CreateInstance(type)!;
+            // 使用静态映射查找对应的视图
+            if (ViewMappings.TryGetValue(dataType, out var factory)) {
+                var control = factory();
                 control.DataContext = data;
                 return control;
             }
 
-            return new TextBlock { Text = "Not Found: " + viewName };
+            return new TextBlock { Text = "Not Found: " + dataType.Name };
         }
 
         public bool Match(object? data) {
