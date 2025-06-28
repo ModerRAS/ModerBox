@@ -1,99 +1,16 @@
 <Directives>
   <Application>
     <!-- 
-      This is a runtime directive file that informs the trimmer and AOT compiler
-      which types and members are necessary for reflection-based serialization,
-      such as that used by Newtonsoft.Json and ScottPlot.
+      Minimal runtime directive file for AOT compilation
     -->
     
-    <!-- Preserve all public members of types in Newtonsoft.Json for reflection -->
-    <Assembly Name="Newtonsoft.Json" Dynamic="Required All" />
-    
-    <!-- ScottPlot Native AOT compatibility -->
+    <!-- Essential assemblies only -->
     <Assembly Name="ScottPlot" Dynamic="Required All" />
-    <Assembly Name="ScottPlot.WinUI" Dynamic="Required All" />
+    <Assembly Name="ScottPlot.Avalonia" Dynamic="Required All" />
     <Assembly Name="SkiaSharp" Dynamic="Required All" />
-    <Assembly Name="System.Drawing.Common" Dynamic="Required All" />
-    <Assembly Name="System.Drawing.Primitives" Dynamic="Required All" />
-    <Assembly Name="System.Text.Encoding" Dynamic="Required All" />
-    <Assembly Name="System.Text.Encoding.Extensions" Dynamic="Required All" />
     
-    <!-- Preserve font and text rendering related types -->
-    <Type Name="System.Drawing.Font" Dynamic="Required All" />
-    <Type Name="System.Drawing.FontFamily" Dynamic="Required All" />
-    <Type Name="System.Drawing.FontStyle" Dynamic="Required All" />
-    <Type Name="System.Drawing.Text.FontCollection" Dynamic="Required All" />
-    <Type Name="System.Drawing.Text.InstalledFontCollection" Dynamic="Required All" />
-    <Type Name="System.Drawing.Text.PrivateFontCollection" Dynamic="Required All" />
-    
-    <!-- SkiaSharp text and font types -->
-    <Type Name="SkiaSharp.SKFont" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKFontManager" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKTypeface" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKPaint" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKCanvas" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKBitmap" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKSurface" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKImage" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKData" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKEncodedImageFormat" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKTextAlign" Dynamic="Required All" />
-    <Type Name="SkiaSharp.SKTextEncoding" Dynamic="Required All" />
-    
-    <!-- ScottPlot specific types that may be needed -->
-    <Type Name="ScottPlot.Plot" Dynamic="Required All" />
-    <Type Name="ScottPlot.Color" Dynamic="Required All" />
-    <Type Name="ScottPlot.Colors" Dynamic="Required All" />
-    <Type Name="ScottPlot.Plottables.Scatter" Dynamic="Required All" />
-    <Type Name="ScottPlot.AxisPanels.AxisBase" Dynamic="Required All" />
-    <Type Name="ScottPlot.Legends.Legend" Dynamic="Required All" />
-    
-    <!-- Text and localization types -->
-    <Type Name="System.Globalization.CultureInfo" Dynamic="Required All" />
-    <Type Name="System.Text.StringBuilder" Dynamic="Required All" />
-    <Type Name="System.String" Dynamic="Required All" />
-    
-    <!-- Numeric and math types that ScottPlot may use via reflection -->
-    <Type Name="System.Double" Dynamic="Required All" />
-    <Type Name="System.Single" Dynamic="Required All" />
-    <Type Name="System.Int32" Dynamic="Required All" />
-    <Type Name="System.Math" Dynamic="Required All" />
-    
-    <!-- Collection types that may be used dynamically -->
-    <Type Name="System.Collections.Generic.List`1" Dynamic="Required All" />
-    <Type Name="System.Array" Dynamic="Required All" />
-    
-    <!-- System font directories and resources -->
-    <Type Name="System.Environment" Dynamic="Required All" />
-    <Type Name="System.IO.Directory" Dynamic="Required All" />
-    <Type Name="System.IO.File" Dynamic="Required All" />
-    <Type Name="System.IO.Path" Dynamic="Required All" />
-    
-    <!-- Specific namespaces for font handling -->
-    <Namespace Name="System.Drawing" Dynamic="Required All" />
-    <Namespace Name="System.Drawing.Text" Dynamic="Required All" />
-    <Namespace Name="SkiaSharp" Dynamic="Required All" />
-    <Namespace Name="ScottPlot" Dynamic="Required All" />
-    
-    <!-- Preserve all members of data model types used in deserialization -->
-    <Assembly Name="ModerBox.Comtrade.PeriodicWork">
-      <Type Name="ModerBox.Comtrade.PeriodicWork.DataSpec" Dynamic="Required All" />
-      <Type Name="ModerBox.Comtrade.PeriodicWork.OrthogonalDataItem" Dynamic="Required All" />
-      <Type Name="ModerBox.Comtrade.PeriodicWork.AnalogDataItem" Dynamic="Required All" />
-      <Type Name="ModerBox.Comtrade.PeriodicWork.NonOrthogonalDataItem" Dynamic="Required All" />
-      <Type Name="ModerBox.Comtrade.PeriodicWork.DataNames" Dynamic="Required All" />
-      <Type Name="ModerBox.Comtrade.PeriodicWork.DataFilter" Dynamic="Required All" />
-    </Assembly>
-
-    <Assembly Name="ModerBox.Comtrade.FilterWaveform">
-      <Type Name="ModerBox.Comtrade.FilterWaveform.ACFilter" Dynamic="Required All" />
-    </Assembly>
-    
-    <!-- CurrentDifferenceAnalysis types -->
-    <Assembly Name="ModerBox.Comtrade.CurrentDifferenceAnalysis">
-      <Type Name="ModerBox.Comtrade.CurrentDifferenceAnalysis.CurrentDifferenceResult" Dynamic="Required All" />
-      <Type Name="ModerBox.Comtrade.CurrentDifferenceAnalysis.ChartGenerationService" Dynamic="Required All" />
-    </Assembly>
+    <!-- Project assemblies -->
+    <Assembly Name="ModerBox" Dynamic="Required All" />
     
   </Application>
 </Directives> 
