@@ -20,6 +20,8 @@ namespace ModerBox.ViewModels
         private string _targetFile = string.Empty;
         private string _statusMessage = "准备就绪";
         private bool _isProcessing = false;
+        private bool _isIdeeIdeeAnalysisSelected = true;
+        private bool _isIdeeIdelAnalysisSelected = false;
 
         private readonly ThreePhaseIdeeAnalysisService _analysisService;
 
@@ -47,11 +49,46 @@ namespace ModerBox.ViewModels
             set => this.RaiseAndSetIfChanged(ref _isProcessing, value);
         }
 
+        /// <summary>
+        /// 是否选择基于|IDEE1-IDEE2|峰值的分析
+        /// </summary>
+        public bool IsIdeeIdeeAnalysisSelected
+        {
+            get => _isIdeeIdeeAnalysisSelected;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _isIdeeIdeeAnalysisSelected, value);
+                if (value)
+                {
+                    IsIdeeIdelAnalysisSelected = false;
+                    StatusMessage = "已选择基于|IDEE1-IDEE2|峰值的分析模式";
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否选择基于|IDEE1-IDEL1|峰值的分析
+        /// </summary>
+        public bool IsIdeeIdelAnalysisSelected
+        {
+            get => _isIdeeIdelAnalysisSelected;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _isIdeeIdelAnalysisSelected, value);
+                if (value)
+                {
+                    IsIdeeIdeeAnalysisSelected = false;
+                    StatusMessage = "已选择基于|IDEE1-IDEL1|峰值的分析模式";
+                }
+            }
+        }
+
         public ObservableCollection<ThreePhaseIdeeAnalysisResult> Results { get; } = new();
 
         public ICommand SelectSourceFolderCommand { get; }
         public ICommand SelectTargetFileCommand { get; }
         public ICommand AnalyzeCommand { get; }
+        public ICommand AnalyzeByIdeeIdelCommand { get; }
         public ICommand GenerateChartCommand { get; }
 
         public ThreePhaseIdeeAnalysisViewModel()
@@ -61,6 +98,7 @@ namespace ModerBox.ViewModels
             SelectSourceFolderCommand = ReactiveCommand.CreateFromTask(SelectSourceFolderAsync);
             SelectTargetFileCommand = ReactiveCommand.CreateFromTask(SelectTargetFileAsync);
             AnalyzeCommand = ReactiveCommand.CreateFromTask(AnalyzeAsync, this.WhenAnyValue(x => x.IsProcessing, processing => !processing));
+            AnalyzeByIdeeIdelCommand = ReactiveCommand.CreateFromTask(AnalyzeByIdeeIdelAsync, this.WhenAnyValue(x => x.IsProcessing, processing => !processing));
             GenerateChartCommand = ReactiveCommand.CreateFromTask(GenerateChartAsync, this.WhenAnyValue(x => x.Results.Count, count => count > 0));
         }
 
@@ -176,6 +214,79 @@ namespace ModerBox.ViewModels
                 // 显示完成对话框，但不阻塞UI
                 await Task.Delay(100); // 短暂延迟确保UI更新完成
                 //await DialogHost.Show($"分析完成！\n\n共处理 {results.Count} 个文件\n结果已导出到:\n{TargetFile}", "ErrorDialog");
+            }
+            catch (Exception ex)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    StatusMessage = $"分析失败: {ex.Message}";
+                });
+                await DialogHost.Show($"分析失败: {ex.Message}", "ErrorDialog");
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    IsProcessing = false;
+                });
+            }
+        }
+
+        private async Task AnalyzeByIdeeIdelAsync()
+        {
+            if (string.IsNullOrEmpty(SourceFolder))
+            {
+                await DialogHost.Show("请先选择源文件夹", "ErrorDialog");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(TargetFile))
+            {
+                await DialogHost.Show("请先选择导出文件位置", "ErrorDialog");
+                return;
+            }
+
+            try
+            {
+                IsProcessing = true;
+                Results.Clear();
+                StatusMessage = "开始分析三相IDEE数据(基于|IDEE1-IDEL1|峰值)...";
+
+                // 执行分析，确保进度更新在UI线程上执行
+                var results = await _analysisService.AnalyzeFolderByIdeeIdelAsync(SourceFolder, message =>
+                {
+                    // 确保状态消息更新在UI线程上执行
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        StatusMessage = message;
+                    });
+                });
+
+                // 在UI线程上更新结果
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    foreach (var result in results)
+                    {
+                        Results.Add(result);
+                    }
+                });
+
+                // 导出Excel
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    StatusMessage = "正在导出Excel文件...";
+                });
+                
+                await _analysisService.ExportIdeeIdelToExcelAsync(results, TargetFile);
+
+                // 最终状态更新
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    StatusMessage = $"分析完成！共处理 {results.Count} 个文件，结果已导出到 {Path.GetFileName(TargetFile)}";
+                });
+
+                // 显示完成对话框，但不阻塞UI
+                await Task.Delay(100); // 短暂延迟确保UI更新完成
             }
             catch (Exception ex)
             {

@@ -3,6 +3,7 @@ using ModerBox.Comtrade.CurrentDifferenceAnalysis;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.CurrentDifferenceAnalysis.Test
 {
@@ -272,6 +273,226 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis.Test
             Assert.AreEqual(85.0, result.PhaseAIdel2Value);
             Assert.AreEqual(5.0, result.PhaseAIdeeAbsDifference);
             Assert.AreEqual(10.0, result.PhaseAIdeeIdelAbsDifference);
+        }
+
+        [TestMethod]
+        public void CreateIdeeIdelDataTable_ValidResults_ReturnsCorrectFormat()
+        {
+            // Arrange
+            var results = new List<ThreePhaseIdeeAnalysisResult>
+            {
+                new ThreePhaseIdeeAnalysisResult
+                {
+                    FileName = "test_file_1",
+                    PhaseAIdeeIdelAbsDifference = 2.000,
+                    PhaseBIdeeIdelAbsDifference = 3.000,
+                    PhaseCIdeeIdelAbsDifference = 4.000,
+                    PhaseAIdee1Value = 11.111,
+                    PhaseBIdee1Value = 22.222,
+                    PhaseCIdee1Value = 33.333,
+                    PhaseAIdel1Value = 9.111,
+                    PhaseBIdel1Value = 19.222,
+                    PhaseCIdel1Value = 29.333,
+                    PhaseAIdee2Value = 10.111,
+                    PhaseBIdee2Value = 20.222,
+                    PhaseCIdee2Value = 30.333,
+                    PhaseAIdel2Value = 8.111,
+                    PhaseBIdel2Value = 18.222,
+                    PhaseCIdel2Value = 28.333,
+                    PhaseAIdeeAbsDifference = 1.000,
+                    PhaseBIdeeAbsDifference = 2.000,
+                    PhaseCIdeeAbsDifference = 3.000
+                },
+                new ThreePhaseIdeeAnalysisResult
+                {
+                    FileName = "test_file_2",
+                    PhaseAIdeeIdelAbsDifference = 5.000,
+                    PhaseBIdeeIdelAbsDifference = 6.000,
+                    PhaseCIdeeIdelAbsDifference = 7.000,
+                    PhaseAIdee1Value = 44.444,
+                    PhaseBIdee1Value = 55.555,
+                    PhaseCIdee1Value = 66.666,
+                    PhaseAIdel1Value = 39.444,
+                    PhaseBIdel1Value = 49.555,
+                    PhaseCIdel1Value = 59.666,
+                    PhaseAIdee2Value = 40.444,
+                    PhaseBIdee2Value = 50.555,
+                    PhaseCIdee2Value = 60.666,
+                    PhaseAIdel2Value = 38.444,
+                    PhaseBIdel2Value = 48.555,
+                    PhaseCIdel2Value = 58.666,
+                    PhaseAIdeeAbsDifference = 4.000,
+                    PhaseBIdeeAbsDifference = 5.000,
+                    PhaseCIdeeAbsDifference = 6.000
+                }
+            };
+
+            // Act - 使用反射调用私有方法进行测试
+            var method = typeof(ThreePhaseIdeeAnalysisService).GetMethod("CreateIdeeIdelDataTable", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var result = (List<List<string>>)method.Invoke(_service, new object[] { results });
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(3, result.Count); // 表头 + 2行数据
+            
+            // 检查表头
+            var header = result[0];
+            Assert.AreEqual(19, header.Count); // 19列
+            Assert.AreEqual("文件名", header[0]);
+            Assert.AreEqual("A相|IDEE1-IDEL1|峰值", header[1]);
+            Assert.AreEqual("B相|IDEE1-IDEL1|峰值", header[2]);
+            Assert.AreEqual("C相|IDEE1-IDEL1|峰值", header[3]);
+            Assert.AreEqual("A相峰值时IDEE1值", header[4]);
+            Assert.AreEqual("B相峰值时IDEE1值", header[5]);
+            Assert.AreEqual("C相峰值时IDEE1值", header[6]);
+            Assert.AreEqual("A相峰值时IDEL1值", header[7]);
+            Assert.AreEqual("B相峰值时IDEL1值", header[8]);
+            Assert.AreEqual("C相峰值时IDEL1值", header[9]);
+            Assert.AreEqual("A相峰值时IDEE2值", header[10]);
+            Assert.AreEqual("B相峰值时IDEE2值", header[11]);
+            Assert.AreEqual("C相峰值时IDEE2值", header[12]);
+            Assert.AreEqual("A相峰值时IDEL2值", header[13]);
+            Assert.AreEqual("B相峰值时IDEL2值", header[14]);
+            Assert.AreEqual("C相峰值时IDEL2值", header[15]);
+            Assert.AreEqual("A相|IDEE1-IDEE2|差值", header[16]);
+            Assert.AreEqual("B相|IDEE1-IDEE2|差值", header[17]);
+            Assert.AreEqual("C相|IDEE1-IDEE2|差值", header[18]);
+
+            // 检查第一行数据
+            var firstRow = result[1];
+            Assert.AreEqual(19, firstRow.Count);
+            Assert.AreEqual("test_file_1", firstRow[0]);
+            Assert.AreEqual("2.000", firstRow[1]); // A相|IDEE1-IDEL1|峰值
+            Assert.AreEqual("3.000", firstRow[2]); // B相|IDEE1-IDEL1|峰值
+            Assert.AreEqual("4.000", firstRow[3]); // C相|IDEE1-IDEL1|峰值
+            Assert.AreEqual("11.111", firstRow[4]); // A相峰值时IDEE1值
+            Assert.AreEqual("22.222", firstRow[5]); // B相峰值时IDEE1值
+            Assert.AreEqual("33.333", firstRow[6]); // C相峰值时IDEE1值
+            Assert.AreEqual("9.111", firstRow[7]); // A相峰值时IDEL1值
+            Assert.AreEqual("19.222", firstRow[8]); // B相峰值时IDEL1值
+            Assert.AreEqual("29.333", firstRow[9]); // C相峰值时IDEL1值
+            Assert.AreEqual("10.111", firstRow[10]); // A相峰值时IDEE2值
+            Assert.AreEqual("20.222", firstRow[11]); // B相峰值时IDEE2值
+            Assert.AreEqual("30.333", firstRow[12]); // C相峰值时IDEE2值
+            Assert.AreEqual("8.111", firstRow[13]); // A相峰值时IDEL2值
+            Assert.AreEqual("18.222", firstRow[14]); // B相峰值时IDEL2值
+            Assert.AreEqual("28.333", firstRow[15]); // C相峰值时IDEL2值
+            Assert.AreEqual("1.000", firstRow[16]); // A相|IDEE1-IDEE2|差值
+            Assert.AreEqual("2.000", firstRow[17]); // B相|IDEE1-IDEE2|差值
+            Assert.AreEqual("3.000", firstRow[18]); // C相|IDEE1-IDEE2|差值
+
+            // 检查第二行数据
+            var secondRow = result[2];
+            Assert.AreEqual(19, secondRow.Count);
+            Assert.AreEqual("test_file_2", secondRow[0]);
+            Assert.AreEqual("5.000", secondRow[1]); // A相|IDEE1-IDEL1|峰值
+            Assert.AreEqual("6.000", secondRow[2]); // B相|IDEE1-IDEL1|峰值
+            Assert.AreEqual("7.000", secondRow[3]); // C相|IDEE1-IDEL1|峰值
+            Assert.AreEqual("44.444", secondRow[4]); // A相峰值时IDEE1值
+            Assert.AreEqual("55.555", secondRow[5]); // B相峰值时IDEE1值
+            Assert.AreEqual("66.666", secondRow[6]); // C相峰值时IDEE1值
+            Assert.AreEqual("39.444", secondRow[7]); // A相峰值时IDEL1值
+            Assert.AreEqual("49.555", secondRow[8]); // B相峰值时IDEL1值
+            Assert.AreEqual("59.666", secondRow[9]); // C相峰值时IDEL1值
+            Assert.AreEqual("40.444", secondRow[10]); // A相峰值时IDEE2值
+            Assert.AreEqual("50.555", secondRow[11]); // B相峰值时IDEE2值
+            Assert.AreEqual("60.666", secondRow[12]); // C相峰值时IDEE2值
+            Assert.AreEqual("38.444", secondRow[13]); // A相峰值时IDEL2值
+            Assert.AreEqual("48.555", secondRow[14]); // B相峰值时IDEL2值
+            Assert.AreEqual("58.666", secondRow[15]); // C相峰值时IDEL2值
+            Assert.AreEqual("4.000", secondRow[16]); // A相|IDEE1-IDEE2|差值
+            Assert.AreEqual("5.000", secondRow[17]); // B相|IDEE1-IDEE2|差值
+            Assert.AreEqual("6.000", secondRow[18]); // C相|IDEE1-IDEE2|差值
+        }
+
+        [TestMethod]
+        public void CreateIdeeIdelDataTable_EmptyResults_ReturnsOnlyHeader()
+        {
+            // Arrange
+            var results = new List<ThreePhaseIdeeAnalysisResult>();
+
+            // Act
+            var method = typeof(ThreePhaseIdeeAnalysisService).GetMethod("CreateIdeeIdelDataTable", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var result = (List<List<string>>)method.Invoke(_service, new object[] { results });
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.Count); // 仅表头
+            
+            var header = result[0];
+            Assert.AreEqual(19, header.Count); // 19列
+            Assert.AreEqual("文件名", header[0]);
+            Assert.AreEqual("A相|IDEE1-IDEL1|峰值", header[1]);
+            Assert.AreEqual("B相|IDEE1-IDEL1|峰值", header[2]);
+            Assert.AreEqual("C相|IDEE1-IDEL1|峰值", header[3]);
+        }
+
+        [TestMethod]
+        public void AnalyzeFolderByIdeeIdelAsync_InvalidPath_ThrowsArgumentException()
+        {
+            // Arrange
+            var invalidPath = @"C:\NonexistentFolder\Invalid";
+
+            // Act & Assert
+            Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
+            {
+                await _service.AnalyzeFolderByIdeeIdelAsync(invalidPath);
+            });
+        }
+
+        [TestMethod]
+        public void AnalyzeFolderByIdeeIdelAsync_NullPath_ThrowsArgumentException()
+        {
+            // Act & Assert
+            Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
+            {
+                await _service.AnalyzeFolderByIdeeIdelAsync(null);
+            });
+        }
+
+        [TestMethod]
+        public void AnalyzeFolderByIdeeIdelAsync_EmptyPath_ThrowsArgumentException()
+        {
+            // Act & Assert
+            Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
+            {
+                await _service.AnalyzeFolderByIdeeIdelAsync(string.Empty);
+            });
+        }
+
+        [TestMethod]
+        public void AnalyzeComtradeFileByIdeeIdel_InvalidPath_ThrowsException()
+        {
+            // Arrange
+            var invalidPath = @"C:\NonexistentFolder\Invalid.cfg";
+
+            // Act & Assert
+            Assert.ThrowsException<InvalidOperationException>(() =>
+            {
+                _service.AnalyzeComtradeFileByIdeeIdel(invalidPath);
+            });
+        }
+
+        [TestMethod]
+        public async Task ExportIdeeIdelToExcelAsync_EmptyResults_DoesNotThrow()
+        {
+            // Arrange
+            var emptyResults = new List<ThreePhaseIdeeAnalysisResult>();
+            var outputPath = "test_output.xlsx";
+
+            // Act & Assert - 应该不抛出异常
+            try
+            {
+                await _service.ExportIdeeIdelToExcelAsync(emptyResults, outputPath);
+                // 如果执行到这里，说明没有抛出异常，测试通过
+                Assert.IsTrue(true);
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"方法不应该抛出异常，但抛出了: {ex.Message}");
+            }
         }
     }
 } 

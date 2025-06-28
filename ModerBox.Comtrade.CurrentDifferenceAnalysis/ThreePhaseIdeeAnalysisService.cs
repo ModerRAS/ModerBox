@@ -364,5 +364,238 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
 
             return data;
         }
+
+        /// <summary>
+        /// 分析指定文件夹中的所有Comtrade文件的三相IDEE数据 - 基于|IDEE1-IDEL1|峰值
+        /// </summary>
+        /// <param name="sourceFolder">源文件夹路径</param>
+        /// <param name="progressCallback">进度回调函数</param>
+        /// <returns>分析结果列表</returns>
+        public async Task<List<ThreePhaseIdeeAnalysisResult>> AnalyzeFolderByIdeeIdelAsync(
+            string sourceFolder, 
+            Action<string>? progressCallback = null)
+        {
+            if (string.IsNullOrEmpty(sourceFolder) || !Directory.Exists(sourceFolder))
+            {
+                throw new ArgumentException("无效的源文件夹路径", nameof(sourceFolder));
+            }
+
+            // 根据PPR文件命名规则，只处理包含PPR的cfg文件
+            var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+                .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg") &&
+                           (Path.GetFileName(f).Contains("PPR") || Path.GetFileName(f).Contains("ppr")))
+                .ToArray();
+
+            progressCallback?.Invoke($"找到 {cfgFiles.Length} 个PPR相关的CFG文件，开始并行处理...");
+
+            // 使用线程安全的集合存储结果
+            var allResults = new ConcurrentBag<ThreePhaseIdeeAnalysisResult>();
+            var processedCount = 0;
+
+            // 并行处理所有文件
+            await Task.Run(() =>
+            {
+                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile =>
+                {
+                    try
+                    {
+                        var fileResult = AnalyzeComtradeFileByIdeeIdel(cfgFile);
+                        if (fileResult != null)
+                        {
+                            allResults.Add(fileResult);
+                        }
+
+                        Interlocked.Increment(ref processedCount);
+                        
+                        if (processedCount % 10 == 0 || processedCount == cfgFiles.Length)
+                        {
+                            progressCallback?.Invoke($"已处理 {processedCount}/{cfgFiles.Length} 个文件");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
+                    }
+                });
+            });
+
+            progressCallback?.Invoke("处理完成，正在整理数据...");
+            
+            // 将按相分组的PPR文件结果合并为完整的三相数据
+            var aggregatedResults = AggregatePhaseResults(allResults.ToList());
+            progressCallback?.Invoke($"数据聚合完成，最终获得 {aggregatedResults.Count} 个完整结果");
+            
+            return aggregatedResults;
+        }
+
+        /// <summary>
+        /// 分析单个Comtrade文件的三相IDEE数据 - 基于|IDEE1-IDEL1|峰值
+        /// </summary>
+        /// <param name="cfgFilePath">CFG文件路径</param>
+        /// <returns>分析结果，如果文件不包含所需通道则返回null</returns>
+        public ThreePhaseIdeeAnalysisResult? AnalyzeComtradeFileByIdeeIdel(string cfgFilePath)
+        {
+            try
+            {
+                var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFilePath).Result;
+                ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
+
+                var fileName = Path.GetFileNameWithoutExtension(cfgFilePath);
+                
+                // 根据PPR文件命名确定当前文件的相别
+                string currentPhase = DeterminePhaseFromFileName(fileName, cfgFilePath);
+                if (string.IsNullOrEmpty(currentPhase))
+                {
+                    return null; // 无法确定相别的文件跳过
+                }
+
+                // 查找当前相的IDEE1和IDEL1通道
+                var idee1Channel = FindPhaseChannel(comtradeInfo, "IDEE1", currentPhase);
+                var idel1Channel = FindPhaseChannel(comtradeInfo, "IDEL1", currentPhase);
+
+                // 如果找不到IDEE1和IDEL1通道，跳过该文件
+                if (idee1Channel == null || idel1Channel == null)
+                {
+                    return null;
+                }
+
+                // 查找当前相的IDEE2和IDEL2通道
+                var idee2Channel = FindPhaseChannel(comtradeInfo, "IDEE2", currentPhase);
+                var idel2Channel = FindPhaseChannel(comtradeInfo, "IDEL2", currentPhase);
+
+                var result = new ThreePhaseIdeeAnalysisResult
+                {
+                    FileName = fileName
+                };
+
+                // 计算当前相的|IDEE1-IDEL1|峰值数据
+                var ideeIdelDifferences = idee1Channel.Data.Zip(idel1Channel.Data, (idee1, idel1) => Math.Abs(idee1 - idel1)).ToArray();
+                var maxIdeeIdelDifferenceIndex = Array.IndexOf(ideeIdelDifferences, ideeIdelDifferences.Max());
+                var maxIdeeIdelDifference = ideeIdelDifferences[maxIdeeIdelDifferenceIndex];
+                var idee1AtPeak = idee1Channel.Data[maxIdeeIdelDifferenceIndex];
+                var idel1AtPeak = idel1Channel.Data[maxIdeeIdelDifferenceIndex];
+
+                // 计算峰值点的其他值
+                double idee2AtPeak = 0;
+                double idel2AtPeak = 0;
+                double ideeAbsDifference = 0;
+
+                if (idee2Channel != null)
+                {
+                    idee2AtPeak = idee2Channel.Data[maxIdeeIdelDifferenceIndex];
+                    ideeAbsDifference = Math.Abs(idee1AtPeak - idee2AtPeak);
+                }
+
+                if (idel2Channel != null)
+                {
+                    idel2AtPeak = idel2Channel.Data[maxIdeeIdelDifferenceIndex];
+                }
+
+                // 根据相别设置对应的字段
+                switch (currentPhase)
+                {
+                    case "A":
+                        result.PhaseAIdeeIdelAbsDifference = maxIdeeIdelDifference;
+                        result.PhaseAIdee1Value = idee1AtPeak;
+                        result.PhaseAIdel1Value = idel1AtPeak;
+                        result.PhaseAIdee2Value = idee2AtPeak;
+                        result.PhaseAIdel2Value = idel2AtPeak;
+                        result.PhaseAIdeeAbsDifference = ideeAbsDifference;
+                        break;
+                    case "B":
+                        result.PhaseBIdeeIdelAbsDifference = maxIdeeIdelDifference;
+                        result.PhaseBIdee1Value = idee1AtPeak;
+                        result.PhaseBIdel1Value = idel1AtPeak;
+                        result.PhaseBIdee2Value = idee2AtPeak;
+                        result.PhaseBIdel2Value = idel2AtPeak;
+                        result.PhaseBIdeeAbsDifference = ideeAbsDifference;
+                        break;
+                    case "C":
+                        result.PhaseCIdeeIdelAbsDifference = maxIdeeIdelDifference;
+                        result.PhaseCIdee1Value = idee1AtPeak;
+                        result.PhaseCIdel1Value = idel1AtPeak;
+                        result.PhaseCIdee2Value = idee2AtPeak;
+                        result.PhaseCIdel2Value = idel2AtPeak;
+                        result.PhaseCIdeeAbsDifference = ideeAbsDifference;
+                        break;
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"分析文件 {cfgFilePath} 失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 导出基于|IDEE1-IDEL1|峰值的结果到Excel
+        /// </summary>
+        /// <param name="results">分析结果列表</param>
+        /// <param name="filePath">导出文件路径</param>
+        /// <returns>导出任务</returns>
+        public async Task ExportIdeeIdelToExcelAsync(List<ThreePhaseIdeeAnalysisResult> results, string filePath)
+        {
+            if (!results.Any()) return;
+
+            await Task.Run(() =>
+            {
+                var dataWriter = new ModerBox.Common.DataWriter();
+                var data = CreateIdeeIdelDataTable(results);
+                dataWriter.WriteDoubleList(data, "三相IDEE分析结果(基于|IDEE1-IDEL1|峰值)");
+                dataWriter.SaveAs(filePath);
+            });
+        }
+
+        /// <summary>
+        /// 创建基于|IDEE1-IDEL1|峰值的数据表
+        /// </summary>
+        /// <param name="results">结果列表</param>
+        /// <returns>数据表</returns>
+        private List<List<string>> CreateIdeeIdelDataTable(List<ThreePhaseIdeeAnalysisResult> results)
+        {
+            var data = new List<List<string>>();
+            
+            // 创建表头
+            data.Add(new List<string>
+            {
+                "文件名",
+                "A相|IDEE1-IDEL1|峰值", "B相|IDEE1-IDEL1|峰值", "C相|IDEE1-IDEL1|峰值",
+                "A相峰值时IDEE1值", "B相峰值时IDEE1值", "C相峰值时IDEE1值",
+                "A相峰值时IDEL1值", "B相峰值时IDEL1值", "C相峰值时IDEL1值",
+                "A相峰值时IDEE2值", "B相峰值时IDEE2值", "C相峰值时IDEE2值",
+                "A相峰值时IDEL2值", "B相峰值时IDEL2值", "C相峰值时IDEL2值",
+                "A相|IDEE1-IDEE2|差值", "B相|IDEE1-IDEE2|差值", "C相|IDEE1-IDEE2|差值"
+            });
+
+            // 添加数据行
+            foreach (var result in results)
+            {
+                data.Add(new List<string>
+                {
+                    result.FileName,
+                    result.PhaseAIdeeIdelAbsDifference.ToString("F3"),
+                    result.PhaseBIdeeIdelAbsDifference.ToString("F3"),
+                    result.PhaseCIdeeIdelAbsDifference.ToString("F3"),
+                    result.PhaseAIdee1Value.ToString("F3"),
+                    result.PhaseBIdee1Value.ToString("F3"),
+                    result.PhaseCIdee1Value.ToString("F3"),
+                    result.PhaseAIdel1Value.ToString("F3"),
+                    result.PhaseBIdel1Value.ToString("F3"),
+                    result.PhaseCIdel1Value.ToString("F3"),
+                    result.PhaseAIdee2Value.ToString("F3"),
+                    result.PhaseBIdee2Value.ToString("F3"),
+                    result.PhaseCIdee2Value.ToString("F3"),
+                    result.PhaseAIdel2Value.ToString("F3"),
+                    result.PhaseBIdel2Value.ToString("F3"),
+                    result.PhaseCIdel2Value.ToString("F3"),
+                    result.PhaseAIdeeAbsDifference.ToString("F3"),
+                    result.PhaseBIdeeAbsDifference.ToString("F3"),
+                    result.PhaseCIdeeAbsDifference.ToString("F3")
+                });
+            }
+
+            return data;
+        }
     }
 }

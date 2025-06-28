@@ -81,9 +81,9 @@ namespace ModerBox.ViewModels {
             try {
                 var dialog = new SaveFileDialog {
                     Title = "选择导出文件位置",
-                    DefaultExtension = "xlsx",
+                    DefaultExtension = "csv",
                     Filters = new List<FileDialogFilter> {
-                        new FileDialogFilter { Name = "Excel 文件", Extensions = { "xlsx" } },
+                        new FileDialogFilter { Name = "CSV 文件", Extensions = { "csv" } },
                         new FileDialogFilter { Name = "所有文件", Extensions = { "*" } }
                     }
                 };
@@ -92,7 +92,7 @@ namespace ModerBox.ViewModels {
                     var result = await dialog.ShowAsync(desktop.MainWindow);
                     if (!string.IsNullOrEmpty(result)) {
                         TargetFile = result;
-                        StatusMessage = $"目标文件: {Path.GetFileName(result)}";
+                        StatusMessage = $"目标文件: {Path.GetFileName(result)} (CSV格式，无行数限制)";
                     }
                 }
             } catch (Exception ex) {
@@ -205,9 +205,9 @@ namespace ModerBox.ViewModels {
 
                 var dialog = new SaveFileDialog {
                     Title = "保存前100差值点文件",
-                    DefaultExtension = "xlsx",
+                    DefaultExtension = "csv",
                     Filters = new List<FileDialogFilter> {
-                        new FileDialogFilter { Name = "Excel 文件", Extensions = { "xlsx" } },
+                        new FileDialogFilter { Name = "CSV 文件", Extensions = { "csv" } },
                         new FileDialogFilter { Name = "所有文件", Extensions = { "*" } }
                     }
                 };
@@ -215,8 +215,8 @@ namespace ModerBox.ViewModels {
                 if (App.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop) {
                     var result = await dialog.ShowAsync(desktop.MainWindow);
                     if (!string.IsNullOrEmpty(result)) {
-                        await _analysisFacade.ExportTop100ByFileToExcelAsync(Results.ToList(), result);
-                        StatusMessage = $"前100差值点已导出到: {result}";
+                        await _analysisFacade.ExportTop100ByFileToCsvAsync(Results.ToList(), result);
+                        StatusMessage = $"前100差值点已导出到CSV: {result}";
                     }
                 }
             } catch (Exception ex) {
@@ -250,7 +250,6 @@ namespace ModerBox.ViewModels {
                             Results.ToList(), 
                             SourceFolder, 
                             result, 
-                            100,
                             message => StatusMessage = message);
                         StatusMessage = $"波形图已保存到: {result}";
                     }
