@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ComtradeLib = ModerBox.Comtrade;
 
@@ -28,8 +29,12 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 throw new ArgumentException("无效的源文件夹路径", nameof(sourceFolder));
             }
 
-            var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories);
-            progressCallback?.Invoke($"找到 {cfgFiles.Length} 个文件，开始并行处理...");
+            // 过滤掉.CFGcfg文件，只处理真正的.cfg文件
+            var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+                .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+                
+            progressCallback?.Invoke($"找到 {cfgFiles.Length} 个CFG文件，开始并行处理...");
 
             // 使用线程安全的集合存储结果
             var allResults = new ConcurrentBag<CurrentDifferenceResult>();
@@ -48,17 +53,27 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                             allResults.Add(result);
                         }
 
-                        Interlocked.Increment(ref processedCount);
+                        var currentCount = Interlocked.Increment(ref processedCount);
+                        
+                        // 每处理10个文件或处理完成时更新进度
+                        if (currentCount % 10 == 0 || currentCount == cfgFiles.Length)
+                        {
+                            progressCallback?.Invoke($"已处理 {currentCount}/{cfgFiles.Length} 个文件...");
+                        }
                     }
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
+                        // 继续处理其他文件，不让单个文件的错误中断整个处理过程
                     }
                 });
             });
 
             progressCallback?.Invoke("处理完成，正在整理数据...");
-            return allResults.ToList();
+            var resultList = allResults.ToList();
+            progressCallback?.Invoke($"分析完成！共获得 {resultList.Count} 个数据点");
+            
+            return resultList;
         }
 
         /// <summary>
@@ -75,21 +90,39 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFilePath).Result;
                 ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
 
-                // 查找所需的通道
-                var idel1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL1"));
-                var idel2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEL2"));
-                var idee1 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE1"));
-                var idee2 = comtradeInfo.AData.FirstOrDefault(ch => ch.Name.Contains("IDEE2"));
+                // 查找所需的通道 - 使用更精确的匹配
+                var idel1 = comtradeInfo.AData.FirstOrDefault(ch => 
+                    ch.Name.Equals("IDEL1", StringComparison.OrdinalIgnoreCase) || 
+                    ch.Name.Contains("IDEL1"));
+                var idel2 = comtradeInfo.AData.FirstOrDefault(ch => 
+                    ch.Name.Equals("IDEL2", StringComparison.OrdinalIgnoreCase) || 
+                    ch.Name.Contains("IDEL2"));
+                var idee1 = comtradeInfo.AData.FirstOrDefault(ch => 
+                    ch.Name.Equals("IDEE1", StringComparison.OrdinalIgnoreCase) || 
+                    ch.Name.Contains("IDEE1"));
+                var idee2 = comtradeInfo.AData.FirstOrDefault(ch => 
+                    ch.Name.Equals("IDEE2", StringComparison.OrdinalIgnoreCase) || 
+                    ch.Name.Contains("IDEE2"));
 
                 if (idel1 == null || idel2 == null || idee1 == null || idee2 == null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"文件 {Path.GetFileName(cfgFilePath)} 缺少必需的通道：" +
+                        $"IDEL1={idel1?.Name ?? "未找到"}, " +
+                        $"IDEL2={idel2?.Name ?? "未找到"}, " +
+                        $"IDEE1={idee1?.Name ?? "未找到"}, " +
+                        $"IDEE2={idee2?.Name ?? "未找到"}");
                     return results; // 返回空列表，跳过没有所需通道的文件
                 }
 
                 var fileName = Path.GetFileNameWithoutExtension(cfgFilePath);
 
+                // 确保数据长度一致
+                var dataLength = Math.Min(Math.Min(idel1.Data.Length, idel2.Data.Length), 
+                                         Math.Min(idee1.Data.Length, idee2.Data.Length));
+                dataLength = Math.Min(dataLength, comtradeInfo.EndSamp);
+
                 // 计算每个时间点的差值
-                for (int i = 0; i < comtradeInfo.EndSamp; i++)
+                for (int i = 0; i < dataLength; i++)
                 {
                     var result = CalculateCurrentDifference(fileName, i, 
                         idel1.Data[i], idel2.Data[i], idee1.Data[i], idee2.Data[i]);
