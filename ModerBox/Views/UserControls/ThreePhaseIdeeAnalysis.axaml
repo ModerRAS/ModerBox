@@ -23,7 +23,7 @@
       
       <!-- 功能描述 -->
       <TextBlock Grid.Row="0" 
-                 Text="此功能用于扫描波形文件，提取三相IDEE1、IDEE2数据，计算|IDEE1-IDEE2|差值绝对值和IDEE2数值，按文件生成汇总表格"
+                 Text="此功能用于扫描波形文件，提取三相IDEE1、IDEE2、IDEL1、IDEL2数据，计算峰值点的|IDEE1-IDEE2|和|IDEE1-IDEL1|差值绝对值，按文件生成汇总表格"
                  FontSize="12" 
                  Foreground="Gray"
                  Margin="0,34,0,10"
@@ -98,7 +98,7 @@
 
       <!-- 结果表格标题 -->
       <TextBlock Grid.Row="3" 
-                 Text="分析结果预览" 
+                 Text="分析结果预览（显示峰值点数据）" 
                  FontSize="16" 
                  FontWeight="Bold" 
                  Margin="0,0,0,10"
@@ -116,30 +116,90 @@
         <DataGrid.Columns>
           <DataGridTextColumn Header="文件名" 
                               Binding="{Binding FileName}" 
-                              Width="200" 
+                              Width="150" 
                               CanUserSort="True"/>
-          <DataGridTextColumn Header="A相|IDEE1-IDEE2|均值" 
+          
+          <!-- IDEE差值列 -->
+          <DataGridTextColumn Header="A相|IDEE1-IDEE2|" 
                               Binding="{Binding PhaseAIdeeAbsDifference, StringFormat=F3}" 
-                              Width="140" 
+                              Width="120" 
                               CanUserSort="True"/>
-          <DataGridTextColumn Header="B相|IDEE1-IDEE2|均值" 
+          <DataGridTextColumn Header="B相|IDEE1-IDEE2|" 
                               Binding="{Binding PhaseBIdeeAbsDifference, StringFormat=F3}" 
-                              Width="140" 
+                              Width="120" 
                               CanUserSort="True"/>
-          <DataGridTextColumn Header="C相|IDEE1-IDEE2|均值" 
+          <DataGridTextColumn Header="C相|IDEE1-IDEE2|" 
                               Binding="{Binding PhaseCIdeeAbsDifference, StringFormat=F3}" 
-                              Width="140" 
+                              Width="120" 
                               CanUserSort="True"/>
-          <DataGridTextColumn Header="A相IDEE2均值" 
+          
+          <!-- IDEE1值列 -->
+          <DataGridTextColumn Header="A相IDEE1值" 
+                              Binding="{Binding PhaseAIdee1Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="B相IDEE1值" 
+                              Binding="{Binding PhaseBIdee1Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相IDEE1值" 
+                              Binding="{Binding PhaseCIdee1Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          
+          <!-- IDEE2值列 -->
+          <DataGridTextColumn Header="A相IDEE2值" 
                               Binding="{Binding PhaseAIdee2Value, StringFormat=F3}" 
-                              Width="120" 
+                              Width="100" 
                               CanUserSort="True"/>
-          <DataGridTextColumn Header="B相IDEE2均值" 
+          <DataGridTextColumn Header="B相IDEE2值" 
                               Binding="{Binding PhaseBIdee2Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相IDEE2值" 
+                              Binding="{Binding PhaseCIdee2Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          
+          <!-- IDEL1值列 -->
+          <DataGridTextColumn Header="A相IDEL1值" 
+                              Binding="{Binding PhaseAIdel1Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="B相IDEL1值" 
+                              Binding="{Binding PhaseBIdel1Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相IDEL1值" 
+                              Binding="{Binding PhaseCIdel1Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          
+          <!-- IDEL2值列 -->
+          <DataGridTextColumn Header="A相IDEL2值" 
+                              Binding="{Binding PhaseAIdel2Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="B相IDEL2值" 
+                              Binding="{Binding PhaseBIdel2Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相IDEL2值" 
+                              Binding="{Binding PhaseCIdel2Value, StringFormat=F3}" 
+                              Width="100" 
+                              CanUserSort="True"/>
+          
+          <!-- |IDEE1-IDEL1|差值列 -->
+          <DataGridTextColumn Header="A相|IDEE1-IDEL1|" 
+                              Binding="{Binding PhaseAIdeeIdelAbsDifference, StringFormat=F3}" 
                               Width="120" 
                               CanUserSort="True"/>
-          <DataGridTextColumn Header="C相IDEE2均值" 
-                              Binding="{Binding PhaseCIdee2Value, StringFormat=F3}" 
+          <DataGridTextColumn Header="B相|IDEE1-IDEL1|" 
+                              Binding="{Binding PhaseBIdeeIdelAbsDifference, StringFormat=F3}" 
+                              Width="120" 
+                              CanUserSort="True"/>
+          <DataGridTextColumn Header="C相|IDEE1-IDEL1|" 
+                              Binding="{Binding PhaseCIdeeIdelAbsDifference, StringFormat=F3}" 
                               Width="120" 
                               CanUserSort="True"/>
         </DataGrid.Columns>

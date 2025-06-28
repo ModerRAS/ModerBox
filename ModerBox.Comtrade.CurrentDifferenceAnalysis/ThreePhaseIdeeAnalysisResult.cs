@@ -41,5 +41,65 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
         /// C相在差值峰值时刻的IDEE2数值
         /// </summary>
         public double PhaseCIdee2Value { get; set; }
+
+        /// <summary>
+        /// A相在差值峰值时刻的IDEE1数值
+        /// </summary>
+        public double PhaseAIdee1Value { get; set; }
+
+        /// <summary>
+        /// B相在差值峰值时刻的IDEE1数值
+        /// </summary>
+        public double PhaseBIdee1Value { get; set; }
+
+        /// <summary>
+        /// C相在差值峰值时刻的IDEE1数值
+        /// </summary>
+        public double PhaseCIdee1Value { get; set; }
+
+        /// <summary>
+        /// A相在差值峰值时刻的IDEL1数值
+        /// </summary>
+        public double PhaseAIdel1Value { get; set; }
+
+        /// <summary>
+        /// B相在差值峰值时刻的IDEL1数值
+        /// </summary>
+        public double PhaseBIdel1Value { get; set; }
+
+        /// <summary>
+        /// C相在差值峰值时刻的IDEL1数值
+        /// </summary>
+        public double PhaseCIdel1Value { get; set; }
+
+        /// <summary>
+        /// A相在差值峰值时刻的IDEL2数值
+        /// </summary>
+        public double PhaseAIdel2Value { get; set; }
+
+        /// <summary>
+        /// B相在差值峰值时刻的IDEL2数值
+        /// </summary>
+        public double PhaseBIdel2Value { get; set; }
+
+        /// <summary>
+        /// C相在差值峰值时刻的IDEL2数值
+        /// </summary>
+        public double PhaseCIdel2Value { get; set; }
+
+        /// <summary>
+        /// A相在差值峰值时刻的|IDEE1-IDEL1|数值
+        /// </summary>
+        public double PhaseAIdeeIdelAbsDifference { get; set; }
+
+        /// <summary>
+        /// B相在差值峰值时刻的|IDEE1-IDEL1|数值
+        /// </summary>
+        public double PhaseBIdeeIdelAbsDifference { get; set; }
+
+        /// <summary>
+        /// C相在差值峰值时刻的|IDEE1-IDEL1|数值
+        /// </summary>
+        public double PhaseCIdeeIdelAbsDifference { get; set; }
     }
 } 

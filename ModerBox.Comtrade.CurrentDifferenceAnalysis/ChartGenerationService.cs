@@ -286,11 +286,22 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 var phaseADiff = results.Select(r => r.PhaseAIdeeAbsDifference).ToArray();
                 var phaseBDiff = results.Select(r => r.PhaseBIdeeAbsDifference).ToArray();
                 var phaseCDiff = results.Select(r => r.PhaseCIdeeAbsDifference).ToArray();
+                
+                // 新增：IDEE1值数据
+                var phaseAIdee1 = results.Select(r => r.PhaseAIdee1Value).ToArray();
+                var phaseBIdee1 = results.Select(r => r.PhaseBIdee1Value).ToArray();
+                var phaseCIdee1 = results.Select(r => r.PhaseCIdee1Value).ToArray();
+                
                 var phaseAIdee2 = results.Select(r => r.PhaseAIdee2Value).ToArray();
                 var phaseBIdee2 = results.Select(r => r.PhaseBIdee2Value).ToArray();
                 var phaseCIdee2 = results.Select(r => r.PhaseCIdee2Value).ToArray();
 
-                // 添加差值曲线
+                // 新增：|IDEE1-IDEL1|差值数据
+                var phaseAIdeeIdelDiff = results.Select(r => r.PhaseAIdeeIdelAbsDifference).ToArray();
+                var phaseBIdeeIdelDiff = results.Select(r => r.PhaseBIdeeIdelAbsDifference).ToArray();
+                var phaseCIdeeIdelDiff = results.Select(r => r.PhaseCIdeeIdelAbsDifference).ToArray();
+
+                // 添加|IDEE1-IDEE2|差值曲线
                 var diffLineA = plt.Add.Scatter(fileIndices, phaseADiff);
                 diffLineA.LegendText = "A相|IDEE1-IDEE2|";
                 diffLineA.MarkerSize = 3;
@@ -308,6 +319,25 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 diffLineC.MarkerSize = 3;
                 diffLineC.LineWidth = 1;
                 diffLineC.Color = ScottPlot.Colors.Blue;
+
+                // 添加|IDEE1-IDEL1|差值曲线
+                var ideeIdelDiffLineA = plt.Add.Scatter(fileIndices, phaseAIdeeIdelDiff);
+                ideeIdelDiffLineA.LegendText = "A相|IDEE1-IDEL1|";
+                ideeIdelDiffLineA.MarkerSize = 2;
+                ideeIdelDiffLineA.LineWidth = 1;
+                ideeIdelDiffLineA.Color = ScottPlot.Colors.Magenta;
+
+                var ideeIdelDiffLineB = plt.Add.Scatter(fileIndices, phaseBIdeeIdelDiff);
+                ideeIdelDiffLineB.LegendText = "B相|IDEE1-IDEL1|";
+                ideeIdelDiffLineB.MarkerSize = 2;
+                ideeIdelDiffLineB.LineWidth = 1;
+                ideeIdelDiffLineB.Color = ScottPlot.Colors.Orange;
+
+                var ideeIdelDiffLineC = plt.Add.Scatter(fileIndices, phaseCIdeeIdelDiff);
+                ideeIdelDiffLineC.LegendText = "C相|IDEE1-IDEL1|";
+                ideeIdelDiffLineC.MarkerSize = 2;
+                ideeIdelDiffLineC.LineWidth = 1;
+                ideeIdelDiffLineC.Color = ScottPlot.Colors.Cyan;
 
                 // 设置标题和标签
                 NativeAotCompatibilityHelper.SafeSetTitle(plt, "Three Phase IDEE Analysis Results");
