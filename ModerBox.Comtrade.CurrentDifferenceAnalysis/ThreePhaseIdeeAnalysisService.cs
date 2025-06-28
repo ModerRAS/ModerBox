@@ -108,6 +108,10 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                     return null;
                 }
 
+                // 查找当前相的IDEL1和IDEL2通道
+                var idel1Channel = FindPhaseChannel(comtradeInfo, "IDEL1", currentPhase);
+                var idel2Channel = FindPhaseChannel(comtradeInfo, "IDEL2", currentPhase);
+
                 var result = new ThreePhaseIdeeAnalysisResult
                 {
                     FileName = fileName
@@ -117,22 +121,51 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 var differences = idee1Channel.Data.Zip(idee2Channel.Data, (idee1, idee2) => Math.Abs(idee1 - idee2)).ToArray();
                 var maxDifferenceIndex = Array.IndexOf(differences, differences.Max());
                 var maxDifference = differences[maxDifferenceIndex];
+                var idee1AtPeak = idee1Channel.Data[maxDifferenceIndex];
                 var idee2AtPeak = idee2Channel.Data[maxDifferenceIndex];
+
+                // 计算峰值点的IDEL值和|IDEE1-IDEL1|差值
+                double idel1AtPeak = 0;
+                double idel2AtPeak = 0;
+                double ideeIdelAbsDifference = 0;
+
+                if (idel1Channel != null)
+                {
+                    idel1AtPeak = idel1Channel.Data[maxDifferenceIndex];
+                    ideeIdelAbsDifference = Math.Abs(idee1AtPeak - idel1AtPeak);
+                }
+
+                if (idel2Channel != null)
+                {
+                    idel2AtPeak = idel2Channel.Data[maxDifferenceIndex];
+                }
 
                 // 根据相别设置对应的字段
                 switch (currentPhase)
                 {
                     case "A":
                         result.PhaseAIdeeAbsDifference = maxDifference;
+                        result.PhaseAIdee1Value = idee1AtPeak;
                         result.PhaseAIdee2Value = idee2AtPeak;
+                        result.PhaseAIdel1Value = idel1AtPeak;
+                        result.PhaseAIdel2Value = idel2AtPeak;
+                        result.PhaseAIdeeIdelAbsDifference = ideeIdelAbsDifference;
                         break;
                     case "B":
                         result.PhaseBIdeeAbsDifference = maxDifference;
+                        result.PhaseBIdee1Value = idee1AtPeak;
                         result.PhaseBIdee2Value = idee2AtPeak;
+                        result.PhaseBIdel1Value = idel1AtPeak;
+                        result.PhaseBIdel2Value = idel2AtPeak;
+                        result.PhaseBIdeeIdelAbsDifference = ideeIdelAbsDifference;
                         break;
                     case "C":
                         result.PhaseCIdeeAbsDifference = maxDifference;
+                        result.PhaseCIdee1Value = idee1AtPeak;
                         result.PhaseCIdee2Value = idee2AtPeak;
+                        result.PhaseCIdel1Value = idel1AtPeak;
+                        result.PhaseCIdel2Value = idel2AtPeak;
+                        result.PhaseCIdeeIdelAbsDifference = ideeIdelAbsDifference;
                         break;
                 }
 
@@ -192,19 +225,31 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 if (result.PhaseAIdeeAbsDifference > 0)
                 {
                     aggregatedResult.PhaseAIdeeAbsDifference = result.PhaseAIdeeAbsDifference;
+                    aggregatedResult.PhaseAIdee1Value = result.PhaseAIdee1Value;
                     aggregatedResult.PhaseAIdee2Value = result.PhaseAIdee2Value;
+                    aggregatedResult.PhaseAIdel1Value = result.PhaseAIdel1Value;
+                    aggregatedResult.PhaseAIdel2Value = result.PhaseAIdel2Value;
+                    aggregatedResult.PhaseAIdeeIdelAbsDifference = result.PhaseAIdeeIdelAbsDifference;
                 }
 
                 if (result.PhaseBIdeeAbsDifference > 0)
                 {
                     aggregatedResult.PhaseBIdeeAbsDifference = result.PhaseBIdeeAbsDifference;
+                    aggregatedResult.PhaseBIdee1Value = result.PhaseBIdee1Value;
                     aggregatedResult.PhaseBIdee2Value = result.PhaseBIdee2Value;
+                    aggregatedResult.PhaseBIdel1Value = result.PhaseBIdel1Value;
+                    aggregatedResult.PhaseBIdel2Value = result.PhaseBIdel2Value;
+                    aggregatedResult.PhaseBIdeeIdelAbsDifference = result.PhaseBIdeeIdelAbsDifference;
                 }
 
                 if (result.PhaseCIdeeAbsDifference > 0)
                 {
                     aggregatedResult.PhaseCIdeeAbsDifference = result.PhaseCIdeeAbsDifference;
+                    aggregatedResult.PhaseCIdee1Value = result.PhaseCIdee1Value;
                     aggregatedResult.PhaseCIdee2Value = result.PhaseCIdee2Value;
+                    aggregatedResult.PhaseCIdel1Value = result.PhaseCIdel1Value;
+                    aggregatedResult.PhaseCIdel2Value = result.PhaseCIdel2Value;
+                    aggregatedResult.PhaseCIdeeIdelAbsDifference = result.PhaseCIdeeIdelAbsDifference;
                 }
             }
 
@@ -283,7 +328,11 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             {
                 "文件名",
                 "A相|IDEE1-IDEE2|峰值", "B相|IDEE1-IDEE2|峰值", "C相|IDEE1-IDEE2|峰值",
-                "A相峰值时IDEE2值", "B相峰值时IDEE2值", "C相峰值时IDEE2值"
+                "A相峰值时IDEE1值", "B相峰值时IDEE1值", "C相峰值时IDEE1值",
+                "A相峰值时IDEE2值", "B相峰值时IDEE2值", "C相峰值时IDEE2值",
+                "A相峰值时IDEL1值", "B相峰值时IDEL1值", "C相峰值时IDEL1值",
+                "A相峰值时IDEL2值", "B相峰值时IDEL2值", "C相峰值时IDEL2值",
+                "A相|IDEE1-IDEL1|差值", "B相|IDEE1-IDEL1|差值", "C相|IDEE1-IDEL1|差值"
             });
 
             // 添加数据行
@@ -295,9 +344,21 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                     result.PhaseAIdeeAbsDifference.ToString("F3"),
                     result.PhaseBIdeeAbsDifference.ToString("F3"),
                     result.PhaseCIdeeAbsDifference.ToString("F3"),
+                    result.PhaseAIdee1Value.ToString("F3"),
+                    result.PhaseBIdee1Value.ToString("F3"),
+                    result.PhaseCIdee1Value.ToString("F3"),
                     result.PhaseAIdee2Value.ToString("F3"),
                     result.PhaseBIdee2Value.ToString("F3"),
-                    result.PhaseCIdee2Value.ToString("F3")
+                    result.PhaseCIdee2Value.ToString("F3"),
+                    result.PhaseAIdel1Value.ToString("F3"),
+                    result.PhaseBIdel1Value.ToString("F3"),
+                    result.PhaseCIdel1Value.ToString("F3"),
+                    result.PhaseAIdel2Value.ToString("F3"),
+                    result.PhaseBIdel2Value.ToString("F3"),
+                    result.PhaseCIdel2Value.ToString("F3"),
+                    result.PhaseAIdeeIdelAbsDifference.ToString("F3"),
+                    result.PhaseBIdeeIdelAbsDifference.ToString("F3"),
+                    result.PhaseCIdeeIdelAbsDifference.ToString("F3")
                 });
             }
 
