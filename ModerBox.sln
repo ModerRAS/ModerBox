@@ -39,6 +39,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.CurrentDi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.CurrentDifferenceAnalysis.Test", "ModerBox.Comtrade.CurrentDifferenceAnalysis.Test\ModerBox.Comtrade.CurrentDifferenceAnalysis.Test.csproj", "{D480213D-001B-4D55-8D61-6ABC59FE584C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Analysis.CurrentDifference", "ModerBox.Analysis.CurrentDifference\ModerBox.Analysis.CurrentDifference.csproj", "{DAF58448-E690-44DB-BA62-97CBC868567A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -105,6 +107,10 @@ Global
 		{D480213D-001B-4D55-8D61-6ABC59FE584C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D480213D-001B-4D55-8D61-6ABC59FE584C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D480213D-001B-4D55-8D61-6ABC59FE584C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DAF58448-E690-44DB-BA62-97CBC868567A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAF58448-E690-44DB-BA62-97CBC868567A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAF58448-E690-44DB-BA62-97CBC868567A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAF58448-E690-44DB-BA62-97CBC868567A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

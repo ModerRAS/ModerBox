@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="ModerBox.Views.UserControls.NewCurrentDifferenceAnalysis"
+             x:DataType="vm:NewCurrentDifferenceAnalysisViewModel">
+    <Design.DataContext>
+        <vm:NewCurrentDifferenceAnalysisViewModel/>
+    </Design.DataContext>
+
+    <ScrollViewer>
+        <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,*">
+            <TextBlock Grid.Row="0"
+                       Text="接地极电流差值分析 (新版)"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Margin="0,0,0,10"/>
+            <TextBlock Grid.Row="0"
+                       Text="此工具扫描文件夹内的COMTRADE文件，找出每个文件中(IDEL1-IDEL2)与(IDEE1-IDEE2)差值最大的那个数据点，并进行汇总展示。"
+                       FontSize="12"
+                       Foreground="Gray"
+                       Margin="0,34,0,10"
+                       TextWrapping="Wrap"/>
+
+            <Border Grid.Row="1"
+                    Background="LightGray"
+                    Padding="15"
+                    CornerRadius="5"
+                    Margin="0,10,0,10">
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0" Text="源文件夹:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding SourceFolder}" IsReadOnly="True" Margin="10,0" Watermark="选择包含波形文件的文件夹..."/>
+                        <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectSourceFolderCommand}" MinWidth="80"/>
+                    </Grid>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,10,0,0">
+                         <Button Content="分析每个文件的最大差值点" 
+                                 Command="{Binding AnalyzeTopPointsCommand}"
+                                 MinWidth="200"
+                                 Height="35"/>
+                        <Button Content="生成图表" 
+                                Command="{Binding GenerateChartsCommand}"
+                                MinWidth="120" 
+                                Height="35"/>
+                        <Button Content="导出结果" 
+                                Command="{Binding ExportResultsCommand}"
+                                MinWidth="120" 
+                                Height="35"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding StatusMessage}" HorizontalAlignment="Center" Margin="0,10,0,0" FontWeight="Medium"/>
+                </StackPanel>
+            </Border>
+            
+            <ProgressBar Grid.Row="2"
+                         IsIndeterminate="{Binding IsProcessing}"
+                         IsVisible="{Binding IsProcessing}"
+                         Height="4"
+                         Margin="0,5,0,15"/>
+
+            <DataGrid Grid.Row="3"
+                      ItemsSource="{Binding Results}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="All"
+                      CanUserResizeColumns="True"
+                      Margin="0,10,0,0"
+                      IsVisible="{Binding Results.Count}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" CanUserSort="True"/>
+                    <DataGridTextColumn Header="Time Point" Binding="{Binding TimePoint}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="IDEL1" Binding="{Binding IDEL1, StringFormat=F3}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="IDEL2" Binding="{Binding IDEL2, StringFormat=F3}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="IDEE1" Binding="{Binding IDEE1, StringFormat=F3}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="IDEE2" Binding="{Binding IDEE2, StringFormat=F3}" Width="100" CanUserSort="True"/>
+                    <DataGridTextColumn Header="Abs. Difference" Binding="{Binding AbsoluteDifference, StringFormat=F3}" Width="140" CanUserSort="True"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </ScrollViewer>
+</UserControl> 
