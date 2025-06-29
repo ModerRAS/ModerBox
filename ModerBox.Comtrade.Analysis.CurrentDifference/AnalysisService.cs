@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using ComtradeLib = ModerBox.Comtrade;
 
-namespace ModerBox.Analysis.CurrentDifference;
+namespace ModerBox.Comtrade.Analysis.CurrentDifference;
 
 /// <summary>
 /// Provides core services for current difference analysis of COMTRADE files.

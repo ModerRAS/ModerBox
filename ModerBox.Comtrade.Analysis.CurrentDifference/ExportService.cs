@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModerBox.Analysis.CurrentDifference
+namespace ModerBox.Comtrade.Analysis.CurrentDifference
 {
     /// <summary>
     /// Service for exporting analysis results to various formats.

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using ComtradeLib = ModerBox.Comtrade;
 
-namespace ModerBox.Analysis.CurrentDifference
+namespace ModerBox.Comtrade.Analysis.CurrentDifference
 {
     /// <summary>
     /// Service for generating waveform charts from analysis results.
