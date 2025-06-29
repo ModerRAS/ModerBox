@@ -86,6 +86,12 @@ namespace ModerBox.ViewModels
 
         private async Task ExportResultsAsync()
         {
+            if (!Results.Any())
+            {
+                await DialogHost.Show("没有可导出的结果。", "ErrorDialog");
+                return;
+            }
+
             if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow is null) return;
             
             var dialog = new SaveFileDialog
@@ -104,13 +110,12 @@ namespace ModerBox.ViewModels
                 StatusMessage = "正在导出结果...";
                 await _analysisFacade.ExportResultsAsync(Results.ToList(), filePath);
                 StatusMessage = $"结果已成功导出到: {filePath}";
-                await DialogHost.Show(StatusMessage);
             }
             catch (Exception ex)
             {
                 var errorMessage = $"导出失败: {ex.Message}";
                 StatusMessage = errorMessage;
-                await DialogHost.Show(errorMessage);
+                await DialogHost.Show(errorMessage, "ErrorDialog");
             }
             finally
             {
@@ -122,12 +127,12 @@ namespace ModerBox.ViewModels
         {
             if (!Results.Any())
             {
-                await DialogHost.Show("没有可用于生成图表的结果。");
+                await DialogHost.Show("没有可用于生成图表的结果。", "ErrorDialog");
                 return;
             }
             if (string.IsNullOrEmpty(SourceFolder))
             {
-                await DialogHost.Show("源文件夹未指定，无法生成图表，请重新执行分析。");
+                await DialogHost.Show("源文件夹未指定，无法生成图表，请重新执行分析。", "ErrorDialog");
                 return;
             }
 
@@ -145,13 +150,12 @@ namespace ModerBox.ViewModels
                 {
                     Dispatcher.UIThread.InvokeAsync(() => StatusMessage = message);
                 });
-                await DialogHost.Show($"图表已成功生成并保存到:\n{outputFolder}");
             }
             catch (Exception ex)
             {
                 var errorMessage = $"图表生成失败: {ex.Message}";
                 await Dispatcher.UIThread.InvokeAsync(() => StatusMessage = errorMessage);
-                await DialogHost.Show(errorMessage);
+                await DialogHost.Show(errorMessage, "ErrorDialog");
             }
             finally
             {
@@ -163,7 +167,7 @@ namespace ModerBox.ViewModels
         {
             if (string.IsNullOrEmpty(SourceFolder))
             {
-                await DialogHost.Show("请先选择源文件夹。");
+                await DialogHost.Show("请先选择源文件夹。", "ErrorDialog");
                 return;
             }
 
@@ -192,7 +196,7 @@ namespace ModerBox.ViewModels
             {
                 var errorMessage = $"分析失败: {ex.Message}";
                 await Dispatcher.UIThread.InvokeAsync(() => StatusMessage = errorMessage);
-                await DialogHost.Show(errorMessage);
+                await DialogHost.Show(errorMessage, "ErrorDialog");
             }
             finally
             {
