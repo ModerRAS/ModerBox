@@ -1,4 +1,4 @@
-namespace ModerBox.Analysis.CurrentDifference;
+namespace ModerBox.Comtrade.Analysis.CurrentDifference;
 
 /// <summary>
 /// Facade for the Current Difference Analysis feature.

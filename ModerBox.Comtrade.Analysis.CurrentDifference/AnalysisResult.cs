@@ -1,4 +1,4 @@
-namespace ModerBox.Analysis.CurrentDifference;
+namespace ModerBox.Comtrade.Analysis.CurrentDifference;
 
 /// <summary>
 /// Represents the result of a current difference analysis at a single time point.

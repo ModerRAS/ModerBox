@@ -9,7 +9,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using DialogHostAvalonia;
 using ReactiveUI;
-using ModerBox.Analysis.CurrentDifference; // Use the new, clean analysis project
+using ModerBox.Comtrade.Analysis.CurrentDifference; // Use the new, clean analysis project
 
 namespace ModerBox.ViewModels
 {
