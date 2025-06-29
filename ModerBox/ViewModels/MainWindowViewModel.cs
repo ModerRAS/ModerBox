@@ -19,6 +19,7 @@ namespace ModerBox.ViewModels {
                 new FilterWaveformSwitchIntervalViewModel { Title = "滤波器分合闸波形检测", Icon = "Filter" },
                 new PeriodicWorkViewModel { Title = "内置录波定期工作", Icon = "Calendar" },
                 new CurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析", Icon = "Calculator" },
+                new NewCurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析 (新版)", Icon = "Calculator" },
                 new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeColumns" }
             };
             _currentPage = Pages.First();

@@ -185,17 +185,15 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             string outputFolder, 
             Action<string>? progressCallback)
         {
-            // 每个文件只选择一个差值最大的点
-            var topPointsPerFile = results
-                .GroupBy(r => r.FileName)
-                .Select(g => g.OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences)).First())
+            // 不再对结果进行筛选，为所有结果生成图表
+            var pointsToChart = results
                 .OrderByDescending(r => Math.Abs(r.DifferenceOfDifferences))
                 .ToList();
 
             var chartCount = 0;
-            var totalCharts = topPointsPerFile.Count;
+            var totalCharts = pointsToChart.Count;
 
-            foreach (var point in topPointsPerFile)
+            foreach (var point in pointsToChart)
             {
                 try
                 {
@@ -264,7 +262,7 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 }
 
                 var cfgFile = cfgFiles.First();
-                
+
                 // 读取Comtrade文件
                 var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFile).Result;
                 ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();

@@ -39,14 +39,14 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             progressCallback?.Invoke("正在计算接地极电流差值...");
             var allResults = await _analysisService.AnalyzeFolderAsync(sourceFolder, progressCallback);
 
-            // 2. 获取前100个最大差值点
-            var top100Results = _analysisService.GetTopDifferencePoints(allResults, 100);
+            // 2. 每个文件只选择一个差值最大的点
+            var top100Results = _analysisService.GetTopDifferencePointsByFile(allResults, 1);
 
             // 3. 导出到CSV（解决Excel行数限制问题）
             progressCallback?.Invoke("正在导出CSV文件...");
             await _csvService.ExportFullResultsAsync(allResults, targetCsvFile);
 
-            progressCallback?.Invoke($"分析完成！共处理 {allResults.Count} 个数据点，界面显示前100个最大差值点。已导出到CSV文件（避免Excel行数限制）");
+            progressCallback?.Invoke($"分析完成！共处理 {allResults.Count} 个数据点，界面显示每个文件的最大差值点。已导出到CSV文件（避免Excel行数限制）");
 
             return (allResults, top100Results);
         }
