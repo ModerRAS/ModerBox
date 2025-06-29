@@ -63,7 +63,7 @@ public class AnalysisService
             {
                 try
                 {
-                    var fileResults = AnalyzeSingleFile(cfgFile);
+                    var fileResults = AnalyzeSingleFile(cfgFile, folderPath);
                     foreach (var result in fileResults)
                     {
                         results.Add(result);
@@ -84,7 +84,7 @@ public class AnalysisService
         progressCallback?.Invoke("Analysis complete.");
     }
 
-    private IEnumerable<AnalysisResult> AnalyzeSingleFile(string cfgFilePath)
+    private IEnumerable<AnalysisResult> AnalyzeSingleFile(string cfgFilePath, string basePath)
     {
         var comtradeInfo = ComtradeLib.Comtrade.ReadComtradeCFG(cfgFilePath).Result;
         ComtradeLib.Comtrade.ReadComtradeDAT(comtradeInfo).Wait();
@@ -100,12 +100,12 @@ public class AnalysisService
             yield break;
         }
 
-        var fileName = Path.GetFileName(cfgFilePath);
+        var relativePath = Path.GetRelativePath(basePath, cfgFilePath);
         for (var i = 0; i < comtradeInfo.EndSamp; i++)
         {
             yield return new AnalysisResult
             {
-                FileName = fileName,
+                FileName = relativePath,
                 TimePoint = i,
                 IDEL1 = idel1.Data[i],
                 IDEL2 = idel2.Data[i],
