@@ -7,25 +7,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
-    <!-- 保留调试信息以便调试AOT问题 -->
-    <DebugType>embedded</DebugType>
-    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
-  <!-- NativeAOT settings -->
-  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
-    <PublishTrimmed>true</PublishTrimmed>
-    <!-- 为ScottPlot等第三方库提供更好的AOT兼容性 -->
-    <TrimmerDefaultAction>copy</TrimmerDefaultAction>
-    <IlcDisableReflection>false</IlcDisableReflection>
-    <EventSourceSupport>false</EventSourceSupport>
-    <UseSystemResourceKeys>true</UseSystemResourceKeys>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <!-- ILC optimization settings to prevent hanging -->
-    <OptimizationPreference>Speed</OptimizationPreference>
-    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
-    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
-    <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
+  <PropertyGroup Condition="'$(PublishProfile)' == 'native'">
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,12 +20,6 @@
 
   <ItemGroup>
     <Content Include="Assets\avalonia-logo.ico" />
-  </ItemGroup>
-
-  <!-- Native AOT trimmer configuration -->
-  <ItemGroup Condition="'$(PublishAot)' == 'true'">
-    <TrimmerRootAssembly Include="ScottPlot" />
-    <TrimmerRootAssembly Include="ScottPlot.Avalonia" />
   </ItemGroup>
 
   <ItemGroup>
