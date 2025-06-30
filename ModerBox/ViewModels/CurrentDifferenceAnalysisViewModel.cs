@@ -115,24 +115,6 @@ namespace ModerBox.ViewModels {
             Results.Clear();
 
             try {
-                // 检测Native AOT环境
-                if (ModerBox.Comtrade.CurrentDifferenceAnalysis.NativeAotCompatibilityHelper.IsNativeAot)
-                {
-                    StatusMessage = "检测到Native AOT环境，正在进行兼容性检查...\n";
-                    
-                    // 测试ScottPlot兼容性
-                    var compatibilityTest = ModerBox.Comtrade.CurrentDifferenceAnalysis.NativeAotCompatibilityHelper.TestScottPlotCompatibility();
-                    if (compatibilityTest != null)
-                    {
-                        StatusMessage += $"⚠️ ScottPlot兼容性警告: {compatibilityTest}\n";
-                        StatusMessage += "将使用兼容模式继续...\n\n";
-                    }
-                    else
-                    {
-                        StatusMessage += "✅ ScottPlot兼容性检查通过\n\n";
-                    }
-                }
-                
                 // 使用新的服务执行完整的分析流程
                 var (allResults, top100Results) = await _analysisFacade.ExecuteFullAnalysisAsync(
                     SourceFolder, 
@@ -147,18 +129,7 @@ namespace ModerBox.ViewModels {
                 StatusMessage = $"计算完成，共处理 {allResults.Count} 个数据点，界面显示前100个最大差值点";
 
             } catch (Exception ex) {
-                if (ModerBox.Comtrade.CurrentDifferenceAnalysis.NativeAotCompatibilityHelper.IsNativeAot)
-                {
-                    StatusMessage = $"计算失败 (Native AOT环境): {ex.Message}\n\n" +
-                                     "建议解决方案:\n" +
-                                     "1. 确保所有COMTRADE文件格式正确\n" +
-                                     "2. 检查文件权限\n" +
-                                     "3. 如果问题持续，请尝试禁用图表生成功能";
-                }
-                else
-                {
-                    StatusMessage = $"计算失败: {ex.Message}";
-                }
+                StatusMessage = $"计算失败: {ex.Message}";
             } finally {
                 IsProcessing = false;
             }

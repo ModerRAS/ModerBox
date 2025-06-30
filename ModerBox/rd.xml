@@ -1,16 +1,6 @@
 <Directives>
   <Application>
-    <!-- 
-      Minimal runtime directive file for AOT compilation
-    -->
-    
-    <!-- Essential assemblies only -->
-    <Assembly Name="ScottPlot" Dynamic="Required All" />
-    <Assembly Name="ScottPlot.Avalonia" Dynamic="Required All" />
-    <Assembly Name="SkiaSharp" Dynamic="Required All" />
-    
-    <!-- Project assemblies -->
-    <Assembly Name="ModerBox" Dynamic="Required All" />
-    
+    <!--This is the main executable.-->
+    <Assembly Name="ModerBox" />
   </Application>
 </Directives> 
