@@ -4,6 +4,7 @@ using FlaUI.UIA3;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using System.Reflection;
+using System.Linq;
 
 namespace ModerBox.UIAutomation.Tests
 {
@@ -17,9 +18,7 @@ namespace ModerBox.UIAutomation.Tests
         [ClassInitialize]
         public static void ClassInitialize(TestContext context)
         {
-            var assemblyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var projectRoot = Directory.GetParent(assemblyPath!)!.Parent!.Parent!.Parent!.FullName;
-            var appPath = Path.Combine(projectRoot, "publish", "native", "ModerBox.exe");
+            var appPath = FindExecutable();
             
             app = Application.Launch(appPath);
             automation = new UIA3Automation();
@@ -39,6 +38,36 @@ namespace ModerBox.UIAutomation.Tests
         {
             Assert.IsNotNull(window);
             Assert.AreEqual("ModerBox", window.Title);
+        }
+
+        private static string FindExecutable()
+        {
+            var assemblyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var solutionRoot = Directory.GetParent(assemblyPath!)?.Parent?.Parent?.Parent?.FullName;
+            if (solutionRoot == null)
+            {
+                throw new DirectoryNotFoundException("Could not find the solution root directory.");
+            }
+
+            var executableName = "ModerBox.exe";
+            var searchPattern = Path.Combine("publish", "native", executableName);
+            var executablePath = Path.Combine(solutionRoot, searchPattern);
+
+            if (File.Exists(executablePath))
+            {
+                return executablePath;
+            }
+            
+            // Fallback for different build configurations or CI environments
+            var files = Directory.GetFiles(solutionRoot, executableName, SearchOption.AllDirectories);
+            var file = files.FirstOrDefault(f => f.Contains(Path.Combine("publish", "native")));
+
+            if (file != null)
+            {
+                return file;
+            }
+
+            throw new FileNotFoundException($"Could not find '{executableName}' in any 'publish/native' directory under '{solutionRoot}'.");
         }
     }
 } 
