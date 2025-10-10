@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="using:ModerBox.ViewModels"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:DataType="vm:QuestionBankConversionViewModel"
              x:Class="ModerBox.Views.UserControls.QuestionBankConversion">
@@ -30,14 +31,18 @@
             <TextBlock Text="题库转换工具" FontSize="24" FontWeight="Bold" Margin="0 0 0 10"/>
             
             <!-- 说明 -->
-            <Border Background="{DynamicResource QbPanelBackgroundBrush}" Padding="15" CornerRadius="8">
+            <ui:InfoBar Title="功能说明"
+                        Severity="Informational"
+                        IsClosable="False"
+                        IsOpen="True"
+                        Margin="0 0 0 10"
+                        Padding="15">
                 <StackPanel Spacing="5">
-                    <TextBlock Text="功能说明：" FontWeight="Bold"/>
                     <TextBlock Text="• 支持从多种格式的题库文件读取题目" TextWrapping="Wrap"/>
                     <TextBlock Text="• 支持导出为考试宝、磨题帮格式" TextWrapping="Wrap"/>
                     <TextBlock Text="• 支持单选题、多选题、判断题" TextWrapping="Wrap"/>
                 </StackPanel>
-            </Border>
+            </ui:InfoBar>
 
             <!-- 源文件选择 -->
             <StackPanel Spacing="8">
@@ -100,37 +105,34 @@
         <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4"/>
 
             <!-- 状态显示 -->
-            <Border Background="{DynamicResource QbStatusBackgroundBrush}" 
-                    Padding="15" 
-                    CornerRadius="8"
-                    BorderBrush="{DynamicResource QbStatusBorderBrush}"
-                    BorderThickness="1">
-                <StackPanel Spacing="5">
-                    <TextBlock Text="状态" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
+            <ui:InfoBar Title="状态"
+                        IsOpen="True"
+                        IsClosable="False"
+                        Severity="{Binding StatusSeverity}"
+                        Message="{Binding Status}"/>
 
             <!-- 支持的格式说明 -->
-            <Expander Header="支持的格式说明" Margin="0 10 0 0">
-                <Border Background="{DynamicResource QbPanelBackgroundBrush}" Padding="15">
-                    <StackPanel Spacing="10">
-                        <StackPanel Spacing="5">
-                            <TextBlock Text="源格式：" FontWeight="Bold"/>
-                            <TextBlock Text="• TXT文本：从Word格式题库转换的文本文件" TextWrapping="Wrap"/>
-                            <TextBlock Text="• 网络大学Excel：标准网络大学题库格式（G列题干，F列题型）" TextWrapping="Wrap"/>
-                            <TextBlock Text="• 网络大学4列：简化版网络大学格式（4列数据）" TextWrapping="Wrap"/>
-                            <TextBlock Text="• EXC格式：特定的Excel题库格式" TextWrapping="Wrap"/>
-                        </StackPanel>
-                        
-                        <StackPanel Spacing="5">
-                            <TextBlock Text="目标格式：" FontWeight="Bold"/>
-                            <TextBlock Text="• 考试宝：适用于考试宝App的题库格式" TextWrapping="Wrap"/>
-                            <TextBlock Text="• 磨题帮：适用于磨题帮App的题库格式" TextWrapping="Wrap"/>
-                        </StackPanel>
+            <ui:InfoBar Title="支持的格式说明"
+                        Severity="Informational"
+                        IsClosable="False"
+                        IsOpen="True"
+                        Padding="15">
+                <StackPanel Spacing="10">
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="源格式：" FontWeight="Bold"/>
+                        <TextBlock Text="• TXT文本：从Word格式题库转换的文本文件" TextWrapping="Wrap"/>
+                        <TextBlock Text="• 网络大学Excel：标准网络大学题库格式（G列题干，F列题型）" TextWrapping="Wrap"/>
+                        <TextBlock Text="• 网络大学4列：简化版网络大学格式（4列数据）" TextWrapping="Wrap"/>
+                        <TextBlock Text="• EXC格式：特定的Excel题库格式" TextWrapping="Wrap"/>
                     </StackPanel>
-                </Border>
-            </Expander>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="目标格式：" FontWeight="Bold"/>
+                        <TextBlock Text="• 考试宝：适用于考试宝App的题库格式" TextWrapping="Wrap"/>
+                        <TextBlock Text="• 磨题帮：适用于磨题帮App的题库格式" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+            </ui:InfoBar>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
