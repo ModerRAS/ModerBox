@@ -6,6 +6,20 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:DataType="vm:QuestionBankConversionViewModel"
              x:Class="ModerBox.Views.UserControls.QuestionBankConversion">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="QbPanelBackgroundBrush" Color="#F5F5F5" />
+            <SolidColorBrush x:Key="QbStatusBackgroundBrush" Color="#E3F2FD" />
+            <SolidColorBrush x:Key="QbStatusBorderBrush" Color="#2196F3" />
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="QbPanelBackgroundBrush" Color="#2A2F36" />
+                    <SolidColorBrush x:Key="QbStatusBackgroundBrush" Color="#1B3354" />
+                    <SolidColorBrush x:Key="QbStatusBorderBrush" Color="#64B5F6" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Design.DataContext>
         <vm:QuestionBankConversionViewModel/>
     </Design.DataContext>
@@ -16,7 +30,7 @@
             <TextBlock Text="题库转换工具" FontSize="24" FontWeight="Bold" Margin="0 0 0 10"/>
             
             <!-- 说明 -->
-            <Border Background="#F5F5F5" Padding="15" CornerRadius="8">
+            <Border Background="{DynamicResource QbPanelBackgroundBrush}" Padding="15" CornerRadius="8">
                 <StackPanel Spacing="5">
                     <TextBlock Text="功能说明：" FontWeight="Bold"/>
                     <TextBlock Text="• 支持从多种格式的题库文件读取题目" TextWrapping="Wrap"/>
@@ -86,10 +100,10 @@
         <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4"/>
 
             <!-- 状态显示 -->
-            <Border Background="#E3F2FD" 
+            <Border Background="{DynamicResource QbStatusBackgroundBrush}" 
                     Padding="15" 
                     CornerRadius="8"
-                    BorderBrush="#2196F3"
+                    BorderBrush="{DynamicResource QbStatusBorderBrush}"
                     BorderThickness="1">
                 <StackPanel Spacing="5">
                     <TextBlock Text="状态" FontWeight="Bold"/>
@@ -99,7 +113,7 @@
 
             <!-- 支持的格式说明 -->
             <Expander Header="支持的格式说明" Margin="0 10 0 0">
-                <Border Background="#F5F5F5" Padding="15">
+                <Border Background="{DynamicResource QbPanelBackgroundBrush}" Padding="15">
                     <StackPanel Spacing="10">
                         <StackPanel Spacing="5">
                             <TextBlock Text="源格式：" FontWeight="Bold"/>
