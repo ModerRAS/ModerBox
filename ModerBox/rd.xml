@@ -3,4 +3,12 @@
     <!--This is the main executable.-->
     <Assembly Name="ModerBox" />
   </Application>
+  <Assembly Name="ModerBox.Comtrade.PeriodicWork">
+    <Type Name="ModerBox.Comtrade.PeriodicWork.DataSpec" Dynamic="Required All" Serialize="Required All" />
+    <Type Name="ModerBox.Comtrade.PeriodicWork.OrthogonalDataItem" Dynamic="Required All" Serialize="Required All" />
+    <Type Name="ModerBox.Comtrade.PeriodicWork.NonOrthogonalDataItem" Dynamic="Required All" Serialize="Required All" />
+    <Type Name="ModerBox.Comtrade.PeriodicWork.AnalogDataItem" Dynamic="Required All" Serialize="Required All" />
+    <Type Name="ModerBox.Comtrade.PeriodicWork.DataNames" Dynamic="Required All" Serialize="Required All" />
+    <Type Name="ModerBox.Comtrade.PeriodicWork.DataFilter" Dynamic="Required All" Serialize="Required All" />
+  </Assembly>
 </Directives> 
