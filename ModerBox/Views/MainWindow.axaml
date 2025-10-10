@@ -31,6 +31,9 @@
         <DataTemplate DataType="{x:Type vm:ThreePhaseIdeeAnalysisViewModel}">
             <views:ThreePhaseIdeeAnalysis/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:QuestionBankConversionViewModel}">
+            <views:QuestionBankConversion/>
+        </DataTemplate>
     </Window.DataTemplates>
 
     <Design.DataContext>

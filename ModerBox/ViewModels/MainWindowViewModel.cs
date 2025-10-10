@@ -20,7 +20,8 @@ namespace ModerBox.ViewModels {
                 new PeriodicWorkViewModel { Title = "内置录波定期工作", Icon = "Calendar" },
                 new CurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析", Icon = "Calculator" },
                 new NewCurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析 (新版)", Icon = "Calculator" },
-                new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeColumns" }
+                new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeColumns" },
+                new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" }
             };
             _currentPage = Pages.First();
         }

@@ -1,0 +1,118 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="using:ModerBox.ViewModels"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:DataType="vm:QuestionBankConversionViewModel"
+             x:Class="ModerBox.Views.UserControls.QuestionBankConversion">
+    <Design.DataContext>
+        <vm:QuestionBankConversionViewModel/>
+    </Design.DataContext>
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="15">
+            <!-- 标题 -->
+            <TextBlock Text="题库转换工具" FontSize="24" FontWeight="Bold" Margin="0 0 0 10"/>
+            
+            <!-- 说明 -->
+            <Border Background="#F5F5F5" Padding="15" CornerRadius="8">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="功能说明：" FontWeight="Bold"/>
+                    <TextBlock Text="• 支持从多种格式的题库文件读取题目" TextWrapping="Wrap"/>
+                    <TextBlock Text="• 支持导出为考试宝、磨题帮格式" TextWrapping="Wrap"/>
+                    <TextBlock Text="• 支持单选题、多选题、判断题" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 源文件选择 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="源文件" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0" 
+                             Margin="0 0 10 0" 
+                             Watermark="选择题库源文件" 
+                             Text="{Binding SourceFile}"
+                             IsReadOnly="True"/>
+                    <Button Grid.Column="1" 
+                            Content="浏览..." 
+                            Command="{Binding SelectSourceFile}" 
+                            Width="100"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- 源格式选择 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="源格式" FontWeight="SemiBold"/>
+                <ComboBox ItemsSource="{Binding SourceFormats}" 
+                          SelectedItem="{Binding SelectedSourceFormat}"
+                          HorizontalAlignment="Stretch"/>
+            </StackPanel>
+
+            <!-- 目标格式选择 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="目标格式" FontWeight="SemiBold"/>
+                <ComboBox ItemsSource="{Binding TargetFormats}" 
+                          SelectedItem="{Binding SelectedTargetFormat}"
+                          HorizontalAlignment="Stretch"/>
+            </StackPanel>
+
+            <!-- 目标文件选择 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="目标文件" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0" 
+                             Margin="0 0 10 0" 
+                             Watermark="选择保存位置" 
+                             Text="{Binding TargetFile}"
+                             IsReadOnly="True"/>
+                    <Button Grid.Column="1" 
+                            Content="浏览..." 
+                            Command="{Binding SelectTargetFile}" 
+                            Width="100"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- 转换按钮 -->
+            <Button Content="开始转换" 
+                    Command="{Binding RunConversion}" 
+                    HorizontalAlignment="Stretch"
+                    Height="40"
+                    FontSize="16"
+                    Margin="0 10 0 0"/>
+
+            <!-- 状态显示 -->
+            <Border Background="#E3F2FD" 
+                    Padding="15" 
+                    CornerRadius="8"
+                    BorderBrush="#2196F3"
+                    BorderThickness="1">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="状态" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 支持的格式说明 -->
+            <Expander Header="支持的格式说明" Margin="0 10 0 0">
+                <Border Background="#F5F5F5" Padding="15">
+                    <StackPanel Spacing="10">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="源格式：" FontWeight="Bold"/>
+                            <TextBlock Text="• TXT文本：从Word格式题库转换的文本文件" TextWrapping="Wrap"/>
+                            <TextBlock Text="• 网络大学Excel：标准网络大学题库格式（G列题干，F列题型）" TextWrapping="Wrap"/>
+                            <TextBlock Text="• 网络大学4列：简化版网络大学格式（4列数据）" TextWrapping="Wrap"/>
+                            <TextBlock Text="• EXC格式：特定的Excel题库格式" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="目标格式：" FontWeight="Bold"/>
+                            <TextBlock Text="• 考试宝：适用于考试宝App的题库格式" TextWrapping="Wrap"/>
+                            <TextBlock Text="• 磨题帮：适用于磨题帮App的题库格式" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Expander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
