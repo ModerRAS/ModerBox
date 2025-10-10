@@ -5,6 +5,7 @@ using ModerBox.Comtrade.PeriodicWork.Protocol;
 
 using Newtonsoft.Json;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,7 +22,13 @@ namespace ModerBox.Comtrade.PeriodicWork {
 
         }
 
-        public async Task DoPeriodicWork(string folderPath, string exportPath, string dataFilterName) {
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties, typeof(DataSpec))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties, typeof(OrthogonalDataItem))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties, typeof(NonOrthogonalDataItem))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties, typeof(AnalogDataItem))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties, typeof(DataNames))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties, typeof(DataFilter))]
+    public async Task DoPeriodicWork(string folderPath, string exportPath, string dataFilterName) {
             try {
                 // 获取程序目录并构建JSON文件的完整路径
                 var appDirectory = AppContext.BaseDirectory;
@@ -37,7 +44,7 @@ namespace ModerBox.Comtrade.PeriodicWork {
             using (var workbook = new XLWorkbook()) {
                 foreach (var dataFilter in dataFilters.DataNames) {
                     if (dataFilter.Type.Equals("OrthogonalData")) {
-                        var orthogonalDataItem = dataSpec.OrthogonalData.FirstOrDefault(d => d.Name == dataFilter.Name);
+                        var orthogonalDataItem = dataSpec?.OrthogonalData?.FirstOrDefault(d => d.Name == dataFilter.Name);
                         if (orthogonalDataItem != null) {
                             var table = await _orthogonalDataService.ProcessingAsync(folderPath, orthogonalDataItem);
                             table.ExportToExcel(
@@ -50,7 +57,7 @@ namespace ModerBox.Comtrade.PeriodicWork {
                         }
                     }
                     else if (dataFilter.Type.Equals("NonOrthogonalData")) {
-                        var nonOrthogonalDataItem = dataSpec.NonOrthogonalData.FirstOrDefault(d => d.Name == dataFilter.Name);
+                        var nonOrthogonalDataItem = dataSpec?.NonOrthogonalData?.FirstOrDefault(d => d.Name == dataFilter.Name);
                         if (nonOrthogonalDataItem != null) {
                             var table = await _nonOrthogonalDataService.ProcessingAsync(folderPath, nonOrthogonalDataItem);
                             table.ExportToExcel(
