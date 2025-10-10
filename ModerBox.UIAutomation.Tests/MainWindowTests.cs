@@ -1,10 +1,11 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.IO;
-using System.Reflection;
-using System.Linq;
 
 namespace ModerBox.UIAutomation.Tests
 {
@@ -50,24 +51,39 @@ namespace ModerBox.UIAutomation.Tests
             }
 
             var executableName = "ModerBox.exe";
-            var searchPattern = Path.Combine("publish", "native", executableName);
-            var executablePath = Path.Combine(solutionRoot, searchPattern);
 
-            if (File.Exists(executablePath))
+            var preferredFolders = new[]
             {
-                return executablePath;
+                Path.Combine("publish", "native"),
+                "publish-native-aot",
+                Path.Combine("publish", "nativeaot"),
+                "publish-native",
+                "publish-normal"
+            };
+
+            foreach (var folder in preferredFolders)
+            {
+                var candidate = Path.Combine(solutionRoot, folder, executableName);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
             }
-            
+
             // Fallback for different build configurations or CI environments
-            var files = Directory.GetFiles(solutionRoot, executableName, SearchOption.AllDirectories);
-            var file = files.FirstOrDefault(f => f.Contains(Path.Combine("publish", "native")));
+            var files = Directory
+                .GetFiles(solutionRoot, executableName, SearchOption.AllDirectories)
+                .Where(f => f.Contains("publish", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(f => f.Contains("native", StringComparison.OrdinalIgnoreCase))
+                .ThenBy(f => f.Length)
+                .ToArray();
 
-            if (file != null)
+            if (files.Length > 0)
             {
-                return file;
+                return files[0];
             }
 
-            throw new FileNotFoundException($"Could not find '{executableName}' in any 'publish/native' directory under '{solutionRoot}'.");
+            throw new FileNotFoundException($"Could not find '{executableName}' in any publish directory under '{solutionRoot}'.");
         }
     }
 } 
