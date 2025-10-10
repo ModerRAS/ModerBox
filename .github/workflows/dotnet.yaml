@@ -25,10 +25,10 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Publish Application (Native AOT - nativeaot channel)
-      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish-native-aot -r win-x64 -p:PublishAot=true -p:StripSymbols=true
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: Publish Application (Native AOT - nativeaot channel)
+      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish-native-aot -r win-x64 -p:PublishAot=true -p:StripSymbols=true
     - name: Publish Application (Normal - nightly channel)
       run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish-normal -r win-x64
     - name: Upload Normal Artifact
