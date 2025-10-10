@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using FluentAvalonia.UI.Controls;
 using ModerBox.Common;
 using ModerBox.QuestionBank;
 using ReactiveUI;
@@ -59,13 +60,22 @@ namespace ModerBox.ViewModels {
         private string _status;
         public string Status {
             get => _status;
-            set => this.RaiseAndSetIfChanged(ref _status, value);
+            set {
+                this.RaiseAndSetIfChanged(ref _status, value);
+                StatusSeverity = DetermineSeverity(value);
+            }
         }
 
         private bool _isBusy;
         public bool IsBusy {
             get => _isBusy;
             set => this.RaiseAndSetIfChanged(ref _isBusy, value);
+        }
+
+        private InfoBarSeverity _statusSeverity = InfoBarSeverity.Informational;
+        public InfoBarSeverity StatusSeverity {
+            get => _statusSeverity;
+            set => this.RaiseAndSetIfChanged(ref _statusSeverity, value);
         }
 
         public ReactiveCommand<Unit, Unit> SelectSourceFile { get; }
@@ -216,6 +226,22 @@ namespace ModerBox.ViewModels {
             if (!string.IsNullOrWhiteSpace(TargetFile)) {
                 TargetFile = EnsureTargetFileExtension(TargetFile, SelectedTargetFormat.Format);
             }
+        }
+
+        private static InfoBarSeverity DetermineSeverity(string? value) {
+            if (string.IsNullOrWhiteSpace(value)) {
+                return InfoBarSeverity.Informational;
+            }
+
+            if (value.Contains("错误", StringComparison.OrdinalIgnoreCase)) {
+                return InfoBarSeverity.Error;
+            }
+
+            if (value.Contains("完成", StringComparison.OrdinalIgnoreCase)) {
+                return InfoBarSeverity.Success;
+            }
+
+            return InfoBarSeverity.Informational;
         }
     }
 }
