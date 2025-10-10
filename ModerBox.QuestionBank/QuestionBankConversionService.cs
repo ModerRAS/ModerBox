@@ -1,0 +1,177 @@
+using ClosedXML.Excel;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace ModerBox.QuestionBank;
+
+/// <summary>
+/// 题库源格式。
+/// </summary>
+public enum QuestionBankSourceFormat {
+    AutoDetect,
+    Txt,
+    Wldx,
+    Wldx4,
+    Exc
+}
+
+/// <summary>
+/// 题库目标格式。
+/// </summary>
+public enum QuestionBankTargetFormat {
+    Ksb,
+    Mtb
+}
+
+/// <summary>
+/// 题库转换服务。
+/// </summary>
+public class QuestionBankConversionService {
+    /// <summary>
+    /// 根据文件路径检测题库源格式。
+    /// </summary>
+    public QuestionBankSourceFormat DetectSourceFormat(string filePath) {
+        ArgumentNullException.ThrowIfNull(filePath);
+        if (!File.Exists(filePath)) {
+            throw new FileNotFoundException("源文件不存在", filePath);
+        }
+
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        if (extension == ".txt") {
+            return QuestionBankSourceFormat.Txt;
+        }
+
+        if (extension is ".xlsx" or ".xls") {
+            return DetectExcelFormat(filePath);
+        }
+
+        throw new NotSupportedException($"暂不支持的文件格式: {extension}");
+    }
+
+    /// <summary>
+    /// 读取题库。
+    /// </summary>
+    public List<Question> Read(string filePath, QuestionBankSourceFormat format) {
+        ArgumentNullException.ThrowIfNull(filePath);
+        if (format == QuestionBankSourceFormat.AutoDetect) {
+            format = DetectSourceFormat(filePath);
+        }
+
+        return format switch {
+            QuestionBankSourceFormat.Txt => TxtReader.ReadFromFile(filePath),
+            QuestionBankSourceFormat.Wldx => ExcelReader.ReadWLDXFormat(filePath),
+            QuestionBankSourceFormat.Wldx4 => ExcelReader.ReadWLDX4Format(filePath),
+            QuestionBankSourceFormat.Exc => ExcelReader.ReadEXCFormat(filePath),
+            _ => throw new NotSupportedException($"暂不支持的读取格式: {format}")
+        };
+    }
+
+    /// <summary>
+    /// 将题目写入目标格式。
+    /// </summary>
+    public void Write(IEnumerable<Question> questions, string filePath, QuestionBankTargetFormat targetFormat, string? title = null) {
+        ArgumentNullException.ThrowIfNull(questions);
+        ArgumentNullException.ThrowIfNull(filePath);
+
+        var questionList = questions.ToList();
+        if (questionList.Count == 0) {
+            throw new InvalidOperationException("题目列表为空，无法导出");
+        }
+
+        // 确保目标目录存在
+        var directory = Path.GetDirectoryName(Path.GetFullPath(filePath));
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory)) {
+            Directory.CreateDirectory(directory);
+        }
+
+        title ??= Path.GetFileNameWithoutExtension(filePath);
+
+        switch (targetFormat) {
+            case QuestionBankTargetFormat.Ksb:
+                QuestionBankWriter.WriteToKSBFormat(questionList, filePath, title);
+                break;
+            case QuestionBankTargetFormat.Mtb:
+                QuestionBankWriter.WriteToMTBFormat(questionList, filePath, title);
+                break;
+            default:
+                throw new NotSupportedException($"暂不支持的导出格式: {targetFormat}");
+        }
+    }
+
+    /// <summary>
+    /// 执行题库转换。
+    /// </summary>
+    public QuestionBankConversionSummary Convert(string sourcePath,
+                                                 string targetPath,
+                                                 QuestionBankSourceFormat sourceFormat,
+                                                 QuestionBankTargetFormat targetFormat,
+                                                 string? title = null) {
+        ArgumentNullException.ThrowIfNull(sourcePath);
+        ArgumentNullException.ThrowIfNull(targetPath);
+
+        var detectedFormat = sourceFormat == QuestionBankSourceFormat.AutoDetect
+            ? DetectSourceFormat(sourcePath)
+            : sourceFormat;
+
+        var questions = Read(sourcePath, detectedFormat);
+        Write(questions, targetPath, targetFormat, title);
+
+        return new QuestionBankConversionSummary(questions.Count, detectedFormat, targetFormat, targetPath);
+    }
+
+    private static QuestionBankSourceFormat DetectExcelFormat(string filePath) {
+        using var workbook = new XLWorkbook(filePath);
+        var worksheet = workbook.Worksheet(1);
+        var usedRange = worksheet.RangeUsed();
+        if (usedRange is null) {
+            return QuestionBankSourceFormat.Wldx;
+        }
+
+        // 采样若干行判定列结构
+        var rows = usedRange.RowsUsed().Skip(1).Take(10).ToList();
+        if (rows.Count == 0) {
+            return QuestionBankSourceFormat.Wldx;
+        }
+
+        int wldxScore = 0;
+        int wldx4Score = 0;
+        int excScore = 0;
+
+        foreach (var row in rows) {
+            if (!row.Cell(7).IsEmpty() && !row.Cell(6).IsEmpty()) {
+                wldxScore++;
+            }
+
+            if (!row.Cell(2).IsEmpty() && row.Cell(7).IsEmpty() && row.Cell(6).IsEmpty()) {
+                wldx4Score++;
+            }
+
+            if (!row.Cell(6).IsEmpty() && row.Cell(7).IsEmpty() && !row.Cell(8).IsEmpty()) {
+                excScore++;
+            }
+        }
+
+        if (wldx4Score >= wldxScore && wldx4Score >= excScore) {
+            return QuestionBankSourceFormat.Wldx4;
+        }
+
+        if (excScore > wldxScore && excScore > wldx4Score) {
+            return QuestionBankSourceFormat.Exc;
+        }
+
+        return QuestionBankSourceFormat.Wldx;
+    }
+}
+
+/// <summary>
+/// 转换结果摘要。
+/// </summary>
+/// <param name="QuestionCount">题目数量</param>
+/// <param name="SourceFormat">源格式</param>
+/// <param name="TargetFormat">目标格式</param>
+/// <param name="TargetPath">输出路径</param>
+public record QuestionBankConversionSummary(int QuestionCount,
+                                            QuestionBankSourceFormat SourceFormat,
+                                            QuestionBankTargetFormat TargetFormat,
+                                            string TargetPath);

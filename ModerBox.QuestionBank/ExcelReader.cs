@@ -1,4 +1,7 @@
 using ClosedXML.Excel;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ModerBox.QuestionBank;
 
@@ -30,7 +33,7 @@ public class ExcelReader {
                     Topic = topicCell.GetString().Trim().Trim('"'),
                     TopicType = ParseQuestionType(topicTypeCell.GetString().Trim().Trim('"')),
                     Answer = ParseAnswers(answerCell.GetString()),
-                    CorrectAnswer = correctAnswerCell.GetString().Trim().Trim('"').ToUpper()
+                    CorrectAnswer = NormalizeAnswer(correctAnswerCell.GetString())
                 };
 
                 result.Add(question);
@@ -65,7 +68,7 @@ public class ExcelReader {
                     Topic = topicCell.GetString().Trim().Trim('"'),
                     TopicType = ParseQuestionType(topicTypeCell.GetString().Trim().Trim('"')),
                     Answer = ParseAnswers(answerCell.GetString()),
-                    CorrectAnswer = correctAnswerCell.GetString().Trim().Trim('"').ToUpper()
+                    CorrectAnswer = NormalizeAnswer(correctAnswerCell.GetString())
                 };
 
                 result.Add(question);
@@ -101,14 +104,14 @@ public class ExcelReader {
                 answerString = System.Text.RegularExpressions.Regex.Replace(
                     answerString.Replace("；", ";"),
                     @"[A-Z]-",
-                    ""
+                    string.Empty
                 );
 
                 var question = new Question {
                     Topic = topicCell.GetString().Trim().Trim('"'),
                     TopicType = ParseQuestionType(topicTypeCell.GetString().Trim().Trim('"')),
-                    Answer = answerString.Split('|').Select(a => a.Trim()).ToList(),
-                    CorrectAnswer = correctAnswerCell.GetString().Trim().Trim('"').ToUpper()
+                    Answer = ParseAnswers(answerString, "|"),
+                    CorrectAnswer = NormalizeAnswer(correctAnswerCell.GetString())
                 };
 
                 result.Add(question);
@@ -127,16 +130,28 @@ public class ExcelReader {
         return QuestionType.SingleChoice;
     }
 
-    private static List<string> ParseAnswers(string answerString) {
-        if (string.IsNullOrWhiteSpace(answerString)) return new List<string>();
+    private static List<string> ParseAnswers(string answerString, params string[] separators) {
+        if (string.IsNullOrWhiteSpace(answerString)) {
+            return new List<string>();
+        }
 
-        return answerString
-            .Trim()
-            .Trim('"')
-            .Replace("；", ";")
-            .Split("$;$")
+        var normalized = answerString.Trim().Trim('"').Replace("；", ";");
+        var effectiveSeparators = separators is { Length: > 0 }
+            ? separators
+            : new[] { "$;$" };
+
+        return normalized
+            .Split(effectiveSeparators, StringSplitOptions.RemoveEmptyEntries)
             .Select(a => a.Trim())
             .Where(a => !string.IsNullOrWhiteSpace(a))
             .ToList();
+    }
+
+    private static string NormalizeAnswer(string answerString) {
+        if (string.IsNullOrWhiteSpace(answerString)) {
+            return string.Empty;
+        }
+
+        return answerString.Trim().Trim('"').Replace("；", "").Replace(" ", string.Empty).ToUpperInvariant();
     }
 }
