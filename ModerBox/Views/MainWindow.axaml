@@ -28,6 +28,9 @@
         <DataTemplate DataType="{x:Type vm:CurrentDifferenceAnalysisViewModel}">
             <views:CurrentDifferenceAnalysis/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:NewCurrentDifferenceAnalysisViewModel}">
+            <views:NewCurrentDifferenceAnalysis/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ThreePhaseIdeeAnalysisViewModel}">
             <views:ThreePhaseIdeeAnalysis/>
         </DataTemplate>
