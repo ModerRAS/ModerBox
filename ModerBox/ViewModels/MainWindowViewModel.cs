@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using ReactiveUI;
+using System.Collections.ObjectModel;
 using System.Linq;
-using ReactiveUI;
 
 namespace ModerBox.ViewModels {
     public class MainWindowViewModel : ViewModelBase {
-        public IEnumerable<ViewModelBase> Pages { get; }
+        public ObservableCollection<ViewModelBase> Pages { get; }
 
         private ViewModelBase _currentPage;
         public ViewModelBase CurrentPage {
@@ -13,7 +13,7 @@ namespace ModerBox.ViewModels {
         }
 
         public MainWindowViewModel() {
-            Pages = new List<ViewModelBase> {
+            Pages = new ObservableCollection<ViewModelBase> {
                 new HomePageViewModel { Title = "首页", Icon = "Home" },
                 new HarmonicCalculateViewModel { Title = "谐波计算", Icon = "ShowResults" },
                 new FilterWaveformSwitchIntervalViewModel { Title = "滤波器分合闸波形检测", Icon = "Filter" },
