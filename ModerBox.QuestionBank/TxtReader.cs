@@ -20,26 +20,32 @@ public class TxtReader {
         // 自动检测文件编码
         var encoding = DetectEncoding(filePath);
         var content = File.ReadAllText(filePath, encoding);
-        var fileStringList = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+        var fileStringList = content
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+            .Select(line => line?.Trim() ?? string.Empty)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
 
         var questionList = DetectionQuestionType(fileStringList);
         var result = new List<Question>();
 
         if (questionList.TryGetValue(QuestionType.SingleChoice, out var singleQuestions)) {
             result.AddRange(DetectionSelectQuestion(singleQuestions)
-                .Select(q => RecognizeSelectionQuestion(QuestionType.SingleChoice, q)));
+                .Select(q => RecognizeSelectionQuestion(QuestionType.SingleChoice, q))
+                .Where(q => q is not null)!);
         }
 
         if (questionList.TryGetValue(QuestionType.MultipleChoice, out var multiQuestions)) {
             result.AddRange(DetectionSelectQuestion(multiQuestions)
-                .Select(q => RecognizeSelectionQuestion(QuestionType.MultipleChoice, q)));
+                .Select(q => RecognizeSelectionQuestion(QuestionType.MultipleChoice, q))
+                .Where(q => q is not null)!);
         }
 
         if (questionList.TryGetValue(QuestionType.TrueFalse, out var judgeQuestions)) {
             result.AddRange(ConvertJudgeQuestion(judgeQuestions));
         }
 
-        return result.Where(q => q != null).ToList()!;
+        return result;
     }
 
     private static Encoding DetectEncoding(string filePath) {
@@ -127,35 +133,50 @@ public class TxtReader {
         var splitQuestionList = new List<string[]>();
 
         for (int index = 0; index < patternIndexList.Count; index++) {
-            var element = patternIndexList[index];
             if (index == 0) {
                 splitQuestionList.Add(questionList[0..(patternIndexList[index] + 1)]);
-            } else if (index + 1 >= patternIndexList.Count) {
-                continue;
-            } else {
-                splitQuestionList.Add(questionList[(patternIndexList[index - 1] + 1)..(patternIndexList[index] + 1)]);
+            } else if (index < patternIndexList.Count) {
+                var start = patternIndexList[index - 1] + 1;
+                var end = patternIndexList[index] + 1;
+                if (end > start && end <= questionList.Length) {
+                    splitQuestionList.Add(questionList[start..end]);
+                }
             }
         }
 
         return splitQuestionList;
     }
 
-    private static Question RecognizeSelectionQuestion(QuestionType topicType, string[] splitQuestionList) {
+    private static Question? RecognizeSelectionQuestion(QuestionType topicType, string[] splitQuestionList) {
         var selection = new Regex(@"[AaBbCcDdEeFfGgHhIi][、.．]");
         var correctAnswerReg = new Regex(@"[AaBbCcDdEeFfGgHhIi]+");
 
-        var correctAnswerMatch = correctAnswerReg.Match(splitQuestionList[^1]);
-        var correctAnswer = correctAnswerMatch.Success ? correctAnswerMatch.Value.ToUpper() : "";
+        if (splitQuestionList.Length == 0) {
+            return null;
+        }
 
-        var joined = string.Join(" ", splitQuestionList[0..^1]);
-        var toRec = selection.Split(joined)
+        var answerLine = splitQuestionList[^1];
+        var correctAnswerMatch = correctAnswerReg.Match(answerLine);
+        var correctAnswer = correctAnswerMatch.Success ? correctAnswerMatch.Value.ToUpperInvariant() : string.Empty;
+
+        var questionAndOptions = string.Join(" ", splitQuestionList[..^1]);
+        var segments = selection.Split(questionAndOptions)
+            .Select(s => s.Trim())
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .ToArray();
 
+        if (segments.Length == 0) {
+            return null;
+        }
+
+        var answers = segments.Length > 1
+            ? segments[1..].Select(v => v.Trim()).Where(v => v.Length > 0).ToList()
+            : new List<string>();
+
         return new Question {
-            Topic = toRec.Length > 0 ? toRec[0].Trim() : "",
+            Topic = segments[0].Trim(),
             TopicType = topicType,
-            Answer = toRec.Skip(1).Select(v => v.Trim()).ToList(),
+            Answer = answers,
             CorrectAnswer = correctAnswer
         };
     }
@@ -181,13 +202,15 @@ public class TxtReader {
         if (DetectionHasAnswer(questionList)) {
             return DetectionSelectQuestion(questionList)
                 .Select(s => RecognizeSelectionQuestion(QuestionType.TrueFalse, s))
-                .Where(q => q != null)
-                .ToList()!;
-        } else {
-            return questionList
-                .Select(RecognizeJudgeQuestion)
-                .Where(q => q != null)
-                .ToList()!;
+                .Where(q => q is not null)
+                .Select(q => q!)
+                .ToList();
         }
+
+        return questionList
+            .Select(RecognizeJudgeQuestion)
+            .Where(q => q is not null)
+            .Select(q => q!)
+            .ToList();
     }
 }

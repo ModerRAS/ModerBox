@@ -15,7 +15,8 @@ namespace ModerBox {
             { typeof(FilterWaveformSwitchIntervalViewModel), () => new FilterWaveformSwitchInterval() },
             { typeof(CurrentDifferenceAnalysisViewModel), () => new CurrentDifferenceAnalysis() },
             { typeof(ThreePhaseIdeeAnalysisViewModel), () => new ThreePhaseIdeeAnalysis() },
-            { typeof(NewCurrentDifferenceAnalysisViewModel), () => new NewCurrentDifferenceAnalysis() }
+            { typeof(NewCurrentDifferenceAnalysisViewModel), () => new NewCurrentDifferenceAnalysis() },
+            { typeof(QuestionBankConversionViewModel), () => new QuestionBankConversion() }
         };
 
         public Control? Build(object? data) {
