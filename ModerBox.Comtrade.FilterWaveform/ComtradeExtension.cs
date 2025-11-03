@@ -223,6 +223,53 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         /// <summary>
+        /// 计算从交流电压过零点到对应相电流出现点的时间间隔（采样点数）。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="phaseVoltageWave">需要分析的电压通道名称。</param>
+        /// <param name="phaseCurrentWave">对应的电流通道名称。</param>
+        /// <returns>时间间隔对应的采样点数；如果信号无效或未检测到，则返回0。</returns>
+        public static int VoltageZeroCrossToCurrentStartInterval(this ComtradeInfo comtradeInfo, string phaseVoltageWave, string phaseCurrentWave) {
+            if (comtradeInfo is null) {
+                return 0;
+            }
+
+            var voltageInfo = comtradeInfo.AData.GetACFilterAnalog(phaseVoltageWave);
+            var currentInfo = comtradeInfo.AData.GetACFilterAnalog(phaseCurrentWave);
+            if (voltageInfo is null || currentInfo is null) {
+                return 0;
+            }
+
+            var currentStartIndex = comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(phaseCurrentWave);
+            if (currentStartIndex <= 0) {
+                currentStartIndex = currentInfo.DetectCurrentStartIndex();
+            }
+            if (currentStartIndex <= 0) {
+                return 0;
+            }
+
+            var zeroCrossings = voltageInfo.DetectVoltageZeroCrossings();
+            if (zeroCrossings.Count == 0) {
+                return 0;
+            }
+
+            var referenceZeroCrossing = -1;
+            for (var i = zeroCrossings.Count - 1; i >= 0; i--) {
+                if (zeroCrossings[i] <= currentStartIndex) {
+                    referenceZeroCrossing = zeroCrossings[i];
+                    break;
+                }
+            }
+
+            if (referenceZeroCrossing < 0) {
+                referenceZeroCrossing = zeroCrossings[0];
+            }
+
+            var interval = currentStartIndex - referenceZeroCrossing;
+            return interval >= 0 ? interval : 0;
+        }
+
+        /// <summary>
         /// 根据起始和结束索引，裁剪指定的多个数字通道数据。
         /// </summary>
         /// <param name="comtradeInfo">COMTRADE数据对象。</param>
