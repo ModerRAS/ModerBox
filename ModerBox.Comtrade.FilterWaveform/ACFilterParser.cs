@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform {
@@ -66,24 +67,32 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 await GetFilterData();
                 var results = new ConcurrentBag<ACFilterSheetSpec>();
 
-                // 两级生产者-消费者：Stage1 读取 CFG/DAT，Stage2 计算/绘图
-                var cfgQueue = new BlockingCollection<string>(boundedCapacity: 6);
-                var parsedQueue = new BlockingCollection<ComtradeInfo>(boundedCapacity: 6);
+                // 两级生产者-消费者：Stage1 读取 CFG/DAT（异步通道背压），Stage2 计算/绘图
+                var cfgChannel = Channel.CreateBounded<string>(new BoundedChannelOptions(6) {
+                    SingleWriter = true,
+                    SingleReader = false,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
+                var parsedChannel = Channel.CreateBounded<ComtradeInfo>(new BoundedChannelOptions(6) {
+                    SingleWriter = false,
+                    SingleReader = false,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
 
-                var producer = Task.Run(() => {
+                var producer = Task.Run(async () => {
                     foreach (var cfg in AllDataPath) {
-                        cfgQueue.Add(cfg);
+                        await cfgChannel.Writer.WriteAsync(cfg);
                     }
-                    cfgQueue.CompleteAdding();
+                    cfgChannel.Writer.Complete();
                 });
 
                 var ioWorkerCount = Math.Min(4, Environment.ProcessorCount);
                 var ioWorkers = Enumerable.Range(0, ioWorkerCount).Select(_ => Task.Run(async () => {
-                    foreach (var cfgPath in cfgQueue.GetConsumingEnumerable()) {
+                    await foreach (var cfgPath in cfgChannel.Reader.ReadAllAsync()) {
                         try {
                             var info = await LoadComtradeAsync(cfgPath);
                             if (info is not null) {
-                                parsedQueue.Add(info);
+                                await parsedChannel.Writer.WriteAsync(info);
                             }
                         } catch {
                         }
@@ -91,9 +100,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 })).ToArray();
 
                 var processWorkerCount = Math.Min(6, Environment.ProcessorCount);
-                var processWorkers = Enumerable.Range(0, processWorkerCount).Select(_ => Task.Run(() => {
+                var processWorkers = Enumerable.Range(0, processWorkerCount).Select(_ => Task.Run(async () => {
                     var plotter = new ACFilterPlotter(ACFilterData);
-                    foreach (var info in parsedQueue.GetConsumingEnumerable()) {
+                    await foreach (var info in parsedChannel.Reader.ReadAllAsync()) {
                         try {
                             var perData = ProcessComtrade(info, plotter);
                             var current = Interlocked.Increment(ref processedCount);
@@ -106,9 +115,10 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     }
                 })).ToArray();
 
+                await producer;
                 await Task.WhenAll(ioWorkers);
-                parsedQueue.CompleteAdding();
-                await Task.WhenAll(processWorkers.Append(producer));
+                parsedChannel.Writer.Complete();
+                await Task.WhenAll(processWorkers);
 
                 return results.ToList();
             } catch (Exception ex) {
