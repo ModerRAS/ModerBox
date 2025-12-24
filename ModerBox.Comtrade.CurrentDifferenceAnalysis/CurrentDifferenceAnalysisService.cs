@@ -37,38 +37,39 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 
             progressCallback?.Invoke($"找到 {cfgFiles.Length} 个CFG文件，开始并行处理...");
 
-            // 使用线程安全的集合存储结果
+            // 生产者-消费者模型：顺序枚举 cfg，异步处理，限制并发度为6
             var allResults = new ConcurrentBag<CurrentDifferenceResult>();
             var processedCount = 0;
+            var queue = new BlockingCollection<string>(boundedCapacity: 6);
 
-            // 并行处理所有文件，限制并发度为6以避免内存溢出
-            await Task.Run(() =>
-            {
-                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
-                {
-                    try
-                    {
+            var producer = Task.Run(() => {
+                foreach (var cfg in cfgFiles) {
+                    queue.Add(cfg);
+                }
+                queue.CompleteAdding();
+            });
+
+            var workerCount = Math.Min(6, Environment.ProcessorCount);
+            var consumers = Enumerable.Range(0, workerCount).Select(_ => Task.Run(() => {
+                foreach (var cfgFile in queue.GetConsumingEnumerable()) {
+                    try {
                         var fileResults = AnalyzeComtradeFile(cfgFile);
-                        foreach (var result in fileResults)
-                        {
+                        foreach (var result in fileResults) {
                             allResults.Add(result);
                         }
 
                         var currentCount = Interlocked.Increment(ref processedCount);
-                        
-                        // 每处理10个文件或处理完成时更新进度
-                        if (currentCount % 10 == 0 || currentCount == cfgFiles.Length)
-                        {
+
+                        if (currentCount % 10 == 0 || currentCount == cfgFiles.Length) {
                             progressCallback?.Invoke($"已处理 {currentCount}/{cfgFiles.Length} 个文件...");
                         }
-                    }
-                    catch (Exception ex)
-                    {
+                    } catch (Exception ex) {
                         System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
-                        // 继续处理其他文件，不让单个文件的错误中断整个处理过程
                     }
-                });
-            });
+                }
+            }));
+
+            await Task.WhenAll(consumers.Append(producer));
 
             progressCallback?.Invoke("处理完成，正在整理数据...");
             var resultList = allResults.ToList();

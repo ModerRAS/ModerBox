@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading;
 using ComtradeLib = ModerBox.Comtrade;
 
 namespace ModerBox.Comtrade.Analysis.CurrentDifference;
@@ -58,31 +59,34 @@ public class AnalysisService
         progressCallback?.Invoke($"Found {cfgFiles.Length} files. Starting analysis...");
 
         var processedCount = 0;
-        await Task.Run(() =>
-        {
-            // 限制并发度为6以避免内存溢出
-            Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
-            {
-                try
-                {
+
+        // 生产者-消费者模型：顺序枚举 cfg，异步处理，限制并发度为6
+        var queue = new BlockingCollection<string>(boundedCapacity: 6);
+        var producer = Task.Run(() => {
+            foreach (var cfg in cfgFiles) {
+                queue.Add(cfg);
+            }
+            queue.CompleteAdding();
+        });
+
+        var workerCount = Math.Min(6, Environment.ProcessorCount);
+        var consumers = Enumerable.Range(0, workerCount).Select(_ => Task.Run(() => {
+            foreach (var cfgFile in queue.GetConsumingEnumerable()) {
+                try {
                     var fileResults = AnalyzeSingleFile(cfgFile, folderPath);
-                    foreach (var result in fileResults)
-                    {
+                    foreach (var result in fileResults) {
                         results.Add(result);
                     }
-                }
-                catch (Exception ex)
-                {
-                    // Optionally log the exception for the specific file
+                } catch (Exception ex) {
                     System.Diagnostics.Debug.WriteLine($"Error processing file {cfgFile}: {ex.Message}");
-                }
-                finally
-                {
+                } finally {
                     var currentCount = Interlocked.Increment(ref processedCount);
                     progressCallback?.Invoke($"Processed {currentCount} of {cfgFiles.Length} files...");
                 }
-            });
-        });
+            }
+        }));
+
+        await Task.WhenAll(consumers.Append(producer));
         progressCallback?.Invoke("Analysis complete.");
     }
 

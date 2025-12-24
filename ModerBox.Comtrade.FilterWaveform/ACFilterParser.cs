@@ -2,10 +2,12 @@
 using Newtonsoft.Json;
 using SkiaSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform {
@@ -60,40 +62,40 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// <returns>一个包含所有文件分析结果的 <see cref="ACFilterSheetSpec"/> 列表。</returns>
         public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify) {
             try {
-                var count = 0;
+                var processedCount = 0;
                 await GetFilterData();
-                
-                var AllData = new List<ACFilterSheetSpec>();
-                var plotter = new ACFilterPlotter(ACFilterData);
-                
-                // 使用信号量限制并发度为6，避免内存溢出和过度并发
-                using var semaphore = new SemaphoreSlim(6, 6);
-                var tasks = new List<Task<ACFilterSheetSpec?>>();
-                
-                foreach (var e in AllDataPath) {
-                    await semaphore.WaitAsync();
-                    
-                    var task = Task.Run(async () => {
-                        try {
-                            return await ParsePerComtrade(e, plotter);
-                        } finally {
-                            semaphore.Release();
-                        }
-                    });
-                    
-                    tasks.Add(task);
-                }
-                
-                // 等待所有任务完成，并按完成顺序处理结果
-                foreach (var completedTask in tasks) {
-                    var PerData = await completedTask;
-                    Notify(count++);
-                    if (PerData is not null) {
-                        AllData.Add(PerData);
+                var results = new ConcurrentBag<ACFilterSheetSpec>();
+
+                // 顺序枚举 cfg 文件，之后进入生产者-消费者模型处理
+                var queue = new BlockingCollection<string>(boundedCapacity: 6);
+                var producer = Task.Run(() => {
+                    foreach (var cfg in AllDataPath) {
+                        queue.Add(cfg);
                     }
-                }
-                
-                return AllData;
+                    queue.CompleteAdding();
+                });
+
+                var workerCount = Math.Min(6, Environment.ProcessorCount);
+                var consumers = Enumerable.Range(0, workerCount).Select(_ => Task.Run(async () => {
+                    // 每个消费者持有自己的 plotter，避免潜在的线程安全问题
+                    var plotter = new ACFilterPlotter(ACFilterData);
+                    foreach (var cfgPath in queue.GetConsumingEnumerable()) {
+                        try {
+                            var perData = await ParsePerComtrade(cfgPath, plotter);
+                            var current = Interlocked.Increment(ref processedCount);
+                            Notify(current);
+                            if (perData is not null) {
+                                results.Add(perData);
+                            }
+                        } catch {
+                            // 忽略单个文件的异常，继续处理其他文件
+                        }
+                    }
+                }));
+
+                await Task.WhenAll(consumers.Append(producer));
+
+                return results.ToList();
             } catch (Exception ex) {
                 return null;
             }
