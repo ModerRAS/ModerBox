@@ -270,5 +270,62 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
                     $"{phase} 相合闸电阻投入时间应在 {expectedDuration - 1.5:F1}-{expectedDuration + 1.5:F1}ms 之间，实际值: {result.DurationMs:F2}ms");
             }
         }
+
+        /// <summary>
+        /// 测试第三个波形文件的三相合闸电阻投入时间检测
+        /// 手工测量数据（索引从1开始）：
+        /// A 相：开始 16702，退出 16849，投入时间 = 14.7ms
+        /// B 相：开始 16752，退出 16850，投入时间 = 9.8ms
+        /// C 相：开始 16727，退出 16847，投入时间 = 12.0ms
+        /// 注意：C 相的突变不太明显
+        /// </summary>
+        [TestMethod]
+        public async Task DetectClosingResistorDurations_Waveform3_ShouldMatchManualMeasurement() {
+            // Arrange - 加载第三个波形文件
+            var testDataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestData", "滤波器合闸波形3.cfg");
+            var comtradeInfo3 = await global::ModerBox.Comtrade.Comtrade.ReadComtradeCFG(testDataPath);
+            await global::ModerBox.Comtrade.Comtrade.ReadComtradeDAT(comtradeInfo3);
+
+            var detector = new ClosingResistorExitDetector(comtradeInfo3.Samp);
+
+            // 手工测量数据（索引从1开始，所以从0开始需要减1）
+            // A 相：开始 16702，退出 16849 => 开始 16701，退出 16848，投入时间 = 14.7ms
+            // B 相：开始 16752，退出 16850 => 开始 16751，退出 16849，投入时间 = 9.8ms
+            // C 相：开始 16727，退出 16847 => 开始 16726，退出 16846，投入时间 = 12.0ms
+            var phases = new[] {
+                ("A", "A相电流(滤波器)", 16701, 16848, 14.7),
+                ("B", "B相电流(滤波器)", 16751, 16849, 9.8),
+                ("C", "C相电流(滤波器)", 16726, 16846, 12.0)
+            };
+
+            foreach (var (phase, channelName, expectedStart, expectedExit, expectedDuration) in phases) {
+                var current = comtradeInfo3.AData.GetACFilterAnalog(channelName);
+                Assert.IsNotNull(current, $"未找到 {phase} 相电流通道");
+
+                // Act
+                var result = detector.DetectClosingResistorDuration(current.Data);
+
+                // Assert
+                Assert.IsNotNull(result, $"未检测到 {phase} 相合闸电阻投入时间");
+
+                Console.WriteLine($"\n{phase} 相 (波形3):");
+                Console.WriteLine($"  电流开始: 检测={result.CurrentStartIndex}, 预期={expectedStart}, 差异={result.CurrentStartIndex - expectedStart}");
+                Console.WriteLine($"  退出时刻: 检测={result.ResistorExitIndex}, 预期={expectedExit}, 差异={result.ResistorExitIndex - expectedExit}");
+                Console.WriteLine($"  投入时间: 检测={result.DurationMs:F2}ms, 预期={expectedDuration:F2}ms");
+
+                // 输出电流数据用于诊断
+                var data = current.Data;
+                Console.WriteLine($"\n  电流数据（预期退出点 {expectedExit} 附近）:");
+                for (int i = expectedExit - 30; i < expectedExit + 40; i += 5) {
+                    if (i >= 0 && i < data.Length) {
+                        Console.WriteLine($"    i={i}: I={data[i]:F4}A");
+                    }
+                }
+
+                // 允许 ±2ms 的误差（C 相突变不明显，放宽一些）
+                Assert.IsTrue(result.DurationMs >= expectedDuration - 2.0 && result.DurationMs <= expectedDuration + 2.0,
+                    $"{phase} 相合闸电阻投入时间应在 {expectedDuration - 2.0:F1}-{expectedDuration + 2.0:F1}ms 之间，实际值: {result.DurationMs:F2}ms");
+            }
+        }
     }
 }
