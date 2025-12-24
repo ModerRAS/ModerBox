@@ -50,8 +50,11 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             Console.WriteLine($"投入时间: {result.DurationMs:F2}ms");
             Console.WriteLine($"\n预期退出时刻（如果投入时间是 15-16ms）: {result.CurrentStartTimeMs + 15:F1} - {result.CurrentStartTimeMs + 16:F1}ms");
             
-            Assert.IsTrue(result.DurationMs >= 12.0 && result.DurationMs <= 18.0,
-                $"A 相合闸电阻投入时间应在 12-18ms 之间，实际值: {result.DurationMs:F2}ms");
+            // 手工测量数据（索引从1开始）：
+            // A 相：开始 2149，退出 2305，投入时间 = 15.6ms
+            // 允许 ±1ms 的误差
+            Assert.IsTrue(result.DurationMs >= 14.5 && result.DurationMs <= 16.5,
+                $"A 相合闸电阻投入时间应在 14.5-16.5ms 之间，实际值: {result.DurationMs:F2}ms");
         }
 
         /// <summary>
@@ -73,8 +76,10 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             Console.WriteLine($"合闸电阻退出时刻: {result.ResistorExitTimeMs:F2}ms");
             Console.WriteLine($"投入时间: {result.DurationMs:F2}ms");
             
-            Assert.IsTrue(result.DurationMs >= 10.0 && result.DurationMs <= 11.0,
-                $"B 相合闸电阻投入时间应在 10-11ms 之间，实际值: {result.DurationMs:F2}ms");
+            // 手工测量数据（索引从1开始）：
+            // B 相：开始 2197，退出 2301，投入时间 = 10.4ms
+            Assert.IsTrue(result.DurationMs >= 9.5 && result.DurationMs <= 11.5,
+                $"B 相合闸电阻投入时间应在 9.5-11.5ms 之间，实际值: {result.DurationMs:F2}ms");
         }
 
         /// <summary>
@@ -96,8 +101,10 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             Console.WriteLine($"合闸电阻退出时刻: {result.ResistorExitTimeMs:F2}ms");
             Console.WriteLine($"投入时间: {result.DurationMs:F2}ms");
             
-            Assert.IsTrue(result.DurationMs >= 6.0 && result.DurationMs <= 16.0,
-                $"C 相合闸电阻投入时间应在 6-16ms 之间，实际值: {result.DurationMs:F2}ms");
+            // 手工测量数据（索引从1开始）：
+            // C 相：开始 2177，退出 2318，投入时间 = 14.1ms
+            Assert.IsTrue(result.DurationMs >= 13.0 && result.DurationMs <= 15.0,
+                $"C 相合闸电阻投入时间应在 13-15ms 之间，实际值: {result.DurationMs:F2}ms");
         }
 
         /// <summary>
@@ -123,17 +130,17 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             Console.WriteLine($"B 相投入时间: {result.PhaseBDurationMs:F2}ms");
             Console.WriteLine($"C 相投入时间: {result.PhaseCDurationMs:F2}ms");
 
-            // A 相：12-18ms（原始期望 15-16ms，允许更大容差）
-            Assert.IsTrue(result.PhaseADurationMs >= 12.0 && result.PhaseADurationMs <= 18.0,
-                $"A 相合闸电阻投入时间应在 12-18ms 之间，实际值: {result.PhaseADurationMs:F2}ms");
+            // A 相：15.6ms (±1ms)
+            Assert.IsTrue(result.PhaseADurationMs >= 14.5 && result.PhaseADurationMs <= 16.5,
+                $"A 相合闸电阻投入时间应在 14.5-16.5ms 之间，实际值: {result.PhaseADurationMs:F2}ms");
 
-            // B 相：10.4ms
-            Assert.IsTrue(result.PhaseBDurationMs >= 10.0 && result.PhaseBDurationMs <= 11.0,
-                $"B 相合闸电阻投入时间应在 10-11ms 之间，实际值: {result.PhaseBDurationMs:F2}ms");
+            // B 相：10.4ms (±1ms)
+            Assert.IsTrue(result.PhaseBDurationMs >= 9.5 && result.PhaseBDurationMs <= 11.5,
+                $"B 相合闸电阻投入时间应在 9.5-11.5ms 之间，实际值: {result.PhaseBDurationMs:F2}ms");
 
-            // C 相：6-16ms（原始期望 14.1ms，允许更大容差）
-            Assert.IsTrue(result.PhaseCDurationMs >= 6.0 && result.PhaseCDurationMs <= 16.0,
-                $"C 相合闸电阻投入时间应在 6-16ms 之间，实际值: {result.PhaseCDurationMs:F2}ms");
+            // C 相：14.1ms (±1ms)
+            Assert.IsTrue(result.PhaseCDurationMs >= 13.0 && result.PhaseCDurationMs <= 15.0,
+                $"C 相合闸电阻投入时间应在 13-15ms 之间，实际值: {result.PhaseCDurationMs:F2}ms");
         }
 
         /// <summary>
@@ -147,6 +154,65 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             // Act & Assert
             Assert.IsNull(detector.DetectClosingResistorDuration(null));
             Assert.IsNull(detector.DetectClosingResistorDuration(Array.Empty<double>()));
+        }
+
+        /// <summary>
+        /// 诊断测试：分析检测到的索引与手工测量的差异
+        /// </summary>
+        [TestMethod]
+        public void Diagnostic_CompareWithManualMeasurement() {
+            // 手工测量数据（索引从1开始，所以从0开始需要减1）
+            // A 相：开始 2149，退出 2305 => 开始 2148，退出 2304
+            // B 相：开始 2197，退出 2301 => 开始 2196，退出 2300
+            // C 相：开始 2177，退出 2318 => 开始 2176，退出 2317
+
+            var detector = new ClosingResistorExitDetector(_comtradeInfo.Samp);
+            
+            // 检测三相
+            var phases = new[] {
+                ("A", "A相电流(滤波器)", 2148, 2304),
+                ("B", "B相电流(滤波器)", 2196, 2300),
+                ("C", "C相电流(滤波器)", 2176, 2317)
+            };
+
+            foreach (var (phase, channelName, expectedStart, expectedExit) in phases) {
+                var current = _comtradeInfo.AData.GetACFilterAnalog(channelName);
+                Assert.IsNotNull(current, $"未找到 {phase} 相电流通道");
+
+                var result = detector.DetectClosingResistorDuration(current.Data);
+                Assert.IsNotNull(result, $"未检测到 {phase} 相");
+
+                Console.WriteLine($"\n{phase} 相:");
+                Console.WriteLine($"  电流开始: 检测={result.CurrentStartIndex}, 预期={expectedStart}, 差异={result.CurrentStartIndex - expectedStart}");
+                Console.WriteLine($"  退出时刻: 检测={result.ResistorExitIndex}, 预期={expectedExit}, 差异={result.ResistorExitIndex - expectedExit}");
+                Console.WriteLine($"  投入时间: 检测={result.DurationMs:F2}ms, 预期={(expectedExit - expectedStart) * 0.1:F2}ms");
+
+                // 如果是 A 相，输出更详细的诊断信息
+                if (phase == "A") {
+                    var data = current.Data;
+                    Console.WriteLine($"\n  A 相电流 RMS 分析（搜索范围）:");
+                    
+                    // 计算搜索范围内每个点的半周期 RMS
+                    int halfCycle = 100; // 10ms = 100 samples at 10kHz
+                    int searchStart = expectedStart + 80; // 从 8ms 后开始
+                    int searchEnd = expectedStart + 200; // 到 20ms 为止
+                    
+                    for (int i = searchStart; i < searchEnd; i += 10) {
+                        // 计算以当前点为中心的半周期 RMS
+                        double sumSq = 0;
+                        int count = 0;
+                        for (int j = i - halfCycle/2; j < i + halfCycle/2 && j < data.Length; j++) {
+                            if (j >= 0) {
+                                sumSq += data[j] * data[j];
+                                count++;
+                            }
+                        }
+                        double rms = count > 0 ? Math.Sqrt(sumSq / count) : 0;
+                        double timeMs = (i - expectedStart) * 0.1;
+                        Console.WriteLine($"    t={timeMs:F1}ms (i={i}): RMS={rms:F4}A, I={data[i]:F4}A");
+                    }
+                }
+            }
         }
     }
 }

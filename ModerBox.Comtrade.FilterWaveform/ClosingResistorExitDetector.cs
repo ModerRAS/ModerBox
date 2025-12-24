@@ -559,13 +559,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
         /// <summary>
         /// 检测合闸电阻退出时刻
-        /// 在电流开始后，检测电流幅值包络发生明显增大的时刻
-        /// 合闸电阻退出时电流幅值会跳变增大
+        /// 在电流开始后，检测电流幅值发生明显跳变增大的时刻
+        /// 合闸电阻退出时电流幅值会突然增大（电阻被短接）
         /// </summary>
         private int DetectResistorExitIndex(double[] current, int startIndex) {
             // 合闸电阻投入时间通常在 8-20ms，所以退出时刻应该在电流开始后 8ms 以后
             int minDuration = (int)(_samplingRate * 0.008); // 最小 8ms
-            int maxDuration = (int)(_samplingRate * 0.022); // 最大 22ms
+            int maxDuration = (int)(_samplingRate * 0.020); // 最大 20ms
             
             int searchStart = startIndex + minDuration;
             int searchEnd = Math.Min(current.Length, startIndex + maxDuration);
@@ -574,105 +574,87 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 return -1;
             }
 
-            // 计算每个采样点的瞬时幅值（使用绝对值的包络）
-            // 使用短窗口滑动最大值来估计包络
-            int envWindowSize = (int)(_samplingRate * 0.005); // 5ms 窗口
-            if (envWindowSize < 10) envWindowSize = 10;
-
-            // 计算幅值包络
-            var envelope = new double[searchEnd - searchStart];
-            for (int i = 0; i < envelope.Length; i++) {
-                double maxVal = 0;
-                int windowStart = searchStart + i;
-                int windowEnd = Math.Min(windowStart + envWindowSize, current.Length);
-                for (int j = windowStart; j < windowEnd; j++) {
-                    maxVal = Math.Max(maxVal, Math.Abs(current[j]));
-                }
-                envelope[i] = maxVal;
-            }
-
-            // 平滑包络
-            var smoothedEnv = new double[envelope.Length];
-            int smoothWindow = envWindowSize / 2;
-            for (int i = 0; i < envelope.Length; i++) {
-                double sum = 0;
-                int count = 0;
-                for (int j = Math.Max(0, i - smoothWindow); j < Math.Min(envelope.Length, i + smoothWindow + 1); j++) {
-                    sum += envelope[j];
-                    count++;
-                }
-                smoothedEnv[i] = sum / count;
-            }
-
-            // 计算包络的变化率（只关注增大的变化）
-            double maxIncrease = 0;
-            int maxIncreaseIdx = -1;
+            // 方法1：检测电流绝对值的瞬时跳变
+            // 合闸电阻退出时，电流绝对值会突然增大
+            int smoothWindow = 20; // 2ms 平滑窗口
+            double maxJump = 0;
+            int maxJumpIdx = -1;
             
-            for (int i = smoothWindow; i < smoothedEnv.Length - smoothWindow; i++) {
-                // 计算前后窗口的平均值
+            for (int i = searchStart + smoothWindow; i < searchEnd - smoothWindow; i++) {
+                // 计算当前点前后的平均绝对值
                 double prevAvg = 0, nextAvg = 0;
                 for (int j = 0; j < smoothWindow; j++) {
-                    prevAvg += smoothedEnv[i - smoothWindow + j];
-                    nextAvg += smoothedEnv[i + j];
+                    prevAvg += Math.Abs(current[i - smoothWindow + j]);
+                    nextAvg += Math.Abs(current[i + j]);
                 }
                 prevAvg /= smoothWindow;
                 nextAvg /= smoothWindow;
                 
+                // 计算绝对跳变量
+                double jump = nextAvg - prevAvg;
+                if (jump > maxJump && prevAvg > 0.01) {
+                    maxJump = jump;
+                    maxJumpIdx = i;
+                }
+            }
+
+            // 如果找到明显跳变（至少 0.05A 的绝对增量），使用这个点
+            if (maxJumpIdx > 0 && maxJump > 0.05) {
+                return maxJumpIdx;
+            }
+
+            // 方法2：使用半周期（10ms = 100采样点）窗口计算 RMS 包络的变化
+            int halfCycle = (int)(_samplingRate * 0.010); // 10ms
+            if (halfCycle < 50) halfCycle = 50;
+
+            // 计算搜索区域每个点的 RMS 值
+            var rmsValues = new double[searchEnd - searchStart];
+            for (int i = 0; i < rmsValues.Length; i++) {
+                int windowCenter = searchStart + i;
+                int windowStart = Math.Max(0, windowCenter - halfCycle / 2);
+                int windowEnd = Math.Min(current.Length, windowCenter + halfCycle / 2);
+                
+                double sumSquared = 0;
+                int count = 0;
+                for (int j = windowStart; j < windowEnd; j++) {
+                    sumSquared += current[j] * current[j];
+                    count++;
+                }
+                rmsValues[i] = count > 0 ? Math.Sqrt(sumSquared / count) : 0;
+            }
+
+            // 计算 RMS 的变化率，寻找最大变化比率点
+            int compareWindow = halfCycle / 2; // 5ms 比较窗口
+            double maxRatio = 1.0;
+            int maxRatioIdx = -1;
+            
+            for (int i = compareWindow; i < rmsValues.Length - compareWindow; i++) {
+                // 计算前后窗口的平均 RMS
+                double prevRms = 0, nextRms = 0;
+                for (int j = 0; j < compareWindow; j++) {
+                    prevRms += rmsValues[i - compareWindow + j];
+                    nextRms += rmsValues[i + j];
+                }
+                prevRms /= compareWindow;
+                nextRms /= compareWindow;
+                
                 // 只关注增大的变化（合闸电阻退出时幅值增大）
-                double increase = nextAvg - prevAvg;
-                if (increase > maxIncrease && prevAvg > 0.01) {
-                    // 计算相对增长率
-                    double relIncrease = increase / prevAvg;
-                    if (relIncrease > 0.2) { // 至少 20% 的增长
-                        maxIncrease = increase;
-                        maxIncreaseIdx = searchStart + i;
+                if (prevRms > 0.01 && nextRms > prevRms) {
+                    double ratio = nextRms / prevRms;
+                    if (ratio > maxRatio) {
+                        maxRatio = ratio;
+                        maxRatioIdx = searchStart + i;
                     }
                 }
             }
 
-            if (maxIncreaseIdx > 0) {
-                return maxIncreaseIdx;
+            // 如果找到明显的 RMS 变化（至少 20%），返回该点
+            if (maxRatioIdx > 0 && maxRatio > 1.2) {
+                return maxRatioIdx;
             }
 
-            // 使用斜率检测作为备用
-            return DetectResistorExitBySlope(current, startIndex, searchStart, searchEnd);
-        }
-
-        /// <summary>
-        /// 使用斜率变化检测合闸电阻退出时刻（备用方法）
-        /// </summary>
-        private int DetectResistorExitBySlope(double[] current, int startIndex, int searchStart, int searchEnd) {
-            int searchLength = searchEnd - searchStart;
-            if (searchLength < 50) {
-                return searchStart + searchLength / 2;
-            }
-
-            var searchData = new double[searchLength];
-            Array.Copy(current, searchStart, searchData, 0, searchLength);
-
-            // 对搜索区域进行预处理（滤波去除 50Hz 基波）
-            var filtered = Preprocess(searchData);
-
-            // 计算斜率（使用更大的窗口以平滑噪声）
-            var slope = CalculateSlope(filtered, 21);
-
-            // 计算斜率一阶差分（加速度）
-            var slopeDiff = new double[slope.Length - 1];
-            for (int i = 0; i < slope.Length - 1; i++) {
-                slopeDiff[i] = slope[i + 1] - slope[i];
-            }
-
-            // 找到最大变化点
-            int maxIdx = 0;
-            double maxVal = 0;
-            for (int i = 0; i < slopeDiff.Length; i++) {
-                if (Math.Abs(slopeDiff[i]) > maxVal) {
-                    maxVal = Math.Abs(slopeDiff[i]);
-                    maxIdx = i;
-                }
-            }
-
-            return searchStart + maxIdx;
+            // 最后备用：返回搜索区域中点
+            return searchStart + (searchEnd - searchStart) / 2;
         }
     }
 }
