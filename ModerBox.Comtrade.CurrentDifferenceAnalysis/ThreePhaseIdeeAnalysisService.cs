@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using ComtradeLib = ModerBox.Comtrade;
 
@@ -42,32 +43,35 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             var allResults = new ConcurrentBag<ThreePhaseIdeeAnalysisResult>();
             var processedCount = 0;
 
-            // 并行处理所有文件，限制并发度为6以避免内存溢出
-            await Task.Run(() =>
-            {
-                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
-                {
-                    try
-                    {
+            // 生产者-消费者模型：顺序枚举 cfg，异步处理，限制并发度为6
+            var queue = new BlockingCollection<string>(boundedCapacity: 6);
+            var producer = Task.Run(() => {
+                foreach (var cfg in cfgFiles) {
+                    queue.Add(cfg);
+                }
+                queue.CompleteAdding();
+            });
+
+            var workerCount = Math.Min(6, Environment.ProcessorCount);
+            var consumers = Enumerable.Range(0, workerCount).Select(_ => Task.Run(() => {
+                foreach (var cfgFile in queue.GetConsumingEnumerable()) {
+                    try {
                         var fileResult = AnalyzeComtradeFile(cfgFile);
-                        if (fileResult != null)
-                        {
+                        if (fileResult != null) {
                             allResults.Add(fileResult);
                         }
 
-                        Interlocked.Increment(ref processedCount);
-                        
-                        if (processedCount % 10 == 0 || processedCount == cfgFiles.Length)
-                        {
-                            progressCallback?.Invoke($"已处理 {processedCount}/{cfgFiles.Length} 个文件");
+                        var current = Interlocked.Increment(ref processedCount);
+                        if (current % 10 == 0 || current == cfgFiles.Length) {
+                            progressCallback?.Invoke($"已处理 {current}/{cfgFiles.Length} 个文件");
                         }
-                    }
-                    catch (Exception ex)
-                    {
+                    } catch (Exception ex) {
                         System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
                     }
-                });
-            });
+                }
+            }));
+
+            await Task.WhenAll(consumers.Append(producer));
 
             progressCallback?.Invoke("处理完成，正在整理数据...");
             
@@ -394,32 +398,35 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             var allResults = new ConcurrentBag<ThreePhaseIdeeAnalysisResult>();
             var processedCount = 0;
 
-            // 并行处理所有文件，限制并发度为6以避免内存溢出
-            await Task.Run(() =>
-            {
-                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
-                {
-                    try
-                    {
+            // 生产者-消费者模型：顺序枚举 cfg，异步处理，限制并发度为6
+            var queue = new BlockingCollection<string>(boundedCapacity: 6);
+            var producer = Task.Run(() => {
+                foreach (var cfg in cfgFiles) {
+                    queue.Add(cfg);
+                }
+                queue.CompleteAdding();
+            });
+
+            var workerCount = Math.Min(6, Environment.ProcessorCount);
+            var consumers = Enumerable.Range(0, workerCount).Select(_ => Task.Run(() => {
+                foreach (var cfgFile in queue.GetConsumingEnumerable()) {
+                    try {
                         var fileResult = AnalyzeComtradeFileByIdeeIdel(cfgFile);
-                        if (fileResult != null)
-                        {
+                        if (fileResult != null) {
                             allResults.Add(fileResult);
                         }
 
-                        Interlocked.Increment(ref processedCount);
-                        
-                        if (processedCount % 10 == 0 || processedCount == cfgFiles.Length)
-                        {
-                            progressCallback?.Invoke($"已处理 {processedCount}/{cfgFiles.Length} 个文件");
+                        var current = Interlocked.Increment(ref processedCount);
+                        if (current % 10 == 0 || current == cfgFiles.Length) {
+                            progressCallback?.Invoke($"已处理 {current}/{cfgFiles.Length} 个文件...");
                         }
-                    }
-                    catch (Exception ex)
-                    {
+                    } catch (Exception ex) {
                         System.Diagnostics.Debug.WriteLine($"处理文件 {cfgFile} 失败: {ex.Message}");
                     }
-                });
-            });
+                }
+            }));
+
+            await Task.WhenAll(consumers.Append(producer));
 
             progressCallback?.Invoke("处理完成，正在整理数据...");
             
