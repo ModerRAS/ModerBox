@@ -402,7 +402,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
             int windowSize = (int)(samplingRate / 50.0);
             if (windowSize < 20) windowSize = 20;
 
-            const double StdDevThreshold = 0.1;
+            const double stdDevThreshold = 0.1;
 
             if (waveform.Length < windowSize) {
                 return -1;
@@ -410,7 +410,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
             for (int i = 0; i < waveform.Length - windowSize; i++) {
                 var window = new ReadOnlySpan<double>(waveform, i, windowSize);
-                if (CalculateStandardDeviation(window) < StdDevThreshold) {
+                if (CalculateStandardDeviation(window) < stdDevThreshold) {
                     return i;
                 }
             }
@@ -436,24 +436,63 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
 
             var waveform = analogInfo.Data;
-            int windowSize = (int)(samplingRate / 50.0);
+
+            // 更小的窗口（约 5ms），避免大窗口把“未来的电流段”拖进来造成提前触发。
+            int windowSize = (int)(samplingRate / 200.0);
             if (windowSize < 20) windowSize = 20;
 
-            const double StdDevThreshold = 0.1;
+            // 估计前 5ms 的噪声水平，动态阈值更适配小幅度信号。
+            int noiseWindow = (int)(samplingRate * 0.005);
+            if (noiseWindow < 20) noiseWindow = 20;
+            if (noiseWindow >= waveform.Length) noiseWindow = waveform.Length / 4;
+
+            double noiseMean = 0;
+            for (int i = 0; i < noiseWindow; i++) {
+                noiseMean += waveform[i];
+            }
+            noiseMean /= noiseWindow;
+
+            double noiseStd = 0;
+            for (int i = 0; i < noiseWindow; i++) {
+                double diff = waveform[i] - noiseMean;
+                noiseStd += diff * diff;
+            }
+            noiseStd = Math.Sqrt(noiseStd / noiseWindow);
+
+            double stdDevThreshold = Math.Max(noiseStd * 6, 0.03);        // 波动性阈值
+            double triggerAmp = Math.Max(noiseStd * 8, Jitter * 1.5);      // 振幅触发阈值，过滤微小噪声
 
             if (waveform.Length < windowSize) {
                 return -1;
             }
 
-            for (int i = 0; i < waveform.Length - windowSize; i++) {
+            for (int i = 0; i <= waveform.Length - windowSize; i++) {
                 var window = new ReadOnlySpan<double>(waveform, i, windowSize);
-                if (CalculateStandardDeviation(window) > StdDevThreshold) {
-                    for (int j = i; j > 0; j--) {
-                        if (Math.Abs(waveform[j]) < Jitter && Math.Abs(waveform[j - 1]) < Jitter) {
-                            return j;
+                if (CalculateStandardDeviation(window) > stdDevThreshold) {
+                    // 在窗口内（并向后延伸半个窗口）寻找第一个持续超阈值的点
+                    int searchEnd = Math.Min(waveform.Length, i + windowSize + windowSize / 2);
+                    int consecutive = 0;
+
+                    for (int j = i; j < searchEnd; j++) {
+                        if (Math.Abs(waveform[j]) > triggerAmp) {
+                            consecutive++;
+                        } else {
+                            consecutive = 0;
+                        }
+
+                        if (consecutive >= 3) {
+                            int start = j - consecutive + 1;
+
+                            // 向前回溯到最近的“近零”位置，减少定位偏差
+                            for (int k = start; k >= Math.Max(0, start - 30); k--) {
+                                if (Math.Abs(waveform[k]) < Jitter && Math.Abs(waveform[Math.Max(0, k - 1)]) < Jitter) {
+                                    return k + 1;
+                                }
+                            }
+
+                            return start;
                         }
                     }
-                    return i;
                 }
             }
 
