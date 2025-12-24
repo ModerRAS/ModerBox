@@ -574,36 +574,103 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 return -1;
             }
 
-            // 方法1：检测电流绝对值的瞬时跳变
-            // 合闸电阻退出时，电流绝对值会突然增大
-            int smoothWindow = 20; // 2ms 平滑窗口
-            double maxJump = 0;
-            int maxJumpIdx = -1;
+            // 方法1：检测电流变化率的突变（微分法）
+            // 合闸电阻退出时，电流会出现突然的变化（可能是增大或极性反转）
+            int diffWindow = 5; // 0.5ms 微分窗口
+            var diffValues = new double[searchEnd - searchStart - diffWindow];
             
-            for (int i = searchStart + smoothWindow; i < searchEnd - smoothWindow; i++) {
+            for (int i = 0; i < diffValues.Length; i++) {
+                int idx = searchStart + i;
+                // 计算局部变化率（使用绝对值差分）
+                double diff = 0;
+                for (int j = 0; j < diffWindow; j++) {
+                    diff += Math.Abs(current[idx + j + 1] - current[idx + j]);
+                }
+                diffValues[i] = diff / diffWindow;
+            }
+
+            // 平滑微分值
+            int smoothWindow = 10; // 1ms 平滑
+            var smoothedDiff = new double[diffValues.Length];
+            for (int i = 0; i < diffValues.Length; i++) {
+                double sum = 0;
+                int count = 0;
+                for (int j = Math.Max(0, i - smoothWindow/2); j < Math.Min(diffValues.Length, i + smoothWindow/2); j++) {
+                    sum += diffValues[j];
+                    count++;
+                }
+                smoothedDiff[i] = sum / count;
+            }
+
+            // 找到变化率突然增大的点
+            double maxDiffJump = 0;
+            int maxDiffJumpIdx = -1;
+            int compareWindow2 = 20; // 2ms 比较窗口
+            
+            for (int i = compareWindow2; i < smoothedDiff.Length - compareWindow2; i++) {
+                // 计算前后窗口的平均变化率
+                double prevAvg = 0, nextAvg = 0;
+                for (int j = 0; j < compareWindow2; j++) {
+                    prevAvg += smoothedDiff[i - compareWindow2 + j];
+                    nextAvg += smoothedDiff[i + j];
+                }
+                prevAvg /= compareWindow2;
+                nextAvg /= compareWindow2;
+                
+                // 检测变化率增大
+                double diffJump = nextAvg - prevAvg;
+                if (diffJump > maxDiffJump && prevAvg > 0.001) {
+                    double relJump = diffJump / prevAvg;
+                    if (relJump > 0.5) { // 变化率增大超过 50%
+                        maxDiffJump = diffJump;
+                        maxDiffJumpIdx = searchStart + i;
+                    }
+                }
+            }
+
+            // 方法2：检测电流绝对值的瞬时跳变
+            int absWindow = 20; // 2ms 平滑窗口
+            double maxAbsJump = 0;
+            int maxAbsJumpIdx = -1;
+            
+            for (int i = searchStart + absWindow; i < searchEnd - absWindow; i++) {
                 // 计算当前点前后的平均绝对值
                 double prevAvg = 0, nextAvg = 0;
-                for (int j = 0; j < smoothWindow; j++) {
-                    prevAvg += Math.Abs(current[i - smoothWindow + j]);
+                for (int j = 0; j < absWindow; j++) {
+                    prevAvg += Math.Abs(current[i - absWindow + j]);
                     nextAvg += Math.Abs(current[i + j]);
                 }
-                prevAvg /= smoothWindow;
-                nextAvg /= smoothWindow;
+                prevAvg /= absWindow;
+                nextAvg /= absWindow;
                 
                 // 计算绝对跳变量
                 double jump = nextAvg - prevAvg;
-                if (jump > maxJump && prevAvg > 0.01) {
-                    maxJump = jump;
-                    maxJumpIdx = i;
+                if (jump > maxAbsJump && prevAvg > 0.01) {
+                    maxAbsJump = jump;
+                    maxAbsJumpIdx = i;
                 }
             }
 
-            // 如果找到明显跳变（至少 0.05A 的绝对增量），使用这个点
-            if (maxJumpIdx > 0 && maxJump > 0.05) {
-                return maxJumpIdx;
+            // 选择最佳检测点：优先使用变化率检测，如果绝对值跳变更明显则使用绝对值
+            int bestIdx = -1;
+            
+            // 如果变化率检测有效且在合理范围内
+            if (maxDiffJumpIdx > 0 && maxDiffJump > 0.01) {
+                bestIdx = maxDiffJumpIdx;
+            }
+            
+            // 如果绝对值跳变足够明显（>=0.05A），且比变化率检测的点更早，使用绝对值
+            if (maxAbsJumpIdx > 0 && maxAbsJump >= 0.05) {
+                if (bestIdx < 0 || maxAbsJumpIdx < bestIdx) {
+                    bestIdx = maxAbsJumpIdx;
+                }
+            }
+            
+            if (bestIdx > 0) {
+                return bestIdx;
             }
 
-            // 方法2：使用半周期（10ms = 100采样点）窗口计算 RMS 包络的变化
+            // 方法3：使用半周期 RMS 包络的变化作为备用
             int halfCycle = (int)(_samplingRate * 0.010); // 10ms
             if (halfCycle < 50) halfCycle = 50;
 
