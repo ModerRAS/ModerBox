@@ -496,11 +496,25 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 return zeroCrossings;
             }
 
-            for (int i = 0; i < analogInfo.Data.Length - 1; i++) {
+            // 轻量平滑，减少尖噪声导致的伪过零
+            var source = analogInfo.Data;
+            var data = new double[source.Length];
+            const int windowRadius = 2; // 5 点滑动平均
+            for (int i = 0; i < source.Length; i++) {
+                int start = Math.Max(0, i - windowRadius);
+                int end = Math.Min(source.Length - 1, i + windowRadius);
+                double sum = 0;
+                for (int j = start; j <= end; j++) {
+                    sum += source[j];
+                }
+                data[i] = sum / (end - start + 1);
+            }
+
+            for (int i = 0; i < data.Length - 1; i++) {
                 // 当相邻两个点的乘积为负数时，说明它们之间发生了过零
-                if (analogInfo.Data[i] * analogInfo.Data[i + 1] < 0) {
+                if (data[i] * data[i + 1] < 0) {
                     // 为了更精确，可以选择离零更近的那个点作为过零点
-                    if (Math.Abs(analogInfo.Data[i]) < Math.Abs(analogInfo.Data[i + 1])) {
+                    if (Math.Abs(data[i]) < Math.Abs(data[i + 1])) {
                         zeroCrossings.Add(i);
                     } else {
                         zeroCrossings.Add(i + 1);
