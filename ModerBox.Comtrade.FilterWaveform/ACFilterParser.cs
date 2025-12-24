@@ -125,6 +125,11 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                     );
                             }
 
+                            var closingResistorExit = comtradeInfo.DetectClosingResistorExitTimes(obj.b);
+                            retData.PhaseAClosingResistorExitTimeMs = closingResistorExit?.PhaseAExitTimeMs ?? 0;
+                            retData.PhaseBClosingResistorExitTimeMs = closingResistorExit?.PhaseBExitTimeMs ?? 0;
+                            retData.PhaseCClosingResistorExitTimeMs = closingResistorExit?.PhaseCExitTimeMs ?? 0;
+
                             // 【新增】电压过零点与电流出现点的时间差计算
                             var voltageZeroCrossingAction = new Action(() => {
                                 // A相
