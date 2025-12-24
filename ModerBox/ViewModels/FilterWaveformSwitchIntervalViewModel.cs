@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reactive;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json;
 using ModerBox.Comtrade.FilterWaveform;
 using static ModerBox.Common.Util;
 
@@ -34,20 +35,52 @@ namespace ModerBox.ViewModels {
         private string _sourceFolder;
         public string SourceFolder {
             get => _sourceFolder;
-            set => this.RaiseAndSetIfChanged(ref _sourceFolder, value);
+            set {
+                this.RaiseAndSetIfChanged(ref _sourceFolder, value);
+                if (_settingsLoaded) SaveSettings();
+            }
         }
 
         private string _targetFile;
         public string TargetFile {
             get => _targetFile;
-            set => this.RaiseAndSetIfChanged(ref _targetFile, value);
+            set {
+                this.RaiseAndSetIfChanged(ref _targetFile, value);
+                if (_settingsLoaded) SaveSettings();
+            }
         }
 
         private bool _useNewAlgorithm = true;
         public bool UseNewAlgorithm {
             get => _useNewAlgorithm;
-            set => this.RaiseAndSetIfChanged(ref _useNewAlgorithm, value);
+            set {
+                this.RaiseAndSetIfChanged(ref _useNewAlgorithm, value);
+                if (_settingsLoaded) SaveSettings();
+            }
         }
+
+        private int _ioWorkerCount;
+        public int IoWorkerCount {
+            get => _ioWorkerCount;
+            set {
+                var normalized = NormalizeWorkerCount(value, 4);
+                this.RaiseAndSetIfChanged(ref _ioWorkerCount, normalized);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private int _processWorkerCount;
+        public int ProcessWorkerCount {
+            get => _processWorkerCount;
+            set {
+                var normalized = NormalizeWorkerCount(value, 6);
+                this.RaiseAndSetIfChanged(ref _processWorkerCount, normalized);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private readonly string _settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ModerBox", "filterwaveform.settings.json");
+        private bool _settingsLoaded;
         public FilterWaveformSwitchIntervalViewModel() {
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
@@ -55,6 +88,9 @@ namespace ModerBox.ViewModels {
             ProgressMax = 100;
             Progress = 0;
             UseNewAlgorithm = true;
+            IoWorkerCount = NormalizeWorkerCount(null, 4);
+            ProcessWorkerCount = NormalizeWorkerCount(null, 6);
+            LoadSettings();
         }
 
         private async Task SelectSourceTask() {
@@ -80,7 +116,7 @@ namespace ModerBox.ViewModels {
             await Task.Run(async () => {
                 try {
 
-                    var parser = new ACFilterParser(SourceFolder, UseNewAlgorithm);
+                    var parser = new ACFilterParser(SourceFolder, UseNewAlgorithm, IoWorkerCount, ProcessWorkerCount);
                     var targetFolder = Path.GetDirectoryName(TargetFile) ?? Path.GetTempPath();
                     var Data = await parser.ParseAllComtrade(
                         (_progress) => Progress = (int)(_progress * 100.0 / parser.Count),
@@ -141,6 +177,57 @@ namespace ModerBox.ViewModels {
                 DefaultExtension = ".xlsx",
                 SuggestedFileName = "滤波器分合闸波形检查.xlsx"
             });
+        }
+
+        private void LoadSettings() {
+            try {
+                if (File.Exists(_settingsPath)) {
+                    var json = File.ReadAllText(_settingsPath);
+                    var saved = System.Text.Json.JsonSerializer.Deserialize<FilterWaveformSettings>(json);
+                    if (saved is not null) {
+                        SourceFolder = saved.SourceFolder ?? SourceFolder;
+                        TargetFile = saved.TargetFile ?? TargetFile;
+                        UseNewAlgorithm = saved.UseNewAlgorithm;
+                        IoWorkerCount = NormalizeWorkerCount(saved.IoWorkerCount, 4);
+                        ProcessWorkerCount = NormalizeWorkerCount(saved.ProcessWorkerCount, 6);
+                    }
+                }
+            } catch { }
+            _settingsLoaded = true;
+        }
+
+        private void SaveSettings() {
+            try {
+                var dir = Path.GetDirectoryName(_settingsPath);
+                if (!string.IsNullOrEmpty(dir)) {
+                    Directory.CreateDirectory(dir);
+                }
+                var data = new FilterWaveformSettings {
+                    SourceFolder = SourceFolder,
+                    TargetFile = TargetFile,
+                    UseNewAlgorithm = UseNewAlgorithm,
+                    IoWorkerCount = IoWorkerCount,
+                    ProcessWorkerCount = ProcessWorkerCount
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                File.WriteAllText(_settingsPath, json);
+            } catch { }
+        }
+
+        private static int NormalizeWorkerCount(int? value, int defaultMax) {
+            var cpu = Math.Max(1, Environment.ProcessorCount);
+            if (value.HasValue && value.Value > 0) {
+                return Math.Min(value.Value, cpu);
+            }
+            return Math.Min(defaultMax, cpu);
+        }
+
+        private class FilterWaveformSettings {
+            public string? SourceFolder { get; set; }
+            public string? TargetFile { get; set; }
+            public bool UseNewAlgorithm { get; set; } = true;
+            public int IoWorkerCount { get; set; }
+            public int ProcessWorkerCount { get; set; }
         }
 
     }

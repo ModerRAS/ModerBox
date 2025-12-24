@@ -32,6 +32,16 @@
 			<Button Grid.Column="1" Margin="5" Content="..." Command="{Binding SelectTarget}" />
 		</Grid>
 		<CheckBox Margin="5" IsChecked="{Binding UseNewAlgorithm}" Content="使用滑动窗口算法检测电流过零点 (推荐，鲁棒性更高，数值更准)" />
+		<StackPanel Orientation="Horizontal" Margin="5" Spacing="10">
+			<StackPanel Width="180">
+				<TextBlock>IO线程数</TextBlock>
+				<NumericUpDown Minimum="1" Maximum="64" Value="{Binding IoWorkerCount}" />
+			</StackPanel>
+			<StackPanel Width="180">
+				<TextBlock>计算线程数</TextBlock>
+				<NumericUpDown Minimum="1" Maximum="64" Value="{Binding ProcessWorkerCount}" />
+			</StackPanel>
+		</StackPanel>
 		<Button Margin="5" Content="开始" Command="{Binding RunCalculate}" />
 		<ProgressBar  Margin="0 10" Height="20"
                 Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding Progress}"
