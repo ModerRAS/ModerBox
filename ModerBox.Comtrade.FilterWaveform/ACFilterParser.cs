@@ -66,51 +66,64 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 await GetFilterData();
                 var results = new ConcurrentBag<ACFilterSheetSpec>();
 
-                // 顺序枚举 cfg 文件，之后进入生产者-消费者模型处理
-                var queue = new BlockingCollection<string>(boundedCapacity: 6);
+                // 两级生产者-消费者：Stage1 读取 CFG/DAT，Stage2 计算/绘图
+                var cfgQueue = new BlockingCollection<string>(boundedCapacity: 6);
+                var parsedQueue = new BlockingCollection<ComtradeInfo>(boundedCapacity: 6);
+
                 var producer = Task.Run(() => {
                     foreach (var cfg in AllDataPath) {
-                        queue.Add(cfg);
+                        cfgQueue.Add(cfg);
                     }
-                    queue.CompleteAdding();
+                    cfgQueue.CompleteAdding();
                 });
 
-                var workerCount = Math.Min(6, Environment.ProcessorCount);
-                var consumers = Enumerable.Range(0, workerCount).Select(_ => Task.Run(async () => {
-                    // 每个消费者持有自己的 plotter，避免潜在的线程安全问题
-                    var plotter = new ACFilterPlotter(ACFilterData);
-                    foreach (var cfgPath in queue.GetConsumingEnumerable()) {
+                var ioWorkerCount = Math.Min(4, Environment.ProcessorCount);
+                var ioWorkers = Enumerable.Range(0, ioWorkerCount).Select(_ => Task.Run(async () => {
+                    foreach (var cfgPath in cfgQueue.GetConsumingEnumerable()) {
                         try {
-                            var perData = await ParsePerComtrade(cfgPath, plotter);
+                            var info = await LoadComtradeAsync(cfgPath);
+                            if (info is not null) {
+                                parsedQueue.Add(info);
+                            }
+                        } catch {
+                        }
+                    }
+                })).ToArray();
+
+                var processWorkerCount = Math.Min(6, Environment.ProcessorCount);
+                var processWorkers = Enumerable.Range(0, processWorkerCount).Select(_ => Task.Run(() => {
+                    var plotter = new ACFilterPlotter(ACFilterData);
+                    foreach (var info in parsedQueue.GetConsumingEnumerable()) {
+                        try {
+                            var perData = ProcessComtrade(info, plotter);
                             var current = Interlocked.Increment(ref processedCount);
                             Notify(current);
                             if (perData is not null) {
                                 results.Add(perData);
                             }
                         } catch {
-                            // 忽略单个文件的异常，继续处理其他文件
                         }
                     }
-                }));
+                })).ToArray();
 
-                await Task.WhenAll(consumers.Append(producer));
+                await Task.WhenAll(ioWorkers);
+                parsedQueue.CompleteAdding();
+                await Task.WhenAll(processWorkers.Append(producer));
 
                 return results.ToList();
             } catch (Exception ex) {
                 return null;
             }
         }
-        /// <summary>
-        /// 异步解析单个COMTRADE文件。
-        /// </summary>
-        /// <param name="cfgPath">COMTRADE配置文件的路径 (.cfg)。</param>
-        /// <param name="plotter">用于生成波形图的 <see cref="ACFilterPlotter"/> 实例。</param>
-        /// <returns>分析结果 <see cref="ACFilterSheetSpec"/>，如果文件无效或不包含相关数据，则返回 null。</returns>
-        public async Task<ACFilterSheetSpec?> ParsePerComtrade(string cfgPath, ACFilterPlotter plotter) {
+        private async Task<ComtradeInfo?> LoadComtradeAsync(string cfgPath) {
+            var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
+            await Comtrade.ReadComtradeDAT(comtradeInfo);
+            return comtradeInfo;
+        }
+
+        private ACFilterSheetSpec? ProcessComtrade(ComtradeInfo comtradeInfo, ACFilterPlotter plotter) {
             try {
                 var retData = new ACFilterSheetSpec();
-                var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
-                await Comtrade.ReadComtradeDAT(comtradeInfo);
                 var matchedObjects = from a in comtradeInfo.DData.AsParallel()
                                      join b in ACFilterData.AsParallel() on a.Name equals b.PhaseASwitchClose
                                      select (a, b);
@@ -118,15 +131,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 var TimeUnit = comtradeInfo.Samp / 1000;
                 foreach (var obj in matchedObjects) {
                     if (obj.a.IsTR) {
-                        // 检测到需要的数据变位，则开始判断变位点和电流开始或消失点。
-                        // 理论上一个波形中只会有一个滤波器产生变位，而且仅变位一次。
                         if (obj.a.Data[0] == 0) {
                             retData.SwitchType = SwitchType.Close;
                         } else {
                             retData.SwitchType = SwitchType.Open;
                         }
                         if (retData.SwitchType == SwitchType.Close) {
-                            // 【保留】原有的合闸时间计算逻辑
                             if (UseSlidingWindowAlgorithm) {
                                 Parallel.Invoke(
                                     () => retData.PhaseATimeInterval = comtradeInfo.SwitchCloseTimeIntervalWithSlidingWindow(obj.b.PhaseASwitchOpen, obj.b.PhaseACurrentWave) / TimeUnit,
@@ -141,15 +151,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                     );
                             }
 
-                            // 检测合闸电阻投入时间长度（电流开始到合闸电阻退出的时间差）
                             var closingResistorDuration = comtradeInfo.DetectClosingResistorDurations(obj.b);
                             retData.PhaseAClosingResistorDurationMs = closingResistorDuration?.PhaseADurationMs ?? 0;
                             retData.PhaseBClosingResistorDurationMs = closingResistorDuration?.PhaseBDurationMs ?? 0;
                             retData.PhaseCClosingResistorDurationMs = closingResistorDuration?.PhaseCDurationMs ?? 0;
 
-                            // 【新增】电压过零点与电流出现点的时间差计算
                             var voltageZeroCrossingAction = new Action(() => {
-                                // A相
                                 var currentStartA = UseSlidingWindowAlgorithm ? comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(obj.b.PhaseACurrentWave) : comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseACurrentWave)?.DetectCurrentStartIndex() ?? 0;
                                 if (currentStartA > 0) {
                                     var voltageZeroCrossingsA = comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseAVoltageWave)?.DetectVoltageZeroCrossings();
@@ -159,7 +166,6 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                     }
                                 }
 
-                                // B相
                                 var currentStartB = UseSlidingWindowAlgorithm ? comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(obj.b.PhaseBCurrentWave) : comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseBCurrentWave)?.DetectCurrentStartIndex() ?? 0;
                                 if (currentStartB > 0) {
                                     var voltageZeroCrossingsB = comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseBVoltageWave)?.DetectVoltageZeroCrossings();
@@ -169,7 +175,6 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                     }
                                 }
 
-                                // C相
                                 var currentStartC = UseSlidingWindowAlgorithm ? comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(obj.b.PhaseCCurrentWave) : comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseCCurrentWave)?.DetectCurrentStartIndex() ?? 0;
                                 if (currentStartC > 0) {
                                     var voltageZeroCrossingsC = comtradeInfo.AData.GetACFilterAnalog(obj.b.PhaseCVoltageWave)?.DetectVoltageZeroCrossings();
@@ -182,14 +187,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
                             voltageZeroCrossingAction.Invoke();
                         } else {
                             if (UseSlidingWindowAlgorithm) {
-                                //【新】分闸就要合闸消失到电流消失
                                 Parallel.Invoke(
                                     () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeIntervalWithSlidingWindow(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit,
                                     () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeIntervalWithSlidingWindow(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit,
                                     () => retData.PhaseCTimeInterval = comtradeInfo.SwitchOpenTimeIntervalWithSlidingWindow(obj.b.PhaseCSwitchClose, obj.b.PhaseCCurrentWave) / TimeUnit
                                     );
                             } else {
-                                //【旧】分闸就要合闸消失到电流消失
                                 Parallel.Invoke(
                                     () => retData.PhaseATimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseASwitchClose, obj.b.PhaseACurrentWave) / TimeUnit,
                                     () => retData.PhaseBTimeInterval = comtradeInfo.SwitchOpenTimeInterval(obj.b.PhaseBSwitchClose, obj.b.PhaseBCurrentWave) / TimeUnit,
@@ -232,6 +235,18 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 return null;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 异步解析单个COMTRADE文件。
+        /// </summary>
+        /// <param name="cfgPath">COMTRADE配置文件的路径 (.cfg)。</param>
+        /// <param name="plotter">用于生成波形图的 <see cref="ACFilterPlotter"/> 实例。</param>
+        /// <returns>分析结果 <see cref="ACFilterSheetSpec"/>，如果文件无效或不包含相关数据，则返回 null。</returns>
+        public async Task<ACFilterSheetSpec?> ParsePerComtrade(string cfgPath, ACFilterPlotter plotter) {
+            var info = await LoadComtradeAsync(cfgPath);
+            if (info is null) return null;
+            return ProcessComtrade(info, plotter);
         }
 
     }
