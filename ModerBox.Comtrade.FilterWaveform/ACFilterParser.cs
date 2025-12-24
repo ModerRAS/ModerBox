@@ -33,6 +33,14 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// </summary>
         public bool UseSlidingWindowAlgorithm { get; set; }
         /// <summary>
+        /// IO 读取线程数（上限 CPU 核数，至少 1）。
+        /// </summary>
+        public int IoWorkerCount { get; }
+        /// <summary>
+        /// 计算/绘图线程数（上限 CPU 核数，至少 1）。
+        /// </summary>
+        public int ProcessWorkerCount { get; }
+        /// <summary>
         /// 获取待处理文件的总数。
         /// </summary>
         public int Count { get => AllDataPath.Count; }
@@ -41,12 +49,24 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// </summary>
         /// <param name="aCFilterPath">包含COMTRADE文件的目录路径。</param>
         /// <param name="useSlidingWindowAlgorithm">是否使用滑动窗口算法。如果为 true，则使用基于标准差的新算法；否则使用基于阈值的旧算法。</param>
-        public ACFilterParser(string aCFilterPath, bool useSlidingWindowAlgorithm = false) {
+        /// <param name="ioWorkerCount">自定义 IO 读取线程数（可选）。</param>
+        /// <param name="processWorkerCount">自定义计算/绘图线程数（可选）。</param>
+        public ACFilterParser(string aCFilterPath, bool useSlidingWindowAlgorithm = false, int? ioWorkerCount = null, int? processWorkerCount = null) {
             ACFilterPath = aCFilterPath;
             AllDataPath = ACFilterPath
                 .GetAllFiles()
                 .FilterCfgFiles();
             UseSlidingWindowAlgorithm = useSlidingWindowAlgorithm;
+            IoWorkerCount = NormalizeWorkerCount(ioWorkerCount, 4);
+            ProcessWorkerCount = NormalizeWorkerCount(processWorkerCount, 6);
+        }
+
+        private static int NormalizeWorkerCount(int? value, int defaultMax) {
+            var cpu = Math.Max(1, Environment.ProcessorCount);
+            if (value.HasValue && value.Value > 0) {
+                return Math.Min(value.Value, cpu);
+            }
+            return Math.Min(defaultMax, cpu);
         }
         /// <summary>
         /// 从嵌入的 "ACFilterData.json" 资源中异步加载滤波器配置数据。
@@ -88,8 +108,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     cfgChannel.Writer.Complete();
                 });
 
-                var ioWorkerCount = Math.Min(4, Environment.ProcessorCount);
-                var ioWorkers = Enumerable.Range(0, ioWorkerCount).Select(_ => Task.Run(async () => {
+                var ioWorkers = Enumerable.Range(0, IoWorkerCount).Select(_ => Task.Run(async () => {
                     await foreach (var cfgPath in cfgChannel.Reader.ReadAllAsync()) {
                         try {
                             var info = await LoadComtradeAsync(cfgPath);
@@ -101,8 +120,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     }
                 })).ToArray();
 
-                var processWorkerCount = Math.Min(6, Environment.ProcessorCount);
-                var processWorkers = Enumerable.Range(0, processWorkerCount).Select(_ => Task.Run(async () => {
+                var processWorkers = Enumerable.Range(0, ProcessWorkerCount).Select(_ => Task.Run(async () => {
                     var plotter = new ACFilterPlotter(ACFilterData);
                     await foreach (var info in parsedChannel.Reader.ReadAllAsync()) {
                         try {
