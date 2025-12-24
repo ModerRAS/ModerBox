@@ -509,5 +509,77 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
             return zeroCrossings;
         }
+
+        /// <summary>
+        /// 检测三相合闸电阻退出时刻。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="aCFilter">交流滤波器配置。</param>
+        /// <returns>三相合闸电阻退出时刻检测结果。</returns>
+        public static ThreePhaseClosingResistorExitResult DetectClosingResistorExitTimes(this ComtradeInfo comtradeInfo, ACFilter aCFilter) {
+            var detector = new ClosingResistorExitDetector(comtradeInfo.Samp);
+
+            var phaseACurrent = comtradeInfo.AData.GetACFilterAnalog(aCFilter.PhaseACurrentWave);
+            var phaseBCurrent = comtradeInfo.AData.GetACFilterAnalog(aCFilter.PhaseBCurrentWave);
+            var phaseCCurrent = comtradeInfo.AData.GetACFilterAnalog(aCFilter.PhaseCCurrentWave);
+
+            var resultA = detector.DetectExitTime(phaseACurrent?.Data);
+            var resultB = detector.DetectExitTime(phaseBCurrent?.Data);
+            var resultC = detector.DetectExitTime(phaseCCurrent?.Data);
+
+            var result = new ThreePhaseClosingResistorExitResult {
+                PhaseAExitTimeMs = resultA?.TimeMs ?? 0,
+                PhaseBExitTimeMs = resultB?.TimeMs ?? 0,
+                PhaseCExitTimeMs = resultC?.TimeMs ?? 0,
+                PhaseAConfidence = resultA?.Confidence ?? 0,
+                PhaseBConfidence = resultB?.Confidence ?? 0,
+                PhaseCConfidence = resultC?.Confidence ?? 0
+            };
+
+            // 计算三相最大偏差
+            var times = new[] { result.PhaseAExitTimeMs, result.PhaseBExitTimeMs, result.PhaseCExitTimeMs }
+                .Where(t => t > 0)
+                .ToArray();
+
+            if (times.Length >= 2) {
+                result.MaxDeviationMs = times.Max() - times.Min();
+                result.IsConsistent = result.MaxDeviationMs < 0.5;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 检测三相合闸电阻投入时间（电流开始到合闸电阻退出的时间间隔）。
+        /// </summary>
+        /// <param name="comtradeInfo">COMTRADE数据对象。</param>
+        /// <param name="aCFilter">交流滤波器配置。</param>
+        /// <returns>三相合闸电阻投入时间检测结果。</returns>
+        public static ThreePhaseClosingResistorDurationResult DetectClosingResistorDurations(this ComtradeInfo comtradeInfo, ACFilter aCFilter) {
+            var detector = new ClosingResistorExitDetector(comtradeInfo.Samp);
+
+            var phaseACurrent = comtradeInfo.AData.GetACFilterAnalog(aCFilter.PhaseACurrentWave);
+            var phaseBCurrent = comtradeInfo.AData.GetACFilterAnalog(aCFilter.PhaseBCurrentWave);
+            var phaseCCurrent = comtradeInfo.AData.GetACFilterAnalog(aCFilter.PhaseCCurrentWave);
+
+            var resultA = detector.DetectClosingResistorDuration(phaseACurrent?.Data);
+            var resultB = detector.DetectClosingResistorDuration(phaseBCurrent?.Data);
+            var resultC = detector.DetectClosingResistorDuration(phaseCCurrent?.Data);
+
+            return new ThreePhaseClosingResistorDurationResult {
+                PhaseADurationMs = resultA?.DurationMs ?? 0,
+                PhaseBDurationMs = resultB?.DurationMs ?? 0,
+                PhaseCDurationMs = resultC?.DurationMs ?? 0,
+                PhaseACurrentStartTimeMs = resultA?.CurrentStartTimeMs ?? 0,
+                PhaseBCurrentStartTimeMs = resultB?.CurrentStartTimeMs ?? 0,
+                PhaseCCurrentStartTimeMs = resultC?.CurrentStartTimeMs ?? 0,
+                PhaseAResistorExitTimeMs = resultA?.ResistorExitTimeMs ?? 0,
+                PhaseBResistorExitTimeMs = resultB?.ResistorExitTimeMs ?? 0,
+                PhaseCResistorExitTimeMs = resultC?.ResistorExitTimeMs ?? 0,
+                PhaseAConfidence = resultA?.Confidence ?? 0,
+                PhaseBConfidence = resultB?.Confidence ?? 0,
+                PhaseCConfidence = resultC?.Confidence ?? 0
+            };
+        }
     }
 }
