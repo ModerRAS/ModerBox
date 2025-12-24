@@ -53,6 +53,21 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// 获取或设置包含相关信号波形图的PNG图像字节数组。
         /// </summary>
         public byte[] SignalPicture { get; set; } = Array.Empty<byte>();
+
+        /// <summary>
+        /// 获取或设置A相合闸电阻退出时刻（单位：毫秒）。
+        /// </summary>
+        public double PhaseAClosingResistorExitTimeMs { get; set; }
+
+        /// <summary>
+        /// 获取或设置B相合闸电阻退出时刻（单位：毫秒）。
+        /// </summary>
+        public double PhaseBClosingResistorExitTimeMs { get; set; }
+
+        /// <summary>
+        /// 获取或设置C相合闸电阻退出时刻（单位：毫秒）。
+        /// </summary>
+        public double PhaseCClosingResistorExitTimeMs { get; set; }
     }
     /// <summary>
     /// 定义开关操作的类型。
