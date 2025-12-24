@@ -61,13 +61,9 @@ namespace ModerBox.Common {
             List<string> files = new List<string>();
 
             try {
-                // 获取当前目录的所有文件
-                files.AddRange(Directory.EnumerateFiles(directory));
-
-                // 获取当前目录的所有子目录
-                foreach (string subdirectory in Directory.EnumerateDirectories(directory)) {
-                    files.AddRange(GetAllFiles(subdirectory));
-                }
+                // 使用 EnumerateFiles 和 SearchOption.AllDirectories 以支持顺序读取
+                // 这对机械硬盘更友好，避免频繁的磁头寻道
+                files.AddRange(Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories));
             } catch (Exception ex) {
                 Console.WriteLine($"An error occurred while accessing the directory {directory}: {ex.Message}");
             }

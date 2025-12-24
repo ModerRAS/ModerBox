@@ -50,7 +50,8 @@ public class AnalysisService
             throw new DirectoryNotFoundException($"Source directory not found: {folderPath}");
         }
 
-        var cfgFiles = Directory.GetFiles(folderPath, "*.cfg", SearchOption.AllDirectories)
+        // 使用 EnumerateFiles 以优化机械硬盘上的顺序读取性能
+        var cfgFiles = Directory.EnumerateFiles(folderPath, "*.cfg", SearchOption.AllDirectories)
             .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
@@ -59,7 +60,8 @@ public class AnalysisService
         var processedCount = 0;
         await Task.Run(() =>
         {
-            Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile =>
+            // 限制并发度为6以避免内存溢出
+            Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
             {
                 try
                 {

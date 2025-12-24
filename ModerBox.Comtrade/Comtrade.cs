@@ -93,7 +93,9 @@ namespace ModerBox.Comtrade {
             double[] firstSampleAnalogValues = new double[comtradeInfo.AnalogCount];
             if (string.Equals("ASCII", comtradeInfo.ASCII, StringComparison.OrdinalIgnoreCase)) {
                 string datFilePath = Path.ChangeExtension(comtradeInfo.FileName, "dat");
-                using StreamReader datReader = new StreamReader(datFilePath, Encoding.Default);
+                // 添加 FileOptions.SequentialScan 以优化顺序读取性能（特别是机械硬盘）
+                using FileStream fs = new FileStream(datFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+                using StreamReader datReader = new StreamReader(fs, Encoding.Default);
                 for (int i = 0; i < comtradeInfo.EndSamp; i++) {
                     string line = await datReader.ReadLineAsync();
                     if (string.IsNullOrEmpty(line)) continue;
@@ -103,7 +105,8 @@ namespace ModerBox.Comtrade {
                 return;
             }
             string datFilePathBinary = Path.ChangeExtension(comtradeInfo.FileName, "dat");
-            using FileStream datFileStream = new FileStream(datFilePathBinary, FileMode.Open, FileAccess.Read, FileShare.Read);
+            // 添加 FileOptions.SequentialScan 以优化顺序读取性能（特别是机械硬盘）
+            using FileStream datFileStream = new FileStream(datFilePathBinary, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
             using BinaryReader datBinaryReader = new BinaryReader(datFileStream, Encoding.Default);
             int numberOfDigitalWords = (comtradeInfo.DigitalCount + 15) / 16;
             for (int sampleIndex = 0; sampleIndex < comtradeInfo.EndSamp; sampleIndex++) {

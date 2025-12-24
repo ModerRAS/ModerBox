@@ -62,23 +62,37 @@ namespace ModerBox.Comtrade.FilterWaveform {
             try {
                 var count = 0;
                 await GetFilterData();
-                //var AllDataTask = AllDataPath
-                ////.AsParallel()
-                ////.WithDegreeOfParallelism(Environment.ProcessorCount)
-                ////.WithCancellation(new System.Threading.CancellationToken())
-                //.Select(f => {
-                //    Notify(count++);
-                //    return ParsePerComtrade(f);
-                //}).ToList();
+                
                 var AllData = new List<ACFilterSheetSpec>();
                 var plotter = new ACFilterPlotter(ACFilterData);
+                
+                // 使用信号量限制并发度为6，避免内存溢出和过度并发
+                using var semaphore = new SemaphoreSlim(6, 6);
+                var tasks = new List<Task<ACFilterSheetSpec?>>();
+                
                 foreach (var e in AllDataPath) {
-                    var PerData = await ParsePerComtrade(e, plotter);
+                    await semaphore.WaitAsync();
+                    
+                    var task = Task.Run(async () => {
+                        try {
+                            return await ParsePerComtrade(e, plotter);
+                        } finally {
+                            semaphore.Release();
+                        }
+                    });
+                    
+                    tasks.Add(task);
+                }
+                
+                // 等待所有任务完成，并按完成顺序处理结果
+                foreach (var completedTask in tasks) {
+                    var PerData = await completedTask;
                     Notify(count++);
                     if (PerData is not null) {
                         AllData.Add(PerData);
                     }
                 }
+                
                 return AllData;
             } catch (Exception ex) {
                 return null;
