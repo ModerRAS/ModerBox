@@ -81,17 +81,23 @@ namespace ModerBox.ViewModels {
                 try {
 
                     var parser = new ACFilterParser(SourceFolder, UseNewAlgorithm);
-                    var Data = await parser.ParseAllComtrade((_progress) => Progress = (int)(_progress * 100.0 / parser.Count));
+                    var targetFolder = Path.GetDirectoryName(TargetFile) ?? Path.GetTempPath();
+                    var Data = await parser.ParseAllComtrade(
+                        (_progress) => Progress = (int)(_progress * 100.0 / parser.Count),
+                        async spec => {
+                            if (spec.SignalPicture is null || spec.SignalPicture.Length == 0) {
+                                return;
+                            }
+
+                            var folder = Path.Combine(targetFolder, spec.Name);
+                            Directory.CreateDirectory(folder);
+                            var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
+                            var filePath = Path.Combine(folder, fileName);
+                            await File.WriteAllBytesAsync(filePath, spec.SignalPicture);
+                        });
                     var writer = new DataWriter();
                     writer.WriteACFilterWaveformSwitchIntervalData(Data, "分合闸动作时间");
                     writer.SaveAs(TargetFile);
-                    foreach (var e in Data) {
-                        var folder = Path.GetDirectoryName(TargetFile);
-                        if (!Directory.Exists(Path.Combine(folder, e.Name))) {
-                            Directory.CreateDirectory(Path.Combine(folder, e.Name));
-                        }
-                        await File.WriteAllBytesAsync(Path.Combine(folder, e.Name, $"{e.Time.ToString("yyyy-MM-dd_HH-mm-ss-fff")}.png"), e.SignalPicture);
-                    }
                     Progress = ProgressMax;
                     TargetFile.OpenFileWithExplorer();
                 } catch (Exception ex) { }
