@@ -53,6 +53,7 @@
     <ProjectReference Include="..\ModerBox.Comtrade.CurrentDifferenceAnalysis\ModerBox.Comtrade.CurrentDifferenceAnalysis.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade.Analysis.CurrentDifference\ModerBox.Comtrade.Analysis.CurrentDifference.csproj" />
     <ProjectReference Include="..\ModerBox.QuestionBank\ModerBox.QuestionBank.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.Export\ModerBox.Comtrade.Export.csproj" />
 
   </ItemGroup>
 

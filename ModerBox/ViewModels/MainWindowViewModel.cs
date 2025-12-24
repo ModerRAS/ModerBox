@@ -21,7 +21,8 @@ namespace ModerBox.ViewModels {
                 new CurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析", Icon = "Calculator" },
                 new NewCurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析 (新版)", Icon = "Calculator" },
                 new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeColumns" },
-                new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" }
+                new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" },
+                new ComtradeExportViewModel { Title = "波形通道导出", Icon = "Save" }
             };
             _currentPage = Pages.First();
         }

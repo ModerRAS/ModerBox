@@ -37,6 +37,9 @@
         <DataTemplate DataType="{x:Type vm:QuestionBankConversionViewModel}">
             <views:QuestionBankConversion/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ComtradeExportViewModel}">
+            <views:ComtradeExport/>
+        </DataTemplate>
     </Window.DataTemplates>
 
     <Design.DataContext>
