@@ -29,8 +29,9 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 throw new ArgumentException("无效的源文件夹路径", nameof(sourceFolder));
             }
 
-            // 过滤掉.CFGcfg文件，只处理真正的.cfg文件
-            var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+            // 过滤掉.CFGcfg文件,只处理真正的.cfg文件
+            // 使用 EnumerateFiles 以优化机械硬盘上的顺序读取性能
+            var cfgFiles = Directory.EnumerateFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
                 .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
                 
@@ -40,10 +41,10 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             var allResults = new ConcurrentBag<CurrentDifferenceResult>();
             var processedCount = 0;
 
-            // 并行处理所有文件
+            // 并行处理所有文件，限制并发度为6以避免内存溢出
             await Task.Run(() =>
             {
-                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile =>
+                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
                 {
                     try
                     {

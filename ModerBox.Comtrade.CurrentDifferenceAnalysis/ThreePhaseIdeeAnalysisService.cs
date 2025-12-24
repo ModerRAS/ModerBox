@@ -30,7 +30,8 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             }
 
             // 根据PPR文件命名规则，只处理包含PPR的cfg文件
-            var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+            // 使用 EnumerateFiles 以优化机械硬盘上的顺序读取性能
+            var cfgFiles = Directory.EnumerateFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
                 .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg") &&
                            (Path.GetFileName(f).Contains("PPR") || Path.GetFileName(f).Contains("ppr")))
                 .ToArray();
@@ -41,10 +42,10 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             var allResults = new ConcurrentBag<ThreePhaseIdeeAnalysisResult>();
             var processedCount = 0;
 
-            // 并行处理所有文件
+            // 并行处理所有文件，限制并发度为6以避免内存溢出
             await Task.Run(() =>
             {
-                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile =>
+                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
                 {
                     try
                     {
@@ -381,7 +382,8 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             }
 
             // 根据PPR文件命名规则，只处理包含PPR的cfg文件
-            var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+            // 使用 EnumerateFiles 以优化机械硬盘上的顺序读取性能
+            var cfgFiles = Directory.EnumerateFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
                 .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg") &&
                            (Path.GetFileName(f).Contains("PPR") || Path.GetFileName(f).Contains("ppr")))
                 .ToArray();
@@ -392,10 +394,10 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
             var allResults = new ConcurrentBag<ThreePhaseIdeeAnalysisResult>();
             var processedCount = 0;
 
-            // 并行处理所有文件
+            // 并行处理所有文件，限制并发度为6以避免内存溢出
             await Task.Run(() =>
             {
-                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, cfgFile =>
+                Parallel.ForEach(cfgFiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, cfgFile =>
                 {
                     try
                     {

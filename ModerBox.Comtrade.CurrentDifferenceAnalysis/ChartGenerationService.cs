@@ -174,7 +174,8 @@ namespace ModerBox.Comtrade.CurrentDifferenceAnalysis
                 if (plotData == null) return false;
 
                 // 查找对应的CFG文件
-                var cfgFiles = Directory.GetFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
+                // 使用 EnumerateFiles 以优化机械硬盘上的顺序读取性能
+                var cfgFiles = Directory.EnumerateFiles(sourceFolder, "*.cfg", SearchOption.AllDirectories)
                     .Where(f => !Path.GetFileName(f).EndsWith(".CFGcfg") && 
                                Path.GetFileNameWithoutExtension(f).Equals(point.FileName, StringComparison.OrdinalIgnoreCase))
                     .ToArray();
