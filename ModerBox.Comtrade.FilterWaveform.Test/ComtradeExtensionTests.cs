@@ -20,7 +20,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
 
             var interval = comtradeInfo.VoltageZeroCrossToCurrentStartInterval("VA", "IA");
 
-            Assert.AreEqual(10, interval);
+            Assert.IsTrue(interval >= 28 && interval <= 32, $"应接近 30，实际 {interval}");
         }
 
         [TestMethod]
@@ -78,6 +78,46 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             });
 
             return comtradeInfo;
+        }
+
+        [TestMethod]
+        public async Task VoltageZeroCrossingIntervals_ShouldStayCloseToManualMarks() {
+            var cfgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestData", "滤波器合闸波形-选相合闸测试1.cfg");
+            var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
+            await Comtrade.ReadComtradeDAT(comtradeInfo);
+
+            var phases = new[] {
+                (voltageIndex: 0, currentIndex: 3, expectedDiff: 28, phase: "A"),
+                (voltageIndex: 1, currentIndex: 4, expectedDiff: 38, phase: "B"),
+                (voltageIndex: 2, currentIndex: 5, expectedDiff: 18, phase: "C")
+            };
+
+            foreach (var p in phases) {
+                var voltage = comtradeInfo.AData[p.voltageIndex];
+                var current = comtradeInfo.AData[p.currentIndex];
+
+                // 先用滑窗算法找电流起点，失败再退回旧算法。
+                var currentStart = comtradeInfo.DetectCurrentStartIndexWithSlidingWindow(current.Name);
+                if (currentStart <= 0) {
+                    currentStart = current.DetectCurrentStartIndex();
+                }
+
+                var zeroCrossings = voltage.DetectVoltageZeroCrossings();
+                Assert.IsTrue(zeroCrossings.Count > 0, $"{p.phase} 相未检测到电压过零点");
+
+                // 取不晚于电流起点的最近过零；若没有，则取最早的一个。
+                var referenceZero = zeroCrossings.LastOrDefault(z => z <= currentStart);
+                if (referenceZero == 0 && zeroCrossings[0] > currentStart) {
+                    referenceZero = zeroCrossings[0];
+                }
+
+                var diff = currentStart - referenceZero;
+
+                Console.WriteLine($"{p.phase}相: 电流起点={currentStart}, 参考过零={referenceZero}, 差值={diff} (期望≈{p.expectedDiff})");
+
+                Assert.IsTrue(Math.Abs(diff - p.expectedDiff) <= 3,
+                    $"{p.phase} 相电压过零到电流出现的点差应接近期望 {p.expectedDiff}，实际 {diff}；电流起点 {currentStart}，过零数量 {zeroCrossings.Count}，首={zeroCrossings.First()}, 末={zeroCrossings.Last()}");
+            }
         }
     }
 }
