@@ -28,9 +28,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     "A相合闸电压过零点差/ms",
                     "B相合闸电压过零点差/ms",
                     "C相合闸电压过零点差/ms",
-                    "A相合闸电阻退出时间/ms",
-                    "B相合闸电阻退出时间/ms",
-                    "C相合闸电阻退出时间/ms",
+                    "A相合闸电阻投入时间/ms",
+                    "B相合闸电阻投入时间/ms",
+                    "C相合闸电阻投入时间/ms",
                     "波形有无异常",
                 }
             };
@@ -48,9 +48,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     d.SwitchType == SwitchType.Close ? d.PhaseAVoltageZeroCrossingDiff.ToString("F3") : "",
                     d.SwitchType == SwitchType.Close ? d.PhaseBVoltageZeroCrossingDiff.ToString("F3") : "",
                     d.SwitchType == SwitchType.Close ? d.PhaseCVoltageZeroCrossingDiff.ToString("F3") : "",
-                    d.SwitchType == SwitchType.Close && d.PhaseAClosingResistorExitTimeMs > 0 ? d.PhaseAClosingResistorExitTimeMs.ToString("F2") : "",
-                    d.SwitchType == SwitchType.Close && d.PhaseBClosingResistorExitTimeMs > 0 ? d.PhaseBClosingResistorExitTimeMs.ToString("F2") : "",
-                    d.SwitchType == SwitchType.Close && d.PhaseCClosingResistorExitTimeMs > 0 ? d.PhaseCClosingResistorExitTimeMs.ToString("F2") : "",
+                    d.SwitchType == SwitchType.Close && d.PhaseAClosingResistorDurationMs > 0 ? d.PhaseAClosingResistorDurationMs.ToString("F2") : "",
+                    d.SwitchType == SwitchType.Close && d.PhaseBClosingResistorDurationMs > 0 ? d.PhaseBClosingResistorDurationMs.ToString("F2") : "",
+                    d.SwitchType == SwitchType.Close && d.PhaseCClosingResistorDurationMs > 0 ? d.PhaseCClosingResistorDurationMs.ToString("F2") : "",
                     d.WorkType == WorkType.Ok ? "无" : "有",
                 };
                 }));

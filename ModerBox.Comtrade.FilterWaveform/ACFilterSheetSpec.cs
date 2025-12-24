@@ -55,19 +55,19 @@ namespace ModerBox.Comtrade.FilterWaveform {
         public byte[] SignalPicture { get; set; } = Array.Empty<byte>();
 
         /// <summary>
-        /// 获取或设置A相合闸电阻退出时刻（单位：毫秒）。
+        /// 获取或设置A相合闸电阻投入时间长度（单位：毫秒）。
         /// </summary>
-        public double PhaseAClosingResistorExitTimeMs { get; set; }
+        public double PhaseAClosingResistorDurationMs { get; set; }
 
         /// <summary>
-        /// 获取或设置B相合闸电阻退出时刻（单位：毫秒）。
+        /// 获取或设置B相合闸电阻投入时间长度（单位：毫秒）。
         /// </summary>
-        public double PhaseBClosingResistorExitTimeMs { get; set; }
+        public double PhaseBClosingResistorDurationMs { get; set; }
 
         /// <summary>
-        /// 获取或设置C相合闸电阻退出时刻（单位：毫秒）。
+        /// 获取或设置C相合闸电阻投入时间长度（单位：毫秒）。
         /// </summary>
-        public double PhaseCClosingResistorExitTimeMs { get; set; }
+        public double PhaseCClosingResistorDurationMs { get; set; }
     }
     /// <summary>
     /// 定义开关操作的类型。

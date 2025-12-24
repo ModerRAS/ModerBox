@@ -125,10 +125,11 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                     );
                             }
 
-                            var closingResistorExit = comtradeInfo.DetectClosingResistorExitTimes(obj.b);
-                            retData.PhaseAClosingResistorExitTimeMs = closingResistorExit?.PhaseAExitTimeMs ?? 0;
-                            retData.PhaseBClosingResistorExitTimeMs = closingResistorExit?.PhaseBExitTimeMs ?? 0;
-                            retData.PhaseCClosingResistorExitTimeMs = closingResistorExit?.PhaseCExitTimeMs ?? 0;
+                            // 检测合闸电阻投入时间长度（电流开始到合闸电阻退出的时间差）
+                            var closingResistorDuration = comtradeInfo.DetectClosingResistorDurations(obj.b);
+                            retData.PhaseAClosingResistorDurationMs = closingResistorDuration?.PhaseADurationMs ?? 0;
+                            retData.PhaseBClosingResistorDurationMs = closingResistorDuration?.PhaseBDurationMs ?? 0;
+                            retData.PhaseCClosingResistorDurationMs = closingResistorDuration?.PhaseCDurationMs ?? 0;
 
                             // 【新增】电压过零点与电流出现点的时间差计算
                             var voltageZeroCrossingAction = new Action(() => {
