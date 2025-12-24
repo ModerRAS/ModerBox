@@ -60,8 +60,10 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// 异步解析指定路径下的所有COMTRADE文件。
         /// </summary>
         /// <param name="Notify">一个回调操作，用于在处理每个文件后通知进度。</param>
+        /// <param name="onResultReady">可选回调，在单个结果生成后立即调用（可用于流式写图像以降低内存）。</param>
+        /// <param name="clearSignalPictureAfterCallback">如果为 true，在回调后清除 <see cref="ACFilterSheetSpec.SignalPicture"/> 的引用，以便尽早释放图像内存。</param>
         /// <returns>一个包含所有文件分析结果的 <see cref="ACFilterSheetSpec"/> 列表。</returns>
-        public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify) {
+        public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify, Func<ACFilterSheetSpec, Task>? onResultReady = null, bool clearSignalPictureAfterCallback = true) {
             try {
                 var processedCount = 0;
                 await GetFilterData();
@@ -108,6 +110,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
                             var current = Interlocked.Increment(ref processedCount);
                             Notify(current);
                             if (perData is not null) {
+                                if (onResultReady is not null) {
+                                    await onResultReady(perData);
+                                    if (clearSignalPictureAfterCallback) {
+                                        perData.SignalPicture = Array.Empty<byte>();
+                                    }
+                                }
                                 results.Add(perData);
                             }
                         } catch {
