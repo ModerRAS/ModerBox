@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
 using ModerBox.Comtrade.FilterWaveform;
+using ModerBox.Services.Scheduling;
 using static ModerBox.Common.Util;
 
 namespace ModerBox.ViewModels {
@@ -21,6 +22,8 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> SelectSource { get; }
         public ReactiveCommand<Unit, Unit> SelectTarget { get; }
         public ReactiveCommand<Unit, Unit> RunCalculate { get; }
+        public ReactiveCommand<Unit, Unit> StartSchedule { get; }
+        public ReactiveCommand<Unit, Unit> StopSchedule { get; }
         private int _progress;
         public int Progress {
             get => _progress;
@@ -81,17 +84,115 @@ namespace ModerBox.ViewModels {
 
         private readonly string _settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ModerBox", "filterwaveform.settings.json");
         private bool _settingsLoaded;
+
+        private readonly LocalRecurringScheduler _scheduler;
+
+        public ScheduleModeOption[] ScheduleModeOptions { get; } = new[] {
+            new ScheduleModeOption("每天", ScheduleRecurrence.Daily),
+            new ScheduleModeOption("每周", ScheduleRecurrence.Weekly)
+        };
+
+        public WeekDayOption[] WeekDayOptions { get; } = new[] {
+            new WeekDayOption("周一", DayOfWeek.Monday),
+            new WeekDayOption("周二", DayOfWeek.Tuesday),
+            new WeekDayOption("周三", DayOfWeek.Wednesday),
+            new WeekDayOption("周四", DayOfWeek.Thursday),
+            new WeekDayOption("周五", DayOfWeek.Friday),
+            new WeekDayOption("周六", DayOfWeek.Saturday),
+            new WeekDayOption("周日", DayOfWeek.Sunday)
+        };
+
+        private ScheduleModeOption _selectedScheduleMode;
+        public ScheduleModeOption SelectedScheduleMode {
+            get => _selectedScheduleMode;
+            set {
+                this.RaiseAndSetIfChanged(ref _selectedScheduleMode, value);
+                this.RaisePropertyChanged(nameof(IsWeekly));
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private WeekDayOption _selectedWeekDay;
+        public WeekDayOption SelectedWeekDay {
+            get => _selectedWeekDay;
+            set {
+                this.RaiseAndSetIfChanged(ref _selectedWeekDay, value);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private int _scheduleHour;
+        public int ScheduleHour {
+            get => _scheduleHour;
+            set {
+                var v = Math.Clamp(value, 0, 23);
+                this.RaiseAndSetIfChanged(ref _scheduleHour, v);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private int _scheduleMinute;
+        public int ScheduleMinute {
+            get => _scheduleMinute;
+            set {
+                var v = Math.Clamp(value, 0, 59);
+                this.RaiseAndSetIfChanged(ref _scheduleMinute, v);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private bool _isScheduleRunning;
+        public bool IsScheduleRunning {
+            get => _isScheduleRunning;
+            private set {
+                this.RaiseAndSetIfChanged(ref _isScheduleRunning, value);
+                this.RaisePropertyChanged(nameof(CanStartSchedule));
+                this.RaisePropertyChanged(nameof(CanStopSchedule));
+            }
+        }
+
+        private string _scheduleStatusText = "定时任务未启动";
+        public string ScheduleStatusText {
+            get => _scheduleStatusText;
+            private set => this.RaiseAndSetIfChanged(ref _scheduleStatusText, value);
+        }
+
+        public bool CanStartSchedule => !IsScheduleRunning;
+        public bool CanStopSchedule => IsScheduleRunning;
+
+        public bool IsWeekly => SelectedScheduleMode.Value == ScheduleRecurrence.Weekly;
         public FilterWaveformSwitchIntervalViewModel() {
             _sourceFolder = string.Empty;
             _targetFile = string.Empty;
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
-            RunCalculate = ReactiveCommand.CreateFromTask(RunCalculateTask);
+            RunCalculate = ReactiveCommand.CreateFromTask(() => RunCalculateInternalAsync(openExplorerAfterDone: true));
             ProgressMax = 100;
             Progress = 0;
             UseNewAlgorithm = true;
             IoWorkerCount = NormalizeWorkerCount(null, 4);
             ProcessWorkerCount = NormalizeWorkerCount(null, 6);
+
+            _selectedScheduleMode = ScheduleModeOptions[0];
+            _selectedWeekDay = WeekDayOptions[0];
+            _scheduleHour = 2;
+            _scheduleMinute = 0;
+
+            _scheduler = new LocalRecurringScheduler(async ct => {
+                if (ct.IsCancellationRequested) return;
+                await RunCalculateInternalAsync(openExplorerAfterDone: false);
+            });
+
+            var canStart = this.WhenAnyValue(
+                x => x.SourceFolder,
+                x => x.TargetFile,
+                x => x.IsScheduleRunning,
+                (s, t, running) => !running && !string.IsNullOrWhiteSpace(s) && !string.IsNullOrWhiteSpace(t));
+
+            var canStop = this.WhenAnyValue(x => x.IsScheduleRunning);
+
+            StartSchedule = ReactiveCommand.CreateFromTask(StartScheduleTask, canStart);
+            StopSchedule = ReactiveCommand.CreateFromTask(StopScheduleTask, canStop);
             LoadSettings();
         }
 
@@ -119,11 +220,10 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private async Task RunCalculateTask() {
+        private async Task RunCalculateInternalAsync(bool openExplorerAfterDone) {
             Progress = 0;
             await Task.Run(async () => {
                 try {
-
                     await FilterWaveformStreamingFacade.ExecuteToExcelWithSqliteAsync(
                         SourceFolder,
                         TargetFile,
@@ -131,11 +231,41 @@ namespace ModerBox.ViewModels {
                         IoWorkerCount,
                         ProcessWorkerCount,
                         (processed, total) => Progress = (int)(processed * 100.0 / Math.Max(1, total)));
-                    Progress = ProgressMax;
-                    TargetFile.OpenFileWithExplorer();
-                } catch (Exception) { }
-            });
 
+                    Progress = ProgressMax;
+                    if (openExplorerAfterDone) {
+                        TargetFile.OpenFileWithExplorer();
+                    }
+                } catch {
+                }
+            });
+        }
+
+        private Task StartScheduleTask() {
+            try {
+                if (IsScheduleRunning) {
+                    return Task.CompletedTask;
+                }
+                var options = new ScheduleOptions(
+                    SelectedScheduleMode.Value,
+                    new TimeOnly(ScheduleHour, ScheduleMinute),
+                    SelectedScheduleMode.Value == ScheduleRecurrence.Weekly ? SelectedWeekDay.Value : null);
+
+                _scheduler.Start(options);
+                IsScheduleRunning = true;
+                ScheduleStatusText = "定时任务已启动";
+            } catch {
+            }
+            return Task.CompletedTask;
+        }
+
+        private async Task StopScheduleTask() {
+            try {
+                await _scheduler.StopAsync();
+            } catch {
+            }
+            IsScheduleRunning = false;
+            ScheduleStatusText = "定时任务已停止";
         }
         private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
             // For learning purposes, we opted to directly get the reference
@@ -187,6 +317,25 @@ namespace ModerBox.ViewModels {
                         UseNewAlgorithm = saved.UseNewAlgorithm;
                         IoWorkerCount = NormalizeWorkerCount(saved.IoWorkerCount, 4);
                         ProcessWorkerCount = NormalizeWorkerCount(saved.ProcessWorkerCount, 6);
+
+                        if (saved.ScheduleMode is not null) {
+                            var mode = ScheduleModeOptions.FirstOrDefault(x => x.Value == saved.ScheduleMode);
+                            if (!string.IsNullOrWhiteSpace(mode.Display)) {
+                                SelectedScheduleMode = mode;
+                            }
+                        }
+                        if (saved.ScheduleWeekDay is not null) {
+                            var day = WeekDayOptions.FirstOrDefault(x => x.Value == saved.ScheduleWeekDay);
+                            if (!string.IsNullOrWhiteSpace(day.Display)) {
+                                SelectedWeekDay = day;
+                            }
+                        }
+                        if (saved.ScheduleHour.HasValue) {
+                            ScheduleHour = saved.ScheduleHour.Value;
+                        }
+                        if (saved.ScheduleMinute.HasValue) {
+                            ScheduleMinute = saved.ScheduleMinute.Value;
+                        }
                     }
                 }
             } catch { }
@@ -204,7 +353,12 @@ namespace ModerBox.ViewModels {
                     TargetFile = TargetFile,
                     UseNewAlgorithm = UseNewAlgorithm,
                     IoWorkerCount = IoWorkerCount,
-                    ProcessWorkerCount = ProcessWorkerCount
+                    ProcessWorkerCount = ProcessWorkerCount,
+
+                    ScheduleMode = SelectedScheduleMode.Value,
+                    ScheduleWeekDay = SelectedWeekDay.Value,
+                    ScheduleHour = ScheduleHour,
+                    ScheduleMinute = ScheduleMinute
                 };
                 var json = System.Text.Json.JsonSerializer.Serialize(data);
                 File.WriteAllText(_settingsPath, json);
@@ -225,6 +379,19 @@ namespace ModerBox.ViewModels {
             public bool UseNewAlgorithm { get; set; } = true;
             public int IoWorkerCount { get; set; }
             public int ProcessWorkerCount { get; set; }
+
+            public ScheduleRecurrence? ScheduleMode { get; set; }
+            public DayOfWeek? ScheduleWeekDay { get; set; }
+            public int? ScheduleHour { get; set; }
+            public int? ScheduleMinute { get; set; }
+        }
+
+        public readonly record struct ScheduleModeOption(string Display, ScheduleRecurrence Value) {
+            public override string ToString() => Display;
+        }
+
+        public readonly record struct WeekDayOption(string Display, DayOfWeek Value) {
+            public override string ToString() => Display;
         }
 
     }
