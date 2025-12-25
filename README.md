@@ -37,6 +37,12 @@
     *   基于 Avalonia UI，完美支持 Windows、macOS 和 Linux。
     *   界面设计遵循 Fluent Design，美观、直观且易于使用。
 
+*   🧰 **滤波器分合闸波形检测（流式 & 增量续跑）**:
+  *   扫描 COMTRADE `*.cfg`，CFG 预过滤后按需加载 DAT，降低无效 I/O。
+  *   计算结果流式写入 SQLite，最终从 SQLite 流式导出 Excel，显著降低内存峰值。
+  *   内置 processed_files（已读文件表），支持断点/增量续跑：已处理的录波自动跳过。
+  *   说明文档：`Docs/滤波器分合闸波形检测-流式SQLite与增量处理.md`
+
 ## 🚀 如何开始
 
 使用 ModerBox 非常简单：
