@@ -65,6 +65,19 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
             return _channel.Writer.WriteAsync(new StoreItem(null, entity), _cts.Token);
         }
 
+        public ValueTask EnqueueResultWithProcessedAsync(ACFilterSheetSpec spec, string cfgPath, ProcessedComtradeFileStatus status = ProcessedComtradeFileStatus.Processed, string? imagePath = null, string? note = null) {
+            var now = DateTime.UtcNow;
+            var processed = new ProcessedComtradeFileEntity {
+                CfgPath = cfgPath,
+                Status = status,
+                LastUpdatedUtc = now,
+                FirstSeenUtc = now,
+                Note = note
+            };
+            var result = ToResultEntity(spec, imagePath, sourceCfgPath: cfgPath);
+            return _channel.Writer.WriteAsync(new StoreItem(result, processed), _cts.Token);
+        }
+
         public async Task CompleteAsync() {
             _channel.Writer.TryComplete();
             if (_consumer is not null) {

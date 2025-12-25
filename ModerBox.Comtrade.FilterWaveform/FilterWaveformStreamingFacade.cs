@@ -9,6 +9,34 @@ using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade.FilterWaveform {
     public static class FilterWaveformStreamingFacade {
+        internal static System.Collections.Generic.HashSet<string> BuildSkipSet(FilterWaveformResultDbContext dbForSkip) {
+            var processedFiles = dbForSkip.ProcessedFiles
+                .AsNoTracking()
+                .Select(p => new { p.CfgPath, p.Status })
+                .ToList();
+
+            var processedCfgPaths = processedFiles
+                .Where(p => p.Status == ProcessedComtradeFileStatus.Processed)
+                .Select(p => p.CfgPath)
+                .ToList();
+
+            var processedHasResults = dbForSkip.Results
+                .AsNoTracking()
+                .Where(r => r.SourceCfgPath != null && processedCfgPaths.Contains(r.SourceCfgPath))
+                .Select(r => r.SourceCfgPath!)
+                .Distinct()
+                .ToList()
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return processedFiles
+                .Where(p =>
+                    p.Status == ProcessedComtradeFileStatus.SkippedNoMatch ||
+                    p.Status == ProcessedComtradeFileStatus.ProcessedNoResult ||
+                    (p.Status == ProcessedComtradeFileStatus.Processed && processedHasResults.Contains(p.CfgPath)))
+                .Select(p => p.CfgPath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
         public static async Task ExecuteToExcelWithSqliteAsync(
             string sourceFolder,
             string targetExcelFile,
@@ -36,11 +64,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
             await store.InitializeAsync(overwriteExisting: needResetDb);
 
             using var dbForSkip = FilterWaveformResultDbContext.Create(sqlitePath);
-            var processedCfg = dbForSkip.ProcessedFiles
-                .AsNoTracking()
-                .Select(p => p.CfgPath)
-                .ToList();
-            var processedSet = processedCfg.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var processedSet = BuildSkipSet(dbForSkip);
 
             parser.AllDataPath = parser.AllDataPath
                 .Where(p => !processedSet.Contains(p))
@@ -63,9 +87,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                 await File.WriteAllBytesAsync(imagePath, spec.SignalPicture);
                             }
 
-                            await store.EnqueueResultAsync(spec, imagePath, sourceCfgPath: info.FileName);
+                            await store.EnqueueResultWithProcessedAsync(spec, cfgPath: info.FileName, status: ProcessedComtradeFileStatus.Processed, imagePath: imagePath);
                             spec.SignalPicture = Array.Empty<byte>();
-                            await store.EnqueueProcessedAsync(info.FileName, ProcessedComtradeFileStatus.Processed);
                         } else {
                             await store.EnqueueProcessedAsync(info.FileName, ProcessedComtradeFileStatus.ProcessedNoResult);
                         }
