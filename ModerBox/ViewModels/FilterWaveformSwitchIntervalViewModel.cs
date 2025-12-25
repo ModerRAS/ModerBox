@@ -145,16 +145,20 @@ namespace ModerBox.ViewModels {
                             }
 
                             // 写入 SQLite（只写字段，不写图像字节）
-                            store.Enqueue(spec, imagePath);
+                            await store.EnqueueAsync(spec, imagePath);
                         },
                         clearSignalPictureAfterCallback: true,
                         collectResults: false);
 
                     await store.CompleteAsync();
 
-                    var data = store.ReadAllForExport();
+                    using var db = FilterWaveformResultDbContext.Create(sqlitePath);
                     var writer = new DataWriter();
-                    writer.WriteACFilterWaveformSwitchIntervalData(data, "分合闸动作时间");
+                    writer.WriteACFilterWaveformSwitchIntervalData(
+                        db.Results
+                            .OrderBy(r => r.Time)
+                            .ThenBy(r => r.Name),
+                        "分合闸动作时间");
                     writer.SaveAs(TargetFile);
                     Progress = ProgressMax;
                     TargetFile.OpenFileWithExplorer();
