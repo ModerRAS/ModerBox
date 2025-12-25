@@ -24,6 +24,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// 获取或设置从JSON配置文件加载的交流滤波器配置列表。
         /// </summary>
         public List<ACFilter> ACFilterData { get; set; } = new();
+
+        private readonly Dictionary<string, ACFilter> _filtersByPhaseASwitchClose = new(StringComparer.Ordinal);
         /// <summary>
         /// 获取或设置所有待处理的COMTRADE配置文件（.cfg）的路径列表。
         /// </summary>
@@ -75,6 +77,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
         public async Task GetFilterData() {
             var dataJson = await File.ReadAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ACFilterData.json"));
             ACFilterData = JsonConvert.DeserializeObject<List<ACFilter>>(dataJson) ?? new List<ACFilter>();
+
+            _filtersByPhaseASwitchClose.Clear();
+            foreach (var f in ACFilterData) {
+                if (!string.IsNullOrWhiteSpace(f.PhaseASwitchClose)) {
+                    _filtersByPhaseASwitchClose.TryAdd(f.PhaseASwitchClose, f);
+                }
+            }
         }
         
         /// <summary>
@@ -156,9 +165,45 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
         }
         private async Task<ComtradeInfo?> LoadComtradeAsync(string cfgPath) {
-            var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
-            await Comtrade.ReadComtradeDAT(comtradeInfo);
-            return comtradeInfo;
+            // 先只读 CFG（不加载 DAT），根据通道名预过滤，避免无关文件加载大数组
+            var comtradeInfo = await Comtrade.ReadComtradeAsync(cfgPath, loadDat: false);
+
+            if (_filtersByPhaseASwitchClose.Count == 0) {
+                // 防御：如果配置没加载成功，退回到加载 DAT 保持旧行为
+                await comtradeInfo.EnsureDatLoadedAsync();
+                return comtradeInfo;
+            }
+
+            var digitalNames = new HashSet<string>(comtradeInfo.DData.Select(d => d.Name), StringComparer.Ordinal);
+            var analogNames = new HashSet<string>(comtradeInfo.AData.Select(a => a.Name), StringComparer.Ordinal);
+
+            // 只要存在任意一个滤波器配置在当前 CFG 中能完整匹配所需通道，就认为“相关”
+            foreach (var digitalName in digitalNames) {
+                if (_filtersByPhaseASwitchClose.TryGetValue(digitalName, out var f) && HasRequiredChannels(f, digitalNames, analogNames)) {
+                    await comtradeInfo.EnsureDatLoadedAsync();
+                    return comtradeInfo;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasRequiredChannels(ACFilter f, HashSet<string> digitalNames, HashSet<string> analogNames) {
+            return
+                // digital
+                digitalNames.Contains(f.PhaseASwitchClose) &&
+                digitalNames.Contains(f.PhaseBSwitchClose) &&
+                digitalNames.Contains(f.PhaseCSwitchClose) &&
+                digitalNames.Contains(f.PhaseASwitchOpen) &&
+                digitalNames.Contains(f.PhaseBSwitchOpen) &&
+                digitalNames.Contains(f.PhaseCSwitchOpen) &&
+                // analog
+                analogNames.Contains(f.PhaseACurrentWave) &&
+                analogNames.Contains(f.PhaseBCurrentWave) &&
+                analogNames.Contains(f.PhaseCCurrentWave) &&
+                analogNames.Contains(f.PhaseAVoltageWave) &&
+                analogNames.Contains(f.PhaseBVoltageWave) &&
+                analogNames.Contains(f.PhaseCVoltageWave);
         }
 
         private ACFilterSheetSpec? ProcessComtrade(ComtradeInfo comtradeInfo, ACFilterPlotter plotter) {
