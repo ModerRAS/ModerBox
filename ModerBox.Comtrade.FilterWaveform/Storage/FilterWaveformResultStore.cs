@@ -10,15 +10,17 @@ using Microsoft.EntityFrameworkCore;
 namespace ModerBox.Comtrade.FilterWaveform.Storage {
     public sealed class FilterWaveformResultStore : IAsyncDisposable {
         private readonly string _dbPath;
-        private readonly Channel<FilterWaveformResultEntity> _channel;
+        private readonly Channel<StoreItem> _channel;
         private readonly CancellationTokenSource _cts = new();
         private Task? _consumer;
 
         private const int DefaultBatchSize = 50;
 
+        private readonly record struct StoreItem(FilterWaveformResultEntity? Result, ProcessedComtradeFileEntity? Processed);
+
         public FilterWaveformResultStore(string dbPath, int capacity = 256) {
             _dbPath = dbPath;
-            _channel = Channel.CreateBounded<FilterWaveformResultEntity>(new BoundedChannelOptions(capacity) {
+            _channel = Channel.CreateBounded<StoreItem>(new BoundedChannelOptions(capacity) {
                 SingleReader = true,
                 SingleWriter = false,
                 FullMode = BoundedChannelFullMode.Wait
@@ -42,8 +44,25 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
             _consumer = Task.Run(ConsumeAsync, _cts.Token);
         }
 
+        public ValueTask EnqueueResultAsync(ACFilterSheetSpec spec, string? imagePath = null, string? sourceCfgPath = null) {
+            return _channel.Writer.WriteAsync(new StoreItem(ToResultEntity(spec, imagePath, sourceCfgPath), null), _cts.Token);
+        }
+
+        // Backward-compat for existing call sites
         public ValueTask EnqueueAsync(ACFilterSheetSpec spec, string? imagePath = null, string? sourceCfgPath = null) {
-            return _channel.Writer.WriteAsync(ToEntity(spec, imagePath, sourceCfgPath), _cts.Token);
+            return EnqueueResultAsync(spec, imagePath, sourceCfgPath);
+        }
+
+        public ValueTask EnqueueProcessedAsync(string cfgPath, ProcessedComtradeFileStatus status, string? note = null) {
+            var now = DateTime.UtcNow;
+            var entity = new ProcessedComtradeFileEntity {
+                CfgPath = cfgPath,
+                Status = status,
+                LastUpdatedUtc = now,
+                FirstSeenUtc = now,
+                Note = note
+            };
+            return _channel.Writer.WriteAsync(new StoreItem(null, entity), _cts.Token);
         }
 
         public async Task CompleteAsync() {
@@ -86,9 +105,27 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
 
             var pending = 0;
 
-            await foreach (var entity in _channel.Reader.ReadAllAsync(_cts.Token)) {
-                db.Results.Add(entity);
-                pending++;
+            await foreach (var item in _channel.Reader.ReadAllAsync(_cts.Token)) {
+                var itemPending = 0;
+                if (item.Result is not null) {
+                    db.Results.Add(item.Result);
+                    itemPending++;
+                }
+
+                if (item.Processed is not null) {
+                    // Upsert by CfgPath
+                    var existing = await db.ProcessedFiles.FirstOrDefaultAsync(p => p.CfgPath == item.Processed.CfgPath, _cts.Token);
+                    if (existing is null) {
+                        db.ProcessedFiles.Add(item.Processed);
+                    } else {
+                        existing.Status = item.Processed.Status;
+                        existing.LastUpdatedUtc = item.Processed.LastUpdatedUtc;
+                        existing.Note = item.Processed.Note;
+                    }
+                    itemPending++;
+                }
+
+                pending += itemPending;
                 if (pending >= DefaultBatchSize) {
                     await db.SaveChangesAsync(_cts.Token);
                     db.ChangeTracker.Clear();
@@ -102,7 +139,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
             }
         }
 
-        private static FilterWaveformResultEntity ToEntity(ACFilterSheetSpec spec, string? imagePath, string? sourceCfgPath) {
+        private static FilterWaveformResultEntity ToResultEntity(ACFilterSheetSpec spec, string? imagePath, string? sourceCfgPath) {
             return new FilterWaveformResultEntity {
                 Name = spec.Name ?? string.Empty,
                 Time = spec.Time,

@@ -97,7 +97,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
         public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify, Func<ACFilterSheetSpec, Task>? onResultReady = null, bool clearSignalPictureAfterCallback = true, bool collectResults = true) {
             try {
                 var processedCount = 0;
-                await GetFilterData();
+                if (ACFilterData.Count == 0) {
+                    await GetFilterData();
+                }
                 var results = new ConcurrentBag<ACFilterSheetSpec>();
 
                 // 两级生产者-消费者：Stage1 读取 CFG/DAT（异步通道背压），Stage2 计算/绘图
@@ -150,6 +152,105 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                 }
                             }
                         } catch {
+                        }
+                    }
+                })).ToArray();
+
+                await producer;
+                await Task.WhenAll(ioWorkers);
+                parsedChannel.Writer.Complete();
+                await Task.WhenAll(processWorkers);
+
+                return collectResults ? results.ToList() : new List<ACFilterSheetSpec>();
+            } catch {
+                return new List<ACFilterSheetSpec>();
+            }
+        }
+
+        /// <summary>
+        /// 【流式增强】支持对“每个 cfg 文件”的处理结果/跳过进行回调（用于写入 SQLite 的 processed_files 表）。
+        /// </summary>
+        public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(
+            Action<int> Notify,
+            Func<ComtradeInfo, ACFilterSheetSpec?, Task>? onComtradeProcessed,
+            Func<string, Storage.ProcessedComtradeFileStatus, Task>? onCfgFinalized,
+            Func<ACFilterSheetSpec, Task>? onResultReady = null,
+            bool clearSignalPictureAfterCallback = true,
+            bool collectResults = true) {
+            try {
+                var processedCount = 0;
+                if (ACFilterData.Count == 0) {
+                    await GetFilterData();
+                }
+                var results = new ConcurrentBag<ACFilterSheetSpec>();
+
+                var cfgChannel = Channel.CreateBounded<string>(new BoundedChannelOptions(6) {
+                    SingleWriter = true,
+                    SingleReader = false,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
+                var parsedChannel = Channel.CreateBounded<ComtradeInfo>(new BoundedChannelOptions(6) {
+                    SingleWriter = false,
+                    SingleReader = false,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
+
+                var producer = Task.Run(async () => {
+                    foreach (var cfg in AllDataPath) {
+                        await cfgChannel.Writer.WriteAsync(cfg);
+                    }
+                    cfgChannel.Writer.Complete();
+                });
+
+                var ioWorkers = Enumerable.Range(0, IoWorkerCount).Select(_ => Task.Run(async () => {
+                    await foreach (var cfgPath in cfgChannel.Reader.ReadAllAsync()) {
+                        try {
+                            var info = await LoadComtradeAsync(cfgPath);
+                            if (info is not null) {
+                                await parsedChannel.Writer.WriteAsync(info);
+                            } else {
+                                if (onCfgFinalized is not null) {
+                                    await onCfgFinalized(cfgPath, Storage.ProcessedComtradeFileStatus.SkippedNoMatch);
+                                }
+                            }
+                        } catch {
+                            // 读取失败也计入“读过了”
+                            if (onCfgFinalized is not null) {
+                                await onCfgFinalized(cfgPath, Storage.ProcessedComtradeFileStatus.Failed);
+                            }
+                        }
+                    }
+                })).ToArray();
+
+                var processWorkers = Enumerable.Range(0, ProcessWorkerCount).Select(_ => Task.Run(async () => {
+                    var plotter = new ACFilterPlotter(ACFilterData);
+                    await foreach (var info in parsedChannel.Reader.ReadAllAsync()) {
+                        ACFilterSheetSpec? perData = null;
+                        try {
+                            perData = ProcessComtrade(info, plotter);
+                            var current = Interlocked.Increment(ref processedCount);
+                            Notify(current);
+
+                            if (perData is not null) {
+                                if (onResultReady is not null) {
+                                    await onResultReady(perData);
+                                    if (clearSignalPictureAfterCallback) {
+                                        perData.SignalPicture = Array.Empty<byte>();
+                                    }
+                                }
+                                if (collectResults) {
+                                    results.Add(perData);
+                                }
+                            }
+                        } catch {
+                            // ignore
+                        } finally {
+                            if (onComtradeProcessed is not null) {
+                                try {
+                                    await onComtradeProcessed(info, perData);
+                                } catch {
+                                }
+                            }
                         }
                     }
                 })).ToArray();

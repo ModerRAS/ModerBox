@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ModerBox.Comtrade.FilterWaveform.Storage {
     public class FilterWaveformResultDbContext : DbContext {
         public DbSet<FilterWaveformResultEntity> Results => Set<FilterWaveformResultEntity>();
+        public DbSet<ProcessedComtradeFileEntity> ProcessedFiles => Set<ProcessedComtradeFileEntity>();
 
         public FilterWaveformResultDbContext(DbContextOptions<FilterWaveformResultDbContext> options) : base(options) {
         }
@@ -13,6 +14,12 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.Time);
             entity.HasIndex(x => x.Name);
+
+            var processed = modelBuilder.Entity<ProcessedComtradeFileEntity>();
+            processed.ToTable("filter_waveform_processed_files");
+            processed.HasKey(x => x.Id);
+            processed.HasIndex(x => x.CfgPath).IsUnique();
+            processed.HasIndex(x => x.LastUpdatedUtc);
         }
 
         public static FilterWaveformResultDbContext Create(string dbPath) {
