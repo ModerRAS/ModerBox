@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace ModerBox.Comtrade.FilterWaveform.Storage {
     public sealed class FilterWaveformResultStore : IAsyncDisposable {
@@ -12,6 +13,8 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
         private readonly Channel<FilterWaveformResultEntity> _channel;
         private readonly CancellationTokenSource _cts = new();
         private Task? _consumer;
+
+        private const int DefaultBatchSize = 50;
 
         public FilterWaveformResultStore(string dbPath, int capacity = 256) {
             _dbPath = dbPath;
@@ -39,10 +42,8 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
             _consumer = Task.Run(ConsumeAsync, _cts.Token);
         }
 
-        public void Enqueue(ACFilterSheetSpec spec, string? imagePath = null, string? sourceCfgPath = null) {
-            if (!_channel.Writer.TryWrite(ToEntity(spec, imagePath, sourceCfgPath))) {
-                _channel.Writer.WriteAsync(ToEntity(spec, imagePath, sourceCfgPath), _cts.Token).AsTask().GetAwaiter().GetResult();
-            }
+        public ValueTask EnqueueAsync(ACFilterSheetSpec spec, string? imagePath = null, string? sourceCfgPath = null) {
+            return _channel.Writer.WriteAsync(ToEntity(spec, imagePath, sourceCfgPath), _cts.Token);
         }
 
         public async Task CompleteAsync() {
@@ -81,10 +82,23 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
 
         private async Task ConsumeAsync() {
             using var db = FilterWaveformResultDbContext.Create(_dbPath);
+            db.ChangeTracker.AutoDetectChangesEnabled = false;
+
+            var pending = 0;
 
             await foreach (var entity in _channel.Reader.ReadAllAsync(_cts.Token)) {
                 db.Results.Add(entity);
+                pending++;
+                if (pending >= DefaultBatchSize) {
+                    await db.SaveChangesAsync(_cts.Token);
+                    db.ChangeTracker.Clear();
+                    pending = 0;
+                }
+            }
+
+            if (pending > 0) {
                 await db.SaveChangesAsync(_cts.Token);
+                db.ChangeTracker.Clear();
             }
         }
 
