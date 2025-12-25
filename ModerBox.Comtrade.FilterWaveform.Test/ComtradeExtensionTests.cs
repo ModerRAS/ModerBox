@@ -119,5 +119,29 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
                     $"{p.phase} 相电压过零到电流出现的点差应接近期望 {p.expectedDiff}，实际 {diff}；电流起点 {currentStart}，过零数量 {zeroCrossings.Count}，首={zeroCrossings.First()}, 末={zeroCrossings.Last()}");
             }
         }
+
+        [TestMethod]
+        public async Task CurrentStopIndexWithSlidingWindow_OpenWaveform_ShouldStayCloseToManualMarks() {
+            var cfgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestData", "滤波器分闸波形.cfg");
+            var comtradeInfo = await Comtrade.ReadComtradeCFG(cfgPath);
+            await Comtrade.ReadComtradeDAT(comtradeInfo);
+
+            // cfg 内 1~3 是电压，4~6 是电流（按文件顺序）。这里用索引避免通道名编码差异。
+            var phases = new[] {
+                (currentIndex: 3, expected: 2324, phase: "A"),
+                (currentIndex: 4, expected: 2293, phase: "B"),
+                (currentIndex: 5, expected: 2259, phase: "C")
+            };
+
+            foreach (var p in phases) {
+                var current = comtradeInfo.AData[p.currentIndex];
+                var stopIndex = comtradeInfo.DetectCurrentStopIndexWithSlidingWindow(current.Name);
+
+                Console.WriteLine($"{p.phase}相: 电流消失点(滑窗)={stopIndex}, 期望≈{p.expected}");
+
+                Assert.IsTrue(Math.Abs(stopIndex - p.expected) <= 3,
+                    $"{p.phase} 相电流过零(消失)点应接近期望 {p.expected}，实际 {stopIndex}，误差 {stopIndex - p.expected}");
+            }
+        }
     }
 }

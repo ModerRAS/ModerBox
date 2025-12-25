@@ -399,20 +399,95 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
 
             var waveform = analogInfo.Data;
-            int windowSize = (int)(samplingRate / 50.0);
-            if (windowSize < 20) windowSize = 20;
 
-            const double stdDevThreshold = 0.1;
+            // 用更小窗口（约 5ms）+ 连续窗口确认 + 后续稳定性确认，避免在衰减/短暂平稳段提前判停。
+            int windowSize = (int)(samplingRate / 200.0);
+            if (windowSize < 20) windowSize = 20;
 
             if (waveform.Length < windowSize) {
                 return -1;
             }
 
-            for (int i = 0; i < waveform.Length - windowSize; i++) {
+            // 用尾部（默认约 10ms）估计分闸后的噪声水平，做动态阈值。
+            int tailWindow = (int)(samplingRate * 0.01);
+            if (tailWindow < 50) tailWindow = 50;
+            if (tailWindow >= waveform.Length) tailWindow = Math.Max(20, waveform.Length / 4);
+
+            var tail = new ReadOnlySpan<double>(waveform, waveform.Length - tailWindow, tailWindow);
+            double noiseStd = CalculateStandardDeviation(tail);
+            double noiseRms = CalculateRms(tail);
+
+            // “稳定近零段”判定：以尾部噪声为主导（分闸后应接近噪声），只保留一个较小的下限。
+            double stableAbsThreshold = Math.Max(noiseRms * 8, Jitter * 0.1);
+            double stableRmsThreshold = Math.Min(Math.Max(noiseRms * 6, stableAbsThreshold * 0.6), stableAbsThreshold);
+            double stableStdThreshold = Math.Min(Math.Max(noiseStd * 4, stableAbsThreshold * 0.25), stableAbsThreshold);
+
+            const int consecutiveQuietWindows = 5;
+            int quietCount = 0;
+
+            for (int i = 0; i <= waveform.Length - windowSize; i++) {
                 var window = new ReadOnlySpan<double>(waveform, i, windowSize);
-                if (CalculateStandardDeviation(window) < stdDevThreshold) {
-                    return i;
+
+                double maxAbs = 0;
+                foreach (var v in window) {
+                    double abs = Math.Abs(v);
+                    if (abs > maxAbs) maxAbs = abs;
                 }
+
+                if (maxAbs <= stableAbsThreshold && CalculateStandardDeviation(window) <= stableStdThreshold && CalculateRms(window) <= stableRmsThreshold) {
+                    quietCount++;
+                } else {
+                    quietCount = 0;
+                }
+
+                if (quietCount < consecutiveQuietWindows) {
+                    continue;
+                }
+
+                int candidateStart = i - (consecutiveQuietWindows - 1);
+
+                // 后续确认：candidateStart 之后一段时间内必须持续“近零”。
+                int confirmLen = Math.Min(waveform.Length - candidateStart, windowSize * 10); // 约 50ms
+                if (confirmLen < windowSize * 2) {
+                    return candidateStart;
+                }
+
+                bool stable = true;
+                for (int j = candidateStart; j < candidateStart + confirmLen; j++) {
+                    if (Math.Abs(waveform[j]) > stableAbsThreshold) {
+                        stable = false;
+                        break;
+                    }
+                }
+
+                if (!stable) {
+                    continue;
+                }
+
+                // 在“稳定近零段”内进一步找真正显著变小的点（接近人工标注的“消失点”）。
+                // 这里阈值做得比 stableAbsThreshold 更严格，但要足够宽，避免把 B 相这种小幅振荡推迟太多。
+                double finalAbsThreshold = Math.Max(noiseRms * 2.5, stableAbsThreshold * 0.25);
+                const int finalConsecutive = 3;
+                int searchEnd = candidateStart + Math.Min(confirmLen, windowSize * 2); // 约 10ms
+
+                for (int t = candidateStart; t + finalConsecutive < searchEnd; t++) {
+                    if (Math.Abs(waveform[t]) <= finalAbsThreshold &&
+                        Math.Abs(waveform[t + 1]) <= finalAbsThreshold &&
+                        Math.Abs(waveform[t + 2]) <= finalAbsThreshold) {
+                        return t;
+                    }
+                }
+
+                // 尽量贴近“过零/消失点”：回溯一小段，找最后一次进入近零的点。
+                int backTrack = Math.Min(Math.Max(5, windowSize / 2), candidateStart);
+                for (int k = candidateStart; k >= candidateStart - backTrack; k--) {
+                    if (k <= 0) break;
+                    if (Math.Abs(waveform[k]) <= stableAbsThreshold && Math.Abs(waveform[k - 1]) <= stableAbsThreshold) {
+                        return k;
+                    }
+                }
+
+                return candidateStart;
             }
 
             return -1;
@@ -521,6 +596,19 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
 
             return Math.Sqrt(sumOfSquares / (data.Length - 1));
+        }
+
+        private static double CalculateRms(ReadOnlySpan<double> data) {
+            if (data.Length == 0) {
+                return 0;
+            }
+
+            double sumSquares = 0;
+            foreach (var value in data) {
+                sumSquares += value * value;
+            }
+
+            return Math.Sqrt(sumSquares / data.Length);
         }
 
         /// <summary>
