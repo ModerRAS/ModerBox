@@ -32,30 +32,53 @@ jobs:
       run: |
         New-Item -ItemType Directory -Path build-meta -Force | Out-Null
         Set-Content -Path build-meta/build-sha.txt -Value "${{ github.sha }}" -NoNewline
-    - name: Publish Application (Native AOT - nativeaot channel)
-      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish-native-aot -r win-x64 -p:PublishAot=true -p:StripSymbols=true
-    - name: Publish Application (Normal - nightly channel)
-      run: dotnet publish ModerBox/ModerBox.csproj -c Release -o publish-normal -r win-x64
     - name: Upload Build Meta Artifact
       uses: actions/upload-artifact@v4
       with:
         name: build-meta
         path: build-meta
-    - name: Upload Normal Artifact
+
+  publish:
+    permissions: write-all
+    runs-on: windows-latest
+    needs: build-and-test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: normal
+            artifact: publish-normal
+            output: publish-normal
+            publishArgs: "-c Release -o publish-normal -r win-x64"
+          - name: native-aot
+            artifact: publish-native-aot
+            output: publish-native-aot
+            publishArgs: "-c Release -o publish-native-aot -r win-x64 -p:PublishAot=true -p:StripSymbols=true"
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Install .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Publish Application (${{ matrix.name }})
+      shell: pwsh
+      run: |
+        dotnet publish ModerBox/ModerBox.csproj ${{ matrix.publishArgs }}
+    - name: Upload Publish Artifact (${{ matrix.name }})
       uses: actions/upload-artifact@v4
       with:
-        name: publish-normal
-        path: publish-normal
-    - name: Upload Native AOT Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: publish-native-aot
-        path: publish-native-aot
+        name: ${{ matrix.artifact }}
+        path: ${{ matrix.output }}
 
   release-nightly:
     permissions: write-all
     runs-on: windows-latest
-    needs: build-and-test
+    needs: publish
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -270,10 +293,29 @@ jobs:
           $CompareLine = "对比: https://github.com/ModerRAS/ModerBox/compare/$PrevTag...$BuildSha"
         }
 
-        $CommitLines = git log $Range --no-merges --pretty=format:"- %s (%h) @%an"
-        if (-not $CommitLines) {
-          $CommitLines = @('- (无新增提交)')
+        $LogRows = git log $Range --date=short --pretty=format:"%ad|%H|%h|%an|%s"
+        $CommitLines = @()
+        foreach ($row in @($LogRows)) {
+          if ([string]::IsNullOrWhiteSpace($row)) { continue }
+          $parts = $row -split '\|', 5
+          if ($parts.Count -lt 5) { continue }
+          $date = $parts[0]
+          $full = $parts[1]
+          $short = $parts[2]
+          $author = $parts[3]
+          $subject = $parts[4]
+
+          $commitUrl = "https://github.com/ModerRAS/ModerBox/commit/$full"
+          $prLink = $null
+          if ($subject -match '\(#(\d+)\)') {
+            $prNum = $Matches[1]
+            $prLink = "[#${prNum}](https://github.com/ModerRAS/ModerBox/pull/$prNum) "
+            $subject = ($subject -replace '\s*\(#\d+\)\s*$', '')
+          }
+
+          $CommitLines += "- $date $prLink$subject ([${short}]($commitUrl)) @$author"
         }
+        if ($CommitLines.Count -eq 0) { $CommitLines = @('- (无新增提交)') }
 
         $Notes = @(
           "构建提交：`$BuildSha`",
@@ -325,7 +367,7 @@ jobs:
   release-nativeaot:
     permissions: write-all
     runs-on: windows-latest
-    needs: build-and-test
+    needs: publish
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -540,10 +582,29 @@ jobs:
           $CompareLine = "对比: https://github.com/ModerRAS/ModerBox/compare/$PrevTag...$BuildSha"
         }
 
-        $CommitLines = git log $Range --no-merges --pretty=format:"- %s (%h) @%an"
-        if (-not $CommitLines) {
-          $CommitLines = @('- (无新增提交)')
+        $LogRows = git log $Range --date=short --pretty=format:"%ad|%H|%h|%an|%s"
+        $CommitLines = @()
+        foreach ($row in @($LogRows)) {
+          if ([string]::IsNullOrWhiteSpace($row)) { continue }
+          $parts = $row -split '\|', 5
+          if ($parts.Count -lt 5) { continue }
+          $date = $parts[0]
+          $full = $parts[1]
+          $short = $parts[2]
+          $author = $parts[3]
+          $subject = $parts[4]
+
+          $commitUrl = "https://github.com/ModerRAS/ModerBox/commit/$full"
+          $prLink = $null
+          if ($subject -match '\(#(\d+)\)') {
+            $prNum = $Matches[1]
+            $prLink = "[#${prNum}](https://github.com/ModerRAS/ModerBox/pull/$prNum) "
+            $subject = ($subject -replace '\s*\(#\d+\)\s*$', '')
+          }
+
+          $CommitLines += "- $date $prLink$subject ([${short}]($commitUrl)) @$author"
         }
+        if ($CommitLines.Count -eq 0) { $CommitLines = @('- (无新增提交)') }
 
         $Notes = @(
           "构建提交：`$BuildSha`",
