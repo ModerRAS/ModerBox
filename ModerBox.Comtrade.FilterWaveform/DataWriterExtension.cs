@@ -22,8 +22,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var total = new List<List<string>>() {
                 new List<string>() {
                     "名称",
-                    "时间",
                     "分合闸",
+                    "时间",
                     "A相分合闸时间/ms",
                     "B相分合闸时间/ms",
                     "C相分合闸时间/ms",
@@ -42,8 +42,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 .Select(d => {
                     return new List<string>() {
                     d.Name,
-                    d.Time.ToString("yyyy/MM/dd HH:mm:ss.fff"),
                     d.SwitchType == SwitchType.Open ? "分闸" : "合闸",
+                    d.Time.ToString("yyyy/MM/dd HH:mm:ss.fff"),
                     d.PhaseATimeInterval.ToString(),
                     d.PhaseBTimeInterval.ToString(),
                     d.PhaseCTimeInterval.ToString(),
@@ -67,8 +67,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
             var headers = new[] {
                 "名称",
-                "时间",
                 "分合闸",
+                "时间",
                 "A相分合闸时间/ms",
                 "B相分合闸时间/ms",
                 "C相分合闸时间/ms",
@@ -88,8 +88,8 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var rowIndex = 2;
             foreach (var r in query.AsNoTracking()) {
                 worksheet.Cell(rowIndex, 1).Value = r.Name;
-                worksheet.Cell(rowIndex, 2).Value = r.Time.ToString("yyyy/MM/dd HH:mm:ss.fff");
-                worksheet.Cell(rowIndex, 3).Value = r.SwitchType == SwitchType.Open ? "分闸" : "合闸";
+                worksheet.Cell(rowIndex, 2).Value = r.SwitchType == SwitchType.Open ? "分闸" : "合闸";
+                worksheet.Cell(rowIndex, 3).Value = r.Time.ToString("yyyy/MM/dd HH:mm:ss.fff");
                 worksheet.Cell(rowIndex, 4).Value = r.PhaseATimeInterval.ToString();
                 worksheet.Cell(rowIndex, 5).Value = r.PhaseBTimeInterval.ToString();
                 worksheet.Cell(rowIndex, 6).Value = r.PhaseCTimeInterval.ToString();
