@@ -80,7 +80,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                         if (spec is not null) {
                             string? imagePath = null;
                             if (spec.SignalPicture is not null && spec.SignalPicture.Length > 0) {
-                                var folder = Path.Combine(targetFolder, $"{spec.Time:yyyy}", $"{spec.Time:MM}", spec.Name);
+                                var folder = Path.Combine(targetFolder, $"{spec.Time:yyyy}年", $"{spec.Time:MM}月", spec.Name);
                                 Directory.CreateDirectory(folder);
                                 var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
                                 imagePath = Path.Combine(folder, fileName);
