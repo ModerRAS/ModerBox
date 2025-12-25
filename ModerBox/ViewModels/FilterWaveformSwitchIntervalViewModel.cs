@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
 using ModerBox.Comtrade.FilterWaveform;
+using ModerBox.Comtrade.FilterWaveform.Storage;
 using static ModerBox.Common.Util;
 
 namespace ModerBox.ViewModels {
@@ -82,6 +83,8 @@ namespace ModerBox.ViewModels {
         private readonly string _settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ModerBox", "filterwaveform.settings.json");
         private bool _settingsLoaded;
         public FilterWaveformSwitchIntervalViewModel() {
+            _sourceFolder = string.Empty;
+            _targetFile = string.Empty;
             SelectSource = ReactiveCommand.CreateFromTask(SelectSourceTask);
             SelectTarget = ReactiveCommand.CreateFromTask(SelectTargetTask);
             RunCalculate = ReactiveCommand.CreateFromTask(RunCalculateTask);
@@ -96,7 +99,10 @@ namespace ModerBox.ViewModels {
         private async Task SelectSourceTask() {
             try {
                 var folder = await DoOpenFolderPickerAsync();
-                SourceFolder = folder?.TryGetLocalPath() ?? folder.Path.ToString();
+                if (folder is null) {
+                    return;
+                }
+                SourceFolder = folder.TryGetLocalPath() ?? folder.Path.ToString();
             } catch (NullReferenceException) {
 
             }
@@ -105,7 +111,10 @@ namespace ModerBox.ViewModels {
         private async Task SelectTargetTask() {
             try {
                 var file = await DoSaveFilePickerAsync();
-                TargetFile = file?.TryGetLocalPath() ?? file.Path.ToString();
+                if (file is null) {
+                    return;
+                }
+                TargetFile = file.TryGetLocalPath() ?? file.Path.ToString();
             } catch (NullReferenceException) {
 
             }
@@ -118,25 +127,38 @@ namespace ModerBox.ViewModels {
 
                     var parser = new ACFilterParser(SourceFolder, UseNewAlgorithm, IoWorkerCount, ProcessWorkerCount);
                     var targetFolder = Path.GetDirectoryName(TargetFile) ?? Path.GetTempPath();
-                    var Data = await parser.ParseAllComtrade(
+                    var sqlitePath = Path.Combine(targetFolder, $"{Path.GetFileNameWithoutExtension(TargetFile)}.sqlite");
+
+                    await using var store = new FilterWaveformResultStore(sqlitePath);
+                    await store.InitializeAsync(overwriteExisting: true);
+
+                    await parser.ParseAllComtrade(
                         (_progress) => Progress = (int)(_progress * 100.0 / parser.Count),
                         async spec => {
-                            if (spec.SignalPicture is null || spec.SignalPicture.Length == 0) {
-                                return;
+                            string? imagePath = null;
+                            if (spec.SignalPicture is not null && spec.SignalPicture.Length > 0) {
+                                var folder = Path.Combine(targetFolder, spec.Name);
+                                Directory.CreateDirectory(folder);
+                                var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
+                                imagePath = Path.Combine(folder, fileName);
+                                await File.WriteAllBytesAsync(imagePath, spec.SignalPicture);
                             }
 
-                            var folder = Path.Combine(targetFolder, spec.Name);
-                            Directory.CreateDirectory(folder);
-                            var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
-                            var filePath = Path.Combine(folder, fileName);
-                            await File.WriteAllBytesAsync(filePath, spec.SignalPicture);
-                        });
+                            // 写入 SQLite（只写字段，不写图像字节）
+                            store.Enqueue(spec, imagePath);
+                        },
+                        clearSignalPictureAfterCallback: true,
+                        collectResults: false);
+
+                    await store.CompleteAsync();
+
+                    var data = store.ReadAllForExport();
                     var writer = new DataWriter();
-                    writer.WriteACFilterWaveformSwitchIntervalData(Data, "分合闸动作时间");
+                    writer.WriteACFilterWaveformSwitchIntervalData(data, "分合闸动作时间");
                     writer.SaveAs(TargetFile);
                     Progress = ProgressMax;
                     TargetFile.OpenFileWithExplorer();
-                } catch (Exception ex) { }
+                } catch (Exception) { }
             });
             
         }
