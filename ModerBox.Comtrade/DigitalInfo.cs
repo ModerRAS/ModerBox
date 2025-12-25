@@ -12,6 +12,9 @@ namespace ModerBox.Comtrade {
         public string VarName;
 
         public bool IsTR { get {
+                if (Data is null || Data.Length == 0) {
+                    return false;
+                }
                 foreach (int i in Data) {
                     if (i != Data[0]) {
                         return true;

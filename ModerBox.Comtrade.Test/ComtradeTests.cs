@@ -132,5 +132,56 @@ namespace ModerBox.Comtrade.Test {
             Assert.AreEqual(1, comtradeInfo.DData[0].Data[1]);
             Assert.AreEqual(0, comtradeInfo.DData[0].Data[2]);
         }
+
+        [TestMethod]
+        public async Task ReadComtradeLazyDatLoadTest() {
+            // Arrange
+            var cfgPath = Path.Combine(TestDataDir, "test_lazy.cfg");
+            var datPath = Path.Combine(TestDataDir, "test_lazy.dat");
+
+            var cfgContent = "station_name,device_id,2013\n" +
+                             "3,2A,1D\n" +
+                             "1,IA,A,,A,1,0,0,0,1,1,P\n" +
+                             "2,VA,A,,V,1,0,0,0,1,1,P\n" +
+                             "1,STATUS,,0\n" +
+                             "50\n" +
+                             "1\n" +
+                             "2500,3\n" +
+                             "01/01/2024,00:00:00.000\n" +
+                             "01/01/2024,00:00:00.000\n" +
+                             "ASCII";
+            var datContent = "1,400,10.0,100.0,0\n" +
+                             "2,800,20.0,200.0,1\n" +
+                             "3,1200,30.0,300.0,0";
+
+            await File.WriteAllTextAsync(cfgPath, cfgContent);
+            await File.WriteAllTextAsync(datPath, datContent);
+
+            // Act: CFG only (no DAT)
+            var info = await Comtrade.ReadComtradeAsync(cfgPath, loadDat: false);
+
+            // Assert: names are available, but data not loaded
+            Assert.IsFalse(info.IsDatLoaded);
+            Assert.AreEqual(2, info.AnalogCount);
+            Assert.AreEqual(1, info.DigitalCount);
+            Assert.AreEqual("IA", info.AData[0].Name);
+            Assert.AreEqual("VA", info.AData[1].Name);
+            Assert.AreEqual("STATUS", info.DData[0].Name);
+            Assert.AreEqual(0, info.AData[0].Data.Length);
+            Assert.AreEqual(0, info.DData[0].Data.Length);
+
+            // Act: load DAT on demand
+            await info.EnsureDatLoadedAsync();
+
+            // Assert: samples populated
+            Assert.IsTrue(info.IsDatLoaded);
+            Assert.AreEqual(3, info.EndSamp);
+            Assert.AreEqual(10.0, info.AData[0].Data[0]);
+            Assert.AreEqual(20.0, info.AData[0].Data[1]);
+            Assert.AreEqual(30.0, info.AData[0].Data[2]);
+            Assert.AreEqual(0, info.DData[0].Data[0]);
+            Assert.AreEqual(1, info.DData[0].Data[1]);
+            Assert.AreEqual(0, info.DData[0].Data[2]);
+        }
     }
 } 

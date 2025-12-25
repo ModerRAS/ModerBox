@@ -9,7 +9,21 @@ namespace ModerBox.Comtrade {
         static Comtrade() {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
-        public static async Task<ComtradeInfo> ReadComtradeCFG(string cfgFilePath) {
+
+        public static Task<ComtradeInfo> ReadComtradeAsync(string cfgFilePath, bool loadDat = true) {
+            return ReadComtradeInternalAsync(cfgFilePath, loadDat);
+        }
+
+        private static async Task<ComtradeInfo> ReadComtradeInternalAsync(string cfgFilePath, bool loadDat) {
+            var info = await ReadComtradeCFG(cfgFilePath, allocateDataArrays: loadDat).ConfigureAwait(false);
+            if (loadDat) {
+                await ReadComtradeDAT(info).ConfigureAwait(false);
+                info.IsDatLoaded = true;
+            }
+            return info;
+        }
+
+        public static async Task<ComtradeInfo> ReadComtradeCFG(string cfgFilePath, bool allocateDataArrays = true) {
             ComtradeInfo comtradeInfo = new ComtradeInfo(cfgFilePath);
             using StreamReader cfgReader = new StreamReader(cfgFilePath, Encoding.GetEncoding("GBK"));
             string line = await cfgReader.ReadLineAsync();
@@ -80,16 +94,38 @@ namespace ModerBox.Comtrade {
             comtradeInfo.ASCII = line;
             //streamReader.Close();
             ABCVA(comtradeInfo);
-            for (int l = 0; l < comtradeInfo.AnalogCount; l++) {
-                comtradeInfo.AData[l].Data = new double[comtradeInfo.EndSamp];
-            }
-            for (int m = 0; m < comtradeInfo.DigitalCount; m++) {
-                comtradeInfo.DData[m].Data = new int[comtradeInfo.EndSamp];
+
+            if (allocateDataArrays) {
+                for (int l = 0; l < comtradeInfo.AnalogCount; l++) {
+                    comtradeInfo.AData[l].Data = new double[comtradeInfo.EndSamp];
+                }
+                for (int m = 0; m < comtradeInfo.DigitalCount; m++) {
+                    comtradeInfo.DData[m].Data = new int[comtradeInfo.EndSamp];
+                }
+            } else {
+                for (int l = 0; l < comtradeInfo.AnalogCount; l++) {
+                    comtradeInfo.AData[l].Data = Array.Empty<double>();
+                }
+                for (int m = 0; m < comtradeInfo.DigitalCount; m++) {
+                    comtradeInfo.DData[m].Data = Array.Empty<int>();
+                }
             }
             return comtradeInfo;
         }
 
         public static async Task ReadComtradeDAT(ComtradeInfo comtradeInfo) {
+            // Lazy CFG load may not allocate arrays; ensure buffers exist.
+            for (int l = 0; l < comtradeInfo.AnalogCount; l++) {
+                if (comtradeInfo.AData[l].Data is null || comtradeInfo.AData[l].Data.Length != comtradeInfo.EndSamp) {
+                    comtradeInfo.AData[l].Data = new double[comtradeInfo.EndSamp];
+                }
+            }
+            for (int m = 0; m < comtradeInfo.DigitalCount; m++) {
+                if (comtradeInfo.DData[m].Data is null || comtradeInfo.DData[m].Data.Length != comtradeInfo.EndSamp) {
+                    comtradeInfo.DData[m].Data = new int[comtradeInfo.EndSamp];
+                }
+            }
+
             double[] firstSampleAnalogValues = new double[comtradeInfo.AnalogCount];
             if (string.Equals("ASCII", comtradeInfo.ASCII, StringComparison.OrdinalIgnoreCase)) {
                 string datFilePath = Path.ChangeExtension(comtradeInfo.FileName, "dat");
@@ -102,6 +138,7 @@ namespace ModerBox.Comtrade {
                     ParseAsciiLine(line, comtradeInfo, i, firstSampleAnalogValues);
                 }
                 //streamReader.Close();
+                comtradeInfo.IsDatLoaded = true;
                 return;
             }
             string datFilePathBinary = Path.ChangeExtension(comtradeInfo.FileName, "dat");
@@ -139,6 +176,8 @@ namespace ModerBox.Comtrade {
                     }
                 }
             }
+
+            comtradeInfo.IsDatLoaded = true;
         }
 
         private static ReadOnlySpan<char> GetNextToken(ref ReadOnlySpan<char> span) {
