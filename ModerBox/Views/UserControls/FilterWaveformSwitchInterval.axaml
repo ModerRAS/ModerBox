@@ -42,6 +42,32 @@
 				<NumericUpDown Minimum="1" Maximum="64" Value="{Binding ProcessWorkerCount}" />
 			</StackPanel>
 		</StackPanel>
+		<TextBlock Margin="0 10 0 0">定时任务</TextBlock>
+		<StackPanel Orientation="Horizontal" Margin="5" Spacing="10">
+			<StackPanel Width="180">
+				<TextBlock>周期</TextBlock>
+				<ComboBox ItemsSource="{Binding ScheduleModeOptions}" SelectedItem="{Binding SelectedScheduleMode, Mode=TwoWay}" />
+			</StackPanel>
+			<StackPanel Width="180" IsVisible="{Binding IsWeekly}">
+				<TextBlock>星期</TextBlock>
+				<ComboBox ItemsSource="{Binding WeekDayOptions}" SelectedItem="{Binding SelectedWeekDay, Mode=TwoWay}" />
+			</StackPanel>
+		</StackPanel>
+		<StackPanel Orientation="Horizontal" Margin="5" Spacing="10">
+			<StackPanel Width="180">
+				<TextBlock>小时</TextBlock>
+				<NumericUpDown Minimum="0" Maximum="23" Value="{Binding ScheduleHour}" />
+			</StackPanel>
+			<StackPanel Width="180">
+				<TextBlock>分钟</TextBlock>
+				<NumericUpDown Minimum="0" Maximum="59" Value="{Binding ScheduleMinute}" />
+			</StackPanel>
+		</StackPanel>
+		<StackPanel Orientation="Horizontal" Margin="5" Spacing="10">
+			<Button Width="180" Content="启动定时任务" Command="{Binding StartSchedule}" IsEnabled="{Binding CanStartSchedule}" />
+			<Button Width="180" Content="停止定时任务" Command="{Binding StopSchedule}" IsEnabled="{Binding CanStopSchedule}" />
+		</StackPanel>
+		<TextBlock Margin="5" Text="{Binding ScheduleStatusText}" />
 		<Button Margin="5" Content="开始" Command="{Binding RunCalculate}" />
 		<ProgressBar  Margin="0 10" Height="20"
                 Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding Progress}"
