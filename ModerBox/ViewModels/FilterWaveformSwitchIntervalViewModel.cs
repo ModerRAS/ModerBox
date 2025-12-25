@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json;
 using ModerBox.Comtrade.FilterWaveform;
-using ModerBox.Comtrade.FilterWaveform.Storage;
 using static ModerBox.Common.Util;
 
 namespace ModerBox.ViewModels {
@@ -125,50 +124,22 @@ namespace ModerBox.ViewModels {
             await Task.Run(async () => {
                 try {
 
-                    var parser = new ACFilterParser(SourceFolder, UseNewAlgorithm, IoWorkerCount, ProcessWorkerCount);
-                    var targetFolder = Path.GetDirectoryName(TargetFile) ?? Path.GetTempPath();
-                    var sqlitePath = Path.Combine(targetFolder, $"{Path.GetFileNameWithoutExtension(TargetFile)}.sqlite");
-
-                    await using var store = new FilterWaveformResultStore(sqlitePath);
-                    await store.InitializeAsync(overwriteExisting: true);
-
-                    await parser.ParseAllComtrade(
-                        (_progress) => Progress = (int)(_progress * 100.0 / parser.Count),
-                        async spec => {
-                            string? imagePath = null;
-                            if (spec.SignalPicture is not null && spec.SignalPicture.Length > 0) {
-                                var folder = Path.Combine(targetFolder, spec.Name);
-                                Directory.CreateDirectory(folder);
-                                var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
-                                imagePath = Path.Combine(folder, fileName);
-                                await File.WriteAllBytesAsync(imagePath, spec.SignalPicture);
-                            }
-
-                            // 写入 SQLite（只写字段，不写图像字节）
-                            await store.EnqueueAsync(spec, imagePath);
-                        },
-                        clearSignalPictureAfterCallback: true,
-                        collectResults: false);
-
-                    await store.CompleteAsync();
-
-                    using var db = FilterWaveformResultDbContext.Create(sqlitePath);
-                    var writer = new DataWriter();
-                    writer.WriteACFilterWaveformSwitchIntervalData(
-                        db.Results
-                            .OrderBy(r => r.Time)
-                            .ThenBy(r => r.Name),
-                        "分合闸动作时间");
-                    writer.SaveAs(TargetFile);
+                    await FilterWaveformStreamingFacade.ExecuteToExcelWithSqliteAsync(
+                        SourceFolder,
+                        TargetFile,
+                        UseNewAlgorithm,
+                        IoWorkerCount,
+                        ProcessWorkerCount,
+                        (processed, total) => Progress = (int)(processed * 100.0 / Math.Max(1, total)));
                     Progress = ProgressMax;
                     TargetFile.OpenFileWithExplorer();
                 } catch (Exception) { }
             });
-            
+
         }
         private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
             // For learning purposes, we opted to directly get the reference
-            // for StorageProvider APIs here inside the ViewModel. 
+            // for StorageProvider APIs here inside the ViewModel.
 
             // For your real-world apps, you should follow the MVVM principles
             // by making service classes and locating them with DI/IoC.
