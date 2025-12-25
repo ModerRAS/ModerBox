@@ -1,11 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ModerBox.Comtrade {
     [Serializable]
     public class ComtradeInfo {
+        private readonly SemaphoreSlim _datLoadLock = new(1, 1);
+
         public ComtradeInfo(string name) {
             this.FileName = name;
+        }
+
+        public bool IsDatLoaded { get; internal set; }
+
+        public async Task EnsureDatLoadedAsync() {
+            if (IsDatLoaded) {
+                return;
+            }
+
+            await _datLoadLock.WaitAsync().ConfigureAwait(false);
+            try {
+                if (IsDatLoaded) {
+                    return;
+                }
+                await Comtrade.ReadComtradeDAT(this).ConfigureAwait(false);
+                IsDatLoaded = true;
+            } finally {
+                _datLoadLock.Release();
+            }
         }
 
         public void GetMs() {
