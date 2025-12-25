@@ -23,7 +23,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// <summary>
         /// 获取或设置从JSON配置文件加载的交流滤波器配置列表。
         /// </summary>
-        public List<ACFilter> ACFilterData { get; set; }
+        public List<ACFilter> ACFilterData { get; set; } = new();
         /// <summary>
         /// 获取或设置所有待处理的COMTRADE配置文件（.cfg）的路径列表。
         /// </summary>
@@ -59,6 +59,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
             UseSlidingWindowAlgorithm = useSlidingWindowAlgorithm;
             IoWorkerCount = NormalizeWorkerCount(ioWorkerCount, 4);
             ProcessWorkerCount = NormalizeWorkerCount(processWorkerCount, 6);
+            ACFilterData = new List<ACFilter>();
         }
 
         private static int NormalizeWorkerCount(int? value, int defaultMax) {
@@ -73,7 +74,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// </summary>
         public async Task GetFilterData() {
             var dataJson = await File.ReadAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ACFilterData.json"));
-            ACFilterData = JsonConvert.DeserializeObject<List<ACFilter>>(dataJson);
+            ACFilterData = JsonConvert.DeserializeObject<List<ACFilter>>(dataJson) ?? new List<ACFilter>();
         }
         
         /// <summary>
@@ -82,8 +83,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// <param name="Notify">一个回调操作，用于在处理每个文件后通知进度。</param>
         /// <param name="onResultReady">可选回调，在单个结果生成后立即调用（可用于流式写图像以降低内存）。</param>
         /// <param name="clearSignalPictureAfterCallback">如果为 true，在回调后清除 <see cref="ACFilterSheetSpec.SignalPicture"/> 的引用，以便尽早释放图像内存。</param>
+        /// <param name="collectResults">如果为 true，将结果收集并返回；为 false 时不在内存中保留结果（适合写入DB后再导出）。</param>
         /// <returns>一个包含所有文件分析结果的 <see cref="ACFilterSheetSpec"/> 列表。</returns>
-        public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify, Func<ACFilterSheetSpec, Task>? onResultReady = null, bool clearSignalPictureAfterCallback = true) {
+        public async Task<List<ACFilterSheetSpec>> ParseAllComtrade(Action<int> Notify, Func<ACFilterSheetSpec, Task>? onResultReady = null, bool clearSignalPictureAfterCallback = true, bool collectResults = true) {
             try {
                 var processedCount = 0;
                 await GetFilterData();
@@ -134,7 +136,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                         perData.SignalPicture = Array.Empty<byte>();
                                     }
                                 }
-                                results.Add(perData);
+                                if (collectResults) {
+                                    results.Add(perData);
+                                }
                             }
                         } catch {
                         }
@@ -146,9 +150,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 parsedChannel.Writer.Complete();
                 await Task.WhenAll(processWorkers);
 
-                return results.ToList();
-            } catch (Exception ex) {
-                return null;
+                return collectResults ? results.ToList() : new List<ACFilterSheetSpec>();
+            } catch {
+                return new List<ACFilterSheetSpec>();
             }
         }
         private async Task<ComtradeInfo?> LoadComtradeAsync(string cfgPath) {
