@@ -283,13 +283,13 @@ jobs:
         if ([string]::IsNullOrWhiteSpace($PrevTag)) {
           $BaseCommit = (git rev-list --max-parents=0 $BuildSha | Select-Object -First 1)
           $Range = "$BaseCommit..$BuildSha"
-          $Header = "提交列表："
+          $Header = '提交列表：'
           $CompareLine = $null
         }
         else {
           $BaseCommit = (git merge-base $PrevTag $BuildSha)
           $Range = "$BaseCommit..$BuildSha"
-          $Header = "自上次发布 `$PrevTag` 以来的提交："
+          $Header = '自上次发布 `' + $PrevTag + '` 以来的提交：'
           $CompareLine = "对比: https://github.com/ModerRAS/ModerBox/compare/$PrevTag...$BuildSha"
         }
 
@@ -318,14 +318,14 @@ jobs:
         if ($CommitLines.Count -eq 0) { $CommitLines = @('- (无新增提交)') }
 
         $Notes = @(
-          "构建提交：`$BuildSha`",
-          "",
+          ('构建提交：`' + $BuildSha + '`'),
+          '',
           $Header,
-          ""
+          ''
         )
         $Notes += $CommitLines
         if ($CompareLine) {
-          $Notes += @("", $CompareLine)
+          $Notes += @('', $CompareLine)
         }
         $NotesPath = "release-notes.md"
         $Notes | Set-Content -Path $NotesPath -Encoding UTF8
@@ -572,13 +572,13 @@ jobs:
         if ([string]::IsNullOrWhiteSpace($PrevTag)) {
           $BaseCommit = (git rev-list --max-parents=0 $BuildSha | Select-Object -First 1)
           $Range = "$BaseCommit..$BuildSha"
-          $Header = "提交列表："
+          $Header = '提交列表：'
           $CompareLine = $null
         }
         else {
           $BaseCommit = (git merge-base $PrevTag $BuildSha)
           $Range = "$BaseCommit..$BuildSha"
-          $Header = "自上次发布 `$PrevTag` 以来的提交："
+          $Header = '自上次发布 `' + $PrevTag + '` 以来的提交：'
           $CompareLine = "对比: https://github.com/ModerRAS/ModerBox/compare/$PrevTag...$BuildSha"
         }
 
@@ -607,14 +607,14 @@ jobs:
         if ($CommitLines.Count -eq 0) { $CommitLines = @('- (无新增提交)') }
 
         $Notes = @(
-          "构建提交：`$BuildSha`",
-          "",
+          ('构建提交：`' + $BuildSha + '`'),
+          '',
           $Header,
-          ""
+          ''
         )
         $Notes += $CommitLines
         if ($CompareLine) {
-          $Notes += @("", $CompareLine)
+          $Notes += @('', $CompareLine)
         }
         $NotesPath = "release-notes.md"
         $Notes | Set-Content -Path $NotesPath -Encoding UTF8
