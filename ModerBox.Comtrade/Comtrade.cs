@@ -13,6 +13,151 @@ namespace ModerBox.Comtrade {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
+        #region 编码自动检测
+
+        /// <summary>
+        /// 自动检测文件编码
+        /// 支持 UTF-8 (带/不带 BOM), UTF-16 LE/BE, UTF-32 LE/BE, GBK, ASCII
+        /// </summary>
+        public static Encoding DetectEncoding(string filePath) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            
+            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read)) {
+                bytesRead = fs.Read(buffer, 0, buffer.Length);
+            }
+            
+            if (bytesRead == 0) {
+                return Encoding.UTF8;
+            }
+            
+            return DetectEncodingFromBytes(buffer, bytesRead);
+        }
+
+        /// <summary>
+        /// 从字节数组检测编码
+        /// </summary>
+        public static Encoding DetectEncodingFromBytes(byte[] buffer, int length) {
+            // 检测 BOM (Byte Order Mark)
+            if (length >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF) {
+                return Encoding.UTF8; // UTF-8 with BOM
+            }
+            if (length >= 2 && buffer[0] == 0xFF && buffer[1] == 0xFE) {
+                if (length >= 4 && buffer[2] == 0x00 && buffer[3] == 0x00) {
+                    return Encoding.UTF32; // UTF-32 LE
+                }
+                return Encoding.Unicode; // UTF-16 LE
+            }
+            if (length >= 2 && buffer[0] == 0xFE && buffer[1] == 0xFF) {
+                return Encoding.BigEndianUnicode; // UTF-16 BE
+            }
+            if (length >= 4 && buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0xFE && buffer[3] == 0xFF) {
+                return new UTF32Encoding(true, true); // UTF-32 BE
+            }
+            
+            // 无 BOM，尝试检测编码
+            // 优先检测 UTF-8 (IEC 60255-24:2013 推荐使用 UTF-8)
+            if (IsValidUtf8(buffer, length)) {
+                // 检查是否包含非 ASCII 字符
+                bool hasNonAscii = false;
+                for (int i = 0; i < length; i++) {
+                    if (buffer[i] > 127) {
+                        hasNonAscii = true;
+                        break;
+                    }
+                }
+                
+                if (hasNonAscii) {
+                    return Encoding.UTF8; // UTF-8 without BOM
+                }
+                
+                // 纯 ASCII，返回 UTF-8 (ASCII 兼容)
+                return Encoding.UTF8;
+            }
+            
+            // 可能是 GBK/GB2312 编码 (中国大陆常用)
+            if (IsLikelyGbk(buffer, length)) {
+                return Encoding.GetEncoding("GBK");
+            }
+            
+            // 默认使用 GBK (向后兼容旧版 COMTRADE 文件)
+            return Encoding.GetEncoding("GBK");
+        }
+
+        /// <summary>
+        /// 验证是否为有效的 UTF-8 编码
+        /// </summary>
+        private static bool IsValidUtf8(byte[] buffer, int length) {
+            int i = 0;
+            while (i < length) {
+                byte b = buffer[i];
+                
+                if (b <= 0x7F) {
+                    // ASCII 字符
+                    i++;
+                    continue;
+                }
+                
+                int bytesNeeded;
+                if ((b & 0xE0) == 0xC0) {
+                    bytesNeeded = 1; // 2字节序列
+                    if (b < 0xC2) return false; // 过长编码
+                } else if ((b & 0xF0) == 0xE0) {
+                    bytesNeeded = 2; // 3字节序列
+                } else if ((b & 0xF8) == 0xF0) {
+                    bytesNeeded = 3; // 4字节序列
+                    if (b > 0xF4) return false; // 超出 Unicode 范围
+                } else {
+                    return false; // 无效的起始字节
+                }
+                
+                // 检查后续字节
+                if (i + bytesNeeded >= length) {
+                    // 文件末尾，可能是有效的截断
+                    return true;
+                }
+                
+                for (int j = 1; j <= bytesNeeded; j++) {
+                    if ((buffer[i + j] & 0xC0) != 0x80) {
+                        return false; // 后续字节必须是 10xxxxxx
+                    }
+                }
+                
+                i += bytesNeeded + 1;
+            }
+            
+            return true;
+        }
+
+        /// <summary>
+        /// 检测是否可能是 GBK 编码
+        /// GBK 使用双字节表示中文字符：第一字节 0x81-0xFE，第二字节 0x40-0xFE
+        /// </summary>
+        private static bool IsLikelyGbk(byte[] buffer, int length) {
+            int validGbkPairs = 0;
+            int invalidUtf8Sequences = 0;
+            
+            for (int i = 0; i < length - 1; i++) {
+                byte b1 = buffer[i];
+                byte b2 = buffer[i + 1];
+                
+                // 检测 GBK 双字节字符
+                if (b1 >= 0x81 && b1 <= 0xFE) {
+                    if ((b2 >= 0x40 && b2 <= 0x7E) || (b2 >= 0x80 && b2 <= 0xFE)) {
+                        validGbkPairs++;
+                        i++; // 跳过第二个字节
+                    } else {
+                        invalidUtf8Sequences++;
+                    }
+                }
+            }
+            
+            // 如果有多个有效的 GBK 双字节对，认为是 GBK
+            return validGbkPairs > 0 && invalidUtf8Sequences == 0;
+        }
+
+        #endregion
+
         public static Task<ComtradeInfo> ReadComtradeAsync(string cfgFilePath, bool loadDat = true) {
             return ReadComtradeInternalAsync(cfgFilePath, loadDat);
         }
@@ -31,7 +176,12 @@ namespace ModerBox.Comtrade {
         /// </summary>
         public static async Task<ComtradeInfo> ReadComtradeCFG(string cfgFilePath, bool allocateDataArrays = true) {
             ComtradeInfo comtradeInfo = new ComtradeInfo(cfgFilePath);
-            using StreamReader cfgReader = new StreamReader(cfgFilePath, Encoding.GetEncoding("GBK"));
+            
+            // 自动检测文件编码
+            Encoding encoding = DetectEncoding(cfgFilePath);
+            comtradeInfo.FileEncoding = encoding;
+            
+            using StreamReader cfgReader = new StreamReader(cfgFilePath, encoding);
             
             // 第 7.4.2 节: 站名、设备ID、修订年份
             string line = await cfgReader.ReadLineAsync();
