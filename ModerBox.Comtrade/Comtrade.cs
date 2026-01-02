@@ -5,6 +5,9 @@ using System.IO;
 using System.Text;
 
 namespace ModerBox.Comtrade {
+    /// <summary>
+    /// COMTRADE 文件解析器 - 符合 IEC 60255-24:2013 / IEEE Std C37.111-2013 标准
+    /// </summary>
     public class Comtrade {
         static Comtrade() {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -23,54 +26,49 @@ namespace ModerBox.Comtrade {
             return info;
         }
 
+        /// <summary>
+        /// 解析 CFG 配置文件 - IEC 60255-24:2013 第 7 章
+        /// </summary>
         public static async Task<ComtradeInfo> ReadComtradeCFG(string cfgFilePath, bool allocateDataArrays = true) {
             ComtradeInfo comtradeInfo = new ComtradeInfo(cfgFilePath);
             using StreamReader cfgReader = new StreamReader(cfgFilePath, Encoding.GetEncoding("GBK"));
+            
+            // 第 7.4.2 节: 站名、设备ID、修订年份
             string line = await cfgReader.ReadLineAsync();
             int rtdsFormatFlag = 0;
             if (line.IndexOf("RTDS", StringComparison.OrdinalIgnoreCase) >= 0) {
                 rtdsFormatFlag = 1;
             }
+            ParseStationLine(line, comtradeInfo);
+            
+            // 第 7.4.3 节: 通道数量和类型
             line = await cfgReader.ReadLineAsync();
             string[] lineParts = line.Split(new char[] { ',' });
-            int.Parse(lineParts[0]);
+            int.Parse(lineParts[0]); // 总通道数
             comtradeInfo.AnalogCount = int.Parse(lineParts[1].Replace(" ", "").Replace("A", ""));
             comtradeInfo.DigitalCount = int.Parse(lineParts[2].Replace(" ", "").Replace("D", ""));
+            
+            // 第 7.4.4 节: 模拟通道信息
             for (int i = 0; i < comtradeInfo.AnalogCount; i++) {
                 line = await cfgReader.ReadLineAsync();
                 lineParts = line.Split(new char[] { ',' });
-                AnalogInfo newAnalogInfo = new AnalogInfo();
-                newAnalogInfo.Name = lineParts[1];
-                newAnalogInfo.ABCN = "";
-                if (lineParts[2].IndexOf("A", StringComparison.OrdinalIgnoreCase) != -1) {
-                    newAnalogInfo.ABCN = "A";
-                } else if (lineParts[2].IndexOf("B", StringComparison.OrdinalIgnoreCase) != -1) {
-                    newAnalogInfo.ABCN = "B";
-                } else if (lineParts[2].IndexOf("C", StringComparison.OrdinalIgnoreCase) != -1) {
-                    newAnalogInfo.ABCN = "C";
-                } else if (lineParts[2].IndexOf("N", StringComparison.OrdinalIgnoreCase) != -1) {
-                    newAnalogInfo.ABCN = "N";
-                }
-                newAnalogInfo.Unit = lineParts[4];
-                double.TryParse(lineParts[5], out newAnalogInfo.Mul);
-                double.TryParse(lineParts[6], out newAnalogInfo.Add);
-                double.TryParse(lineParts[7], out newAnalogInfo.Skew);
-                if (lineParts.Length == 13) {
-                    double.TryParse(lineParts[10], out newAnalogInfo.Primary);
-                    double.TryParse(lineParts[11], out newAnalogInfo.Secondary);
-                    newAnalogInfo.Ps = !lineParts[12].Equals("P", StringComparison.OrdinalIgnoreCase);
-                }
+                AnalogInfo newAnalogInfo = ParseAnalogChannel(lineParts, i + 1);
                 comtradeInfo.AData.Add(newAnalogInfo);
             }
+            
+            // 第 7.4.5 节: 数字通道信息
             for (int j = 0; j < comtradeInfo.DigitalCount; j++) {
                 line = await cfgReader.ReadLineAsync();
                 lineParts = line.Split(new char[] { ',' });
-                DigitalInfo newDigitalInfo = new DigitalInfo();
-                newDigitalInfo.Name = lineParts[1];
+                DigitalInfo newDigitalInfo = ParseDigitalChannel(lineParts, j + 1);
                 comtradeInfo.DData.Add(newDigitalInfo);
             }
+            
+            // 第 7.4.6 节: 线路频率
             line = await cfgReader.ReadLineAsync();
             comtradeInfo.Hz = (int)Convert.ToSingle(line);
+            
+            // 第 7.4.7 节: 采样率信息
             line = await cfgReader.ReadLineAsync();
             int numberOfSampleRates = int.Parse(line);
             if (numberOfSampleRates == 0) {
@@ -86,13 +84,41 @@ namespace ModerBox.Comtrade {
                 comtradeInfo.Samps[k] = double.Parse(lineParts[0]);
                 comtradeInfo.EndSamps[k] = int.Parse(lineParts[1]);
             }
+            
+            // 第 7.4.8 节: 日期/时间戳
             line = await cfgReader.ReadLineAsync();
             comtradeInfo.dt1 = Comtrade.Text2Time(line, rtdsFormatFlag);
             line = await cfgReader.ReadLineAsync();
             comtradeInfo.dt0 = Comtrade.Text2Time(line, rtdsFormatFlag);
+            
+            // 第 7.4.9 节: 数据文件类型
             line = await cfgReader.ReadLineAsync();
-            comtradeInfo.ASCII = line;
-            //streamReader.Close();
+            comtradeInfo.ASCII = line?.Trim() ?? "ASCII";
+            comtradeInfo.FileType = ParseDataFileType(comtradeInfo.ASCII);
+            
+            // 2013 版本新增字段 (可选)
+            if (comtradeInfo.RevisionYear == ComtradeRevision.Rev2013) {
+                // 第 7.4.10 节: 时间戳乘法因子
+                line = await cfgReader.ReadLineAsync();
+                if (!string.IsNullOrEmpty(line)) {
+                    if (double.TryParse(line.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out double timemult)) {
+                        comtradeInfo.TimeMult = timemult;
+                    }
+                    
+                    // 第 7.4.11 节: 时间信息和本地时间与UTC关系
+                    line = await cfgReader.ReadLineAsync();
+                    if (!string.IsNullOrEmpty(line)) {
+                        ParseTimeCodeLine(line, comtradeInfo);
+                        
+                        // 第 7.4.12 节: 采样时间质量
+                        line = await cfgReader.ReadLineAsync();
+                        if (!string.IsNullOrEmpty(line)) {
+                            ParseLeapSecondLine(line, comtradeInfo);
+                        }
+                    }
+                }
+            }
+            
             ABCVA(comtradeInfo);
 
             if (allocateDataArrays) {
@@ -113,6 +139,178 @@ namespace ModerBox.Comtrade {
             return comtradeInfo;
         }
 
+        /// <summary>
+        /// 解析站名行 - IEC 60255-24:2013 第 7.4.2 节
+        /// 格式: station_name,rec_dev_id,rev_year
+        /// </summary>
+        private static void ParseStationLine(string line, ComtradeInfo info) {
+            var parts = line.Split(',');
+            if (parts.Length >= 1) {
+                info.StationName = parts[0].Trim();
+            }
+            if (parts.Length >= 2) {
+                info.RecordingDeviceId = parts[1].Trim();
+            }
+            if (parts.Length >= 3) {
+                string revYear = parts[2].Trim();
+                if (int.TryParse(revYear, out int year)) {
+                    info.RevisionYear = year switch {
+                        1991 => ComtradeRevision.Rev1991,
+                        2013 => ComtradeRevision.Rev2013,
+                        _ => ComtradeRevision.Rev1999
+                    };
+                }
+            }
+        }
+
+        /// <summary>
+        /// 解析模拟通道信息 - IEC 60255-24:2013 第 7.4.4 节
+        /// 格式: An,ch_id,ph,ccbm,uu,a,b,skew,min,max,primary,secondary,PS
+        /// </summary>
+        private static AnalogInfo ParseAnalogChannel(string[] parts, int index) {
+            AnalogInfo info = new AnalogInfo();
+            info.Index = index;
+            
+            if (parts.Length > 1) info.Name = parts[1].Trim();
+            
+            // 相别标识
+            if (parts.Length > 2) {
+                string ph = parts[2].Trim();
+                info.Phase = ph;
+                if (ph.IndexOf("A", StringComparison.OrdinalIgnoreCase) != -1) {
+                    info.ABCN = "A";
+                } else if (ph.IndexOf("B", StringComparison.OrdinalIgnoreCase) != -1) {
+                    info.ABCN = "B";
+                } else if (ph.IndexOf("C", StringComparison.OrdinalIgnoreCase) != -1) {
+                    info.ABCN = "C";
+                } else if (ph.IndexOf("N", StringComparison.OrdinalIgnoreCase) != -1) {
+                    info.ABCN = "N";
+                } else {
+                    info.ABCN = "";
+                }
+            }
+            
+            // 电路元件
+            if (parts.Length > 3) info.CircuitComponent = parts[3].Trim();
+            
+            // 单位
+            if (parts.Length > 4) info.Unit = parts[4].Trim();
+            
+            // 乘数因子 a
+            if (parts.Length > 5) double.TryParse(parts[5], NumberStyles.Any, CultureInfo.InvariantCulture, out info.Mul);
+            
+            // 偏移加数 b
+            if (parts.Length > 6) double.TryParse(parts[6], NumberStyles.Any, CultureInfo.InvariantCulture, out info.Add);
+            
+            // 时间偏移 skew
+            if (parts.Length > 7) double.TryParse(parts[7], NumberStyles.Any, CultureInfo.InvariantCulture, out info.Skew);
+            
+            // 最小值 min
+            if (parts.Length > 8 && int.TryParse(parts[8], out int min)) {
+                info.CfgMin = min;
+            }
+            
+            // 最大值 max
+            if (parts.Length > 9 && int.TryParse(parts[9], out int max)) {
+                info.CfgMax = max;
+            }
+            
+            // 一次侧/二次侧额定值和标识
+            if (parts.Length >= 13) {
+                double.TryParse(parts[10], NumberStyles.Any, CultureInfo.InvariantCulture, out info.Primary);
+                double.TryParse(parts[11], NumberStyles.Any, CultureInfo.InvariantCulture, out info.Secondary);
+                info.Ps = !parts[12].Trim().Equals("P", StringComparison.OrdinalIgnoreCase);
+            }
+            
+            return info;
+        }
+
+        /// <summary>
+        /// 解析数字通道信息 - IEC 60255-24:2013 第 7.4.5 节
+        /// 格式: Dn,ch_id,ph,ccbm,y
+        /// </summary>
+        private static DigitalInfo ParseDigitalChannel(string[] parts, int index) {
+            DigitalInfo info = new DigitalInfo();
+            info.Index = index;
+            
+            if (parts.Length > 1) info.Name = parts[1].Trim();
+            if (parts.Length > 2) info.Phase = parts[2].Trim();
+            if (parts.Length > 3) info.CircuitComponent = parts[3].Trim();
+            if (parts.Length > 4 && int.TryParse(parts[4], out int normalState)) {
+                info.NormalState = normalState;
+            }
+            
+            return info;
+        }
+
+        /// <summary>
+        /// 解析数据文件类型 - IEC 60255-24:2013 第 7.4.9 节
+        /// </summary>
+        private static DataFileType ParseDataFileType(string typeStr) {
+            return typeStr?.Trim().ToUpperInvariant() switch {
+                "ASCII" => DataFileType.ASCII,
+                "BINARY" => DataFileType.BINARY,
+                "BINARY32" => DataFileType.BINARY32,
+                "FLOAT32" => DataFileType.FLOAT32,
+                _ => DataFileType.ASCII
+            };
+        }
+
+        /// <summary>
+        /// 解析时间码行 - IEC 60255-24:2013 第 7.4.11 节
+        /// 格式: time_code,local_code
+        /// </summary>
+        private static void ParseTimeCodeLine(string line, ComtradeInfo info) {
+            var parts = line.Split(',');
+            if (parts.Length >= 1) {
+                info.TimeCode = ParseTimeOffset(parts[0].Trim());
+            }
+            if (parts.Length >= 2) {
+                info.LocalCode = ParseTimeOffset(parts[1].Trim());
+            }
+        }
+
+        /// <summary>
+        /// 解析时间偏移字符串 (如 "+08:00" 或 "-05:30")
+        /// </summary>
+        private static TimeSpan ParseTimeOffset(string offsetStr) {
+            if (string.IsNullOrEmpty(offsetStr)) return TimeSpan.Zero;
+            
+            bool isNegative = offsetStr.StartsWith("-");
+            offsetStr = offsetStr.TrimStart('+', '-');
+            
+            var timeParts = offsetStr.Split(':');
+            if (timeParts.Length >= 2 &&
+                int.TryParse(timeParts[0], out int hours) &&
+                int.TryParse(timeParts[1], out int minutes)) {
+                var span = new TimeSpan(hours, minutes, 0);
+                return isNegative ? -span : span;
+            }
+            return TimeSpan.Zero;
+        }
+
+        /// <summary>
+        /// 解析闰秒行 - IEC 60255-24:2013 第 7.4.12 节
+        /// 格式: leapsec,leapsecQ
+        /// </summary>
+        private static void ParseLeapSecondLine(string line, ComtradeInfo info) {
+            var parts = line.Split(',');
+            if (parts.Length >= 1 && int.TryParse(parts[0].Trim(), out int leapsec)) {
+                info.LeapSec = leapsec switch {
+                    0 => LeapSecondIndicator.None,
+                    1 => LeapSecondIndicator.Add,
+                    2 => LeapSecondIndicator.Subtract,
+                    _ => LeapSecondIndicator.Unknown
+                };
+            }
+            if (parts.Length >= 2 && int.TryParse(parts[1].Trim(), out int leapsecQ)) {
+                info.LeapSecQuality = leapsecQ == 1;
+            }
+        }
+
+        /// <summary>
+        /// 读取 DAT 数据文件 - IEC 60255-24:2013 第 8 章
+        /// </summary>
         public static async Task ReadComtradeDAT(ComtradeInfo comtradeInfo) {
             // Lazy CFG load may not allocate arrays; ensure buffers exist.
             for (int l = 0; l < comtradeInfo.AnalogCount; l++) {
@@ -127,34 +325,76 @@ namespace ModerBox.Comtrade {
             }
 
             double[] firstSampleAnalogValues = new double[comtradeInfo.AnalogCount];
-            if (string.Equals("ASCII", comtradeInfo.ASCII, StringComparison.OrdinalIgnoreCase)) {
-                string datFilePath = Path.ChangeExtension(comtradeInfo.FileName, "dat");
-                // 添加 FileOptions.SequentialScan 以优化顺序读取性能（特别是机械硬盘）
-                using FileStream fs = new FileStream(datFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
-                using StreamReader datReader = new StreamReader(fs, Encoding.Default);
-                for (int i = 0; i < comtradeInfo.EndSamp; i++) {
-                    string line = await datReader.ReadLineAsync();
-                    if (string.IsNullOrEmpty(line)) continue;
-                    ParseAsciiLine(line, comtradeInfo, i, firstSampleAnalogValues);
-                }
-                //streamReader.Close();
-                comtradeInfo.IsDatLoaded = true;
-                return;
+            
+            // 根据数据文件类型选择解析方法
+            switch (comtradeInfo.FileType) {
+                case DataFileType.ASCII:
+                    await ReadAsciiDAT(comtradeInfo, firstSampleAnalogValues);
+                    break;
+                case DataFileType.BINARY:
+                    await ReadBinaryDAT(comtradeInfo, firstSampleAnalogValues, bytesPerSample: 2);
+                    break;
+                case DataFileType.BINARY32:
+                    await ReadBinaryDAT(comtradeInfo, firstSampleAnalogValues, bytesPerSample: 4);
+                    break;
+                case DataFileType.FLOAT32:
+                    await ReadFloat32DAT(comtradeInfo, firstSampleAnalogValues);
+                    break;
             }
-            string datFilePathBinary = Path.ChangeExtension(comtradeInfo.FileName, "dat");
-            // 添加 FileOptions.SequentialScan 以优化顺序读取性能（特别是机械硬盘）
-            using FileStream datFileStream = new FileStream(datFilePathBinary, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+
+            comtradeInfo.IsDatLoaded = true;
+        }
+
+        /// <summary>
+        /// 读取 ASCII 格式数据文件 - IEC 60255-24:2013 第 8.4 节
+        /// </summary>
+        private static async Task ReadAsciiDAT(ComtradeInfo comtradeInfo, double[] firstSampleAnalogValues) {
+            string datFilePath = Path.ChangeExtension(comtradeInfo.FileName, "dat");
+            using FileStream fs = new FileStream(datFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+            using StreamReader datReader = new StreamReader(fs, Encoding.Default);
+            for (int i = 0; i < comtradeInfo.EndSamp; i++) {
+                string line = await datReader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line)) continue;
+                ParseAsciiLine(line, comtradeInfo, i, firstSampleAnalogValues);
+            }
+        }
+
+        /// <summary>
+        /// 读取二进制格式数据文件 - IEC 60255-24:2013 第 8.6 节
+        /// 支持 BINARY (16位) 和 BINARY32 (32位) 格式
+        /// </summary>
+        private static Task ReadBinaryDAT(ComtradeInfo comtradeInfo, double[] firstSampleAnalogValues, int bytesPerSample) {
+            string datFilePath = Path.ChangeExtension(comtradeInfo.FileName, "dat");
+            using FileStream datFileStream = new FileStream(datFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
             using BinaryReader datBinaryReader = new BinaryReader(datFileStream, Encoding.Default);
+            
             int numberOfDigitalWords = (comtradeInfo.DigitalCount + 15) / 16;
+            
+            // 计算每个样本的字节数
+            int sampleNumberBytes = 4; // 样本号: 4字节
+            int timestampBytes = 4;    // 时间戳: 4字节
+            int analogDataBytes = comtradeInfo.AnalogCount * bytesPerSample;
+            int digitalDataBytes = numberOfDigitalWords * 2;
+            int totalBytesPerSample = sampleNumberBytes + timestampBytes + analogDataBytes + digitalDataBytes;
+            
             for (int sampleIndex = 0; sampleIndex < comtradeInfo.EndSamp; sampleIndex++) {
-                if (datFileStream.Position + 8 + comtradeInfo.AnalogCount * 2 + numberOfDigitalWords * 2 > datFileStream.Length) {
+                if (datFileStream.Position + totalBytesPerSample > datFileStream.Length) {
                     break;
                 }
+                
                 datBinaryReader.ReadUInt32(); // Sample number
                 datBinaryReader.ReadUInt32(); // Timestamp
+                
                 for (int analogIndex = 0; analogIndex < comtradeInfo.AnalogCount; analogIndex++) {
                     AnalogInfo currentAnalogInfo = comtradeInfo.AData[analogIndex];
-                    double analogValue = (double)datBinaryReader.ReadInt16() * currentAnalogInfo.Mul + currentAnalogInfo.Add;
+                    
+                    // 根据字节数读取不同格式
+                    double rawValue = bytesPerSample == 2 
+                        ? datBinaryReader.ReadInt16() 
+                        : datBinaryReader.ReadInt32();
+                    
+                    double analogValue = rawValue * currentAnalogInfo.Mul + currentAnalogInfo.Add;
+                    
                     if (sampleIndex == 0) {
                         firstSampleAnalogValues[analogIndex] = analogValue;
                         currentAnalogInfo.Data[sampleIndex] = analogValue;
@@ -166,6 +406,7 @@ namespace ModerBox.Comtrade {
                         currentAnalogInfo.MinValue = Math.Min(currentAnalogInfo.Data[sampleIndex], currentAnalogInfo.MinValue);
                     }
                 }
+                
                 for (int wordIndex = 0; wordIndex < numberOfDigitalWords; wordIndex++) {
                     ushort digitalValues = datBinaryReader.ReadUInt16();
                     for (int bitIndex = 0; bitIndex < 16; bitIndex++) {
@@ -176,8 +417,61 @@ namespace ModerBox.Comtrade {
                     }
                 }
             }
+            
+            return Task.CompletedTask;
+        }
 
-            comtradeInfo.IsDatLoaded = true;
+        /// <summary>
+        /// 读取 FLOAT32 格式数据文件 - IEC 60255-24:2013 第 8.6 节
+        /// 使用 IEEE 754 单精度浮点格式
+        /// </summary>
+        private static Task ReadFloat32DAT(ComtradeInfo comtradeInfo, double[] firstSampleAnalogValues) {
+            string datFilePath = Path.ChangeExtension(comtradeInfo.FileName, "dat");
+            using FileStream datFileStream = new FileStream(datFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+            using BinaryReader datBinaryReader = new BinaryReader(datFileStream, Encoding.Default);
+            
+            int numberOfDigitalWords = (comtradeInfo.DigitalCount + 15) / 16;
+            int totalBytesPerSample = 4 + 4 + (comtradeInfo.AnalogCount * 4) + (numberOfDigitalWords * 2);
+            
+            for (int sampleIndex = 0; sampleIndex < comtradeInfo.EndSamp; sampleIndex++) {
+                if (datFileStream.Position + totalBytesPerSample > datFileStream.Length) {
+                    break;
+                }
+                
+                datBinaryReader.ReadUInt32(); // Sample number
+                datBinaryReader.ReadUInt32(); // Timestamp
+                
+                for (int analogIndex = 0; analogIndex < comtradeInfo.AnalogCount; analogIndex++) {
+                    AnalogInfo currentAnalogInfo = comtradeInfo.AData[analogIndex];
+                    
+                    // FLOAT32: 直接读取浮点值，不需要应用 a 和 b 因子
+                    // 根据标准，FLOAT32 格式的值已经是最终转换后的值
+                    double analogValue = datBinaryReader.ReadSingle();
+                    
+                    if (sampleIndex == 0) {
+                        firstSampleAnalogValues[analogIndex] = analogValue;
+                        currentAnalogInfo.Data[sampleIndex] = analogValue;
+                        currentAnalogInfo.MaxValue = currentAnalogInfo.Data[sampleIndex];
+                        currentAnalogInfo.MinValue = currentAnalogInfo.Data[sampleIndex];
+                    } else {
+                        currentAnalogInfo.Data[sampleIndex] = analogValue;
+                        currentAnalogInfo.MaxValue = Math.Max(currentAnalogInfo.Data[sampleIndex], currentAnalogInfo.MaxValue);
+                        currentAnalogInfo.MinValue = Math.Min(currentAnalogInfo.Data[sampleIndex], currentAnalogInfo.MinValue);
+                    }
+                }
+                
+                for (int wordIndex = 0; wordIndex < numberOfDigitalWords; wordIndex++) {
+                    ushort digitalValues = datBinaryReader.ReadUInt16();
+                    for (int bitIndex = 0; bitIndex < 16; bitIndex++) {
+                        int digitalIndex = wordIndex * 16 + bitIndex;
+                        if (digitalIndex < comtradeInfo.DigitalCount) {
+                            comtradeInfo.DData[digitalIndex].Data[sampleIndex] = (digitalValues >> bitIndex) & 1;
+                        }
+                    }
+                }
+            }
+            
+            return Task.CompletedTask;
         }
 
         private static ReadOnlySpan<char> GetNextToken(ref ReadOnlySpan<char> span) {
