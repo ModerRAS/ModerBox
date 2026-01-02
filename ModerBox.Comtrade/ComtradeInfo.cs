@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -125,6 +126,14 @@ namespace ModerBox.Comtrade {
         
         /// <summary>COMTRADE 修订版本年份 (1991, 1999, 2013)</summary>
         public ComtradeRevision RevisionYear = ComtradeRevision.Rev1999;
+        #endregion
+
+        #region 编码信息
+        /// <summary>
+        /// 检测到的文件编码
+        /// </summary>
+        [NonSerialized]
+        public Encoding FileEncoding = Encoding.UTF8;
         #endregion
 
         public string FileName;
