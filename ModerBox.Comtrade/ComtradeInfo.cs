@@ -133,7 +133,7 @@ namespace ModerBox.Comtrade {
         /// 检测到的文件编码
         /// </summary>
         [NonSerialized]
-        public Encoding FileEncoding = Encoding.UTF8;
+        public Encoding FileEncoding = Encoding.GetEncoding("GBK");
         #endregion
 
         public string FileName;
