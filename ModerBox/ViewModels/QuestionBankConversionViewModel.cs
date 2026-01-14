@@ -15,8 +15,6 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 
 namespace ModerBox.ViewModels {
-    public record FormatOption<TFormat>(string DisplayName, TFormat Format);
-
     public class QuestionBankConversionViewModel : ViewModelBase {
         private readonly QuestionBankConversionService _conversionService = new();
 
@@ -86,18 +84,9 @@ namespace ModerBox.ViewModels {
             Title = "题库转换";
             Icon = "Document";
 
-            SourceFormatOptions = new[] {
-                new FormatOption<QuestionBankSourceFormat>("自动检测", QuestionBankSourceFormat.AutoDetect),
-                new FormatOption<QuestionBankSourceFormat>("TXT 文本", QuestionBankSourceFormat.Txt),
-                new FormatOption<QuestionBankSourceFormat>("网络大学 Excel", QuestionBankSourceFormat.Wldx),
-                new FormatOption<QuestionBankSourceFormat>("网络大学 4 列", QuestionBankSourceFormat.Wldx4),
-                new FormatOption<QuestionBankSourceFormat>("EXC 格式", QuestionBankSourceFormat.Exc)
-            };
-
-            TargetFormatOptions = new[] {
-                new FormatOption<QuestionBankTargetFormat>("考试宝 (.xlsx)", QuestionBankTargetFormat.Ksb),
-                new FormatOption<QuestionBankTargetFormat>("磨题帮 (.xlsx)", QuestionBankTargetFormat.Mtb)
-            };
+            // 从 QuestionBank 项目自动获取格式选项
+            SourceFormatOptions = FormatOptionsProvider.GetSourceFormatOptions();
+            TargetFormatOptions = FormatOptionsProvider.GetTargetFormatOptions();
 
             _selectedSourceFormat = SourceFormatOptions[0];
             _selectedTargetFormat = TargetFormatOptions[0];
