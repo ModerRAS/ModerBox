@@ -34,7 +34,7 @@ public class LlmConfig {
     /// <summary>
     /// 请求超时时间（秒）
     /// </summary>
-    public int TimeoutSeconds { get; set; } = 360;
+    public int TimeoutSeconds { get; set; } = 3600;
 }
 
 /// <summary>
