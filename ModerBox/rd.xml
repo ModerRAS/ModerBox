@@ -2,5 +2,18 @@
   <Application>
     <!--This is the main executable.-->
     <Assembly Name="ModerBox" />
+    
+    <!-- QuestionBank 项目的反射支持 (用于通过枚举特性自动生成UI选项) -->
+    <Assembly Name="ModerBox.QuestionBank">
+      <!-- 保留枚举类型及其字段元数据，以便反射读取 Description 和 FormatDetail 特性 -->
+      <Type Name="ModerBox.QuestionBank.QuestionBankSourceFormat" Dynamic="Required All" />
+      <Type Name="ModerBox.QuestionBank.QuestionBankTargetFormat" Dynamic="Required All" />
+      <Type Name="ModerBox.QuestionBank.FormatDetailAttribute" Dynamic="Required All" />
+    </Assembly>
+    
+    <!-- System.ComponentModel 中的 DescriptionAttribute 需要保留 -->
+    <Assembly Name="System.ComponentModel.Primitives">
+      <Type Name="System.ComponentModel.DescriptionAttribute" Dynamic="Required All" />
+    </Assembly>
   </Application>
 </Directives> 
