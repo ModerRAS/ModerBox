@@ -18,8 +18,13 @@ namespace ModerBox.ViewModels {
     public class QuestionBankConversionViewModel : ViewModelBase {
         private readonly QuestionBankConversionService _conversionService = new();
 
+        // 下拉框选项（通过反射从 QuestionBank 项目自动获取）
         public IReadOnlyList<FormatOption<QuestionBankSourceFormat>> SourceFormatOptions { get; }
         public IReadOnlyList<FormatOption<QuestionBankTargetFormat>> TargetFormatOptions { get; }
+
+        // 格式说明（通过反射从 QuestionBank 项目自动获取，用于UI显示格式描述）
+        public IReadOnlyList<FormatDescription> SourceFormatDescriptions { get; }
+        public IReadOnlyList<FormatDescription> TargetFormatDescriptions { get; }
 
         private FormatOption<QuestionBankSourceFormat> _selectedSourceFormat;
         public FormatOption<QuestionBankSourceFormat> SelectedSourceFormat {
@@ -84,9 +89,13 @@ namespace ModerBox.ViewModels {
             Title = "题库转换";
             Icon = "Document";
 
-            // 从 QuestionBank 项目自动获取格式选项
+            // 从 QuestionBank 项目自动获取格式选项（通过反射读取枚举的 Description 特性）
             SourceFormatOptions = FormatOptionsProvider.GetSourceFormatOptions();
             TargetFormatOptions = FormatOptionsProvider.GetTargetFormatOptions();
+
+            // 从 QuestionBank 项目自动获取格式描述（通过反射读取枚举的 FormatDetail 特性）
+            SourceFormatDescriptions = FormatOptionsProvider.GetSourceFormatDescriptions();
+            TargetFormatDescriptions = FormatOptionsProvider.GetTargetFormatDescriptions();
 
             _selectedSourceFormat = SourceFormatOptions[0];
             _selectedTargetFormat = TargetFormatOptions[0];
