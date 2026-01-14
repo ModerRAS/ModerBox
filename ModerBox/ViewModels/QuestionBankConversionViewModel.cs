@@ -17,6 +17,8 @@ using System.Threading.Tasks;
 namespace ModerBox.ViewModels {
     public class QuestionBankConversionViewModel : ViewModelBase {
         private readonly QuestionBankConversionService _conversionService = new();
+        private readonly AnalysisCacheService _cacheService = new();
+        private LlmAnalysisService? _llmService;
 
         // 下拉框选项（通过反射从 QuestionBank 项目自动获取）
         public IReadOnlyList<FormatOption<QuestionBankSourceFormat>> SourceFormatOptions { get; }
@@ -25,6 +27,8 @@ namespace ModerBox.ViewModels {
         // 格式说明（通过反射从 QuestionBank 项目自动获取，用于UI显示格式描述）
         public IReadOnlyList<FormatDescription> SourceFormatDescriptions { get; }
         public IReadOnlyList<FormatDescription> TargetFormatDescriptions { get; }
+
+        #region 源格式和目标格式选择
 
         private FormatOption<QuestionBankSourceFormat> _selectedSourceFormat;
         public FormatOption<QuestionBankSourceFormat> SelectedSourceFormat {
@@ -48,6 +52,10 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        #endregion
+
+        #region 文件路径
+
         private string _sourceFile = string.Empty;
         public string SourceFile {
             get => _sourceFile;
@@ -59,6 +67,10 @@ namespace ModerBox.ViewModels {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
         }
+
+        #endregion
+
+        #region 状态
 
         private string _status;
         public string Status {
@@ -81,9 +93,67 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _statusSeverity, value);
         }
 
+        #endregion
+
+        #region 大模型配置
+
+        private bool _llmEnabled;
+        public bool LlmEnabled {
+            get => _llmEnabled;
+            set {
+                this.RaiseAndSetIfChanged(ref _llmEnabled, value);
+                SaveLlmConfig();
+            }
+        }
+
+        private string _llmApiUrl = string.Empty;
+        public string LlmApiUrl {
+            get => _llmApiUrl;
+            set => this.RaiseAndSetIfChanged(ref _llmApiUrl, value);
+        }
+
+        private string _llmApiKey = string.Empty;
+        public string LlmApiKey {
+            get => _llmApiKey;
+            set => this.RaiseAndSetIfChanged(ref _llmApiKey, value);
+        }
+
+        private string _llmModelName = string.Empty;
+        public string LlmModelName {
+            get => _llmModelName;
+            set => this.RaiseAndSetIfChanged(ref _llmModelName, value);
+        }
+
+        private int _llmMaxConcurrency = 3;
+        public int LlmMaxConcurrency {
+            get => _llmMaxConcurrency;
+            set => this.RaiseAndSetIfChanged(ref _llmMaxConcurrency, Math.Max(1, Math.Min(10, value)));
+        }
+
+        private string _llmProgress = string.Empty;
+        public string LlmProgress {
+            get => _llmProgress;
+            set => this.RaiseAndSetIfChanged(ref _llmProgress, value);
+        }
+
+        private string _cacheStats = string.Empty;
+        public string CacheStats {
+            get => _cacheStats;
+            set => this.RaiseAndSetIfChanged(ref _cacheStats, value);
+        }
+
+        #endregion
+
+        #region 命令
+
         public ReactiveCommand<Unit, Unit> SelectSourceFile { get; }
         public ReactiveCommand<Unit, Unit> SelectTargetFile { get; }
         public ReactiveCommand<Unit, Unit> RunConversion { get; }
+        public ReactiveCommand<Unit, Unit> SaveLlmConfigCommand { get; }
+        public ReactiveCommand<Unit, Unit> ClearCacheCommand { get; }
+        public ReactiveCommand<Unit, Unit> CancelLlmCommand { get; }
+
+        #endregion
 
         public QuestionBankConversionViewModel() {
             Title = "题库转换";
@@ -101,6 +171,11 @@ namespace ModerBox.ViewModels {
             _selectedTargetFormat = TargetFormatOptions[0];
             _status = "请选择源文件并开始转换。";
 
+            // 加载大模型配置
+            LoadLlmConfig();
+            UpdateCacheStats();
+
+            // 初始化命令
             SelectSourceFile = ReactiveCommand.CreateFromTask(SelectSourceFileTask);
             SelectTargetFile = ReactiveCommand.CreateFromTask(SelectTargetFileTask);
 
@@ -108,7 +183,58 @@ namespace ModerBox.ViewModels {
                 (source, target, busy) => !busy && !string.IsNullOrWhiteSpace(source) && !string.IsNullOrWhiteSpace(target));
 
             RunConversion = ReactiveCommand.CreateFromTask(RunConversionTask, canConvert);
+            SaveLlmConfigCommand = ReactiveCommand.Create(SaveLlmConfig);
+            ClearCacheCommand = ReactiveCommand.Create(ClearCache);
+            CancelLlmCommand = ReactiveCommand.Create(CancelLlm);
         }
+
+        #region 大模型配置加载/保存
+
+        private void LoadLlmConfig() {
+            var config = LlmConfigService.Load();
+            _llmEnabled = config.Enabled;
+            _llmApiUrl = config.ApiUrl;
+            _llmApiKey = config.ApiKey;
+            _llmModelName = config.ModelName;
+            _llmMaxConcurrency = config.MaxConcurrency;
+        }
+
+        private void SaveLlmConfig() {
+            var config = new LlmConfig {
+                Enabled = LlmEnabled,
+                ApiUrl = LlmApiUrl,
+                ApiKey = LlmApiKey,
+                ModelName = LlmModelName,
+                MaxConcurrency = LlmMaxConcurrency
+            };
+            LlmConfigService.Save(config);
+        }
+
+        private void UpdateCacheStats() {
+            _cacheService.LoadCache();
+            var (count, size) = _cacheService.GetCacheStats();
+            var sizeStr = size > 1024 * 1024 
+                ? $"{size / 1024.0 / 1024.0:F1} MB" 
+                : size > 1024 
+                    ? $"{size / 1024.0:F1} KB" 
+                    : $"{size} B";
+            CacheStats = $"已缓存 {count} 条解析，占用 {sizeStr}";
+        }
+
+        private void ClearCache() {
+            _cacheService.ClearAllCache();
+            UpdateCacheStats();
+            Status = "缓存已清除";
+        }
+
+        private void CancelLlm() {
+            _llmService?.Cancel();
+            Status = "已取消解析任务";
+        }
+
+        #endregion
+
+        #region 文件选择
 
         private async Task SelectSourceFileTask() {
             try {
@@ -148,6 +274,10 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        #endregion
+
+        #region 转换任务
+
         private async Task RunConversionTask() {
             if (!File.Exists(SourceFile)) {
                 Status = "错误：源文件不存在";
@@ -156,28 +286,77 @@ namespace ModerBox.ViewModels {
 
             try {
                 IsBusy = true;
-                Status = "正在分析题库...";
+                Status = "正在读取题库...";
 
                 var targetPath = EnsureTargetFileExtension(TargetFile, SelectedTargetFormat.Format);
                 TargetFile = targetPath;
 
                 var title = Path.GetFileNameWithoutExtension(SourceFile);
 
-                var summary = await Task.Run(() => _conversionService.Convert(
-                    SourceFile,
-                    targetPath,
-                    SelectedSourceFormat.Format,
-                    SelectedTargetFormat.Format,
-                    title));
+                // 读取题目
+                var questions = await Task.Run(() => 
+                    _conversionService.Read(SourceFile, SelectedSourceFormat.Format));
 
-                Status = $"转换完成，共 {summary.QuestionCount} 道题目。";
-                Util.OpenFileWithExplorer(summary.TargetPath);
+                Status = $"已读取 {questions.Count} 道题目";
+
+                // 如果启用了大模型解析
+                if (LlmEnabled && !string.IsNullOrWhiteSpace(LlmApiKey)) {
+                    Status = "正在生成解析...";
+                    LlmProgress = $"0 / {questions.Count}";
+
+                    var config = new LlmConfig {
+                        Enabled = true,
+                        ApiUrl = LlmApiUrl,
+                        ApiKey = LlmApiKey,
+                        ModelName = LlmModelName,
+                        MaxConcurrency = LlmMaxConcurrency
+                    };
+
+                    _llmService = new LlmAnalysisService(config, _cacheService);
+                    _llmService.ProgressChanged += OnLlmProgressChanged;
+
+                    try {
+                        questions = await _llmService.GenerateAnalysisAsync(questions, SourceFile);
+                        UpdateCacheStats();
+                    } finally {
+                        _llmService.ProgressChanged -= OnLlmProgressChanged;
+                        _llmService.Dispose();
+                        _llmService = null;
+                    }
+                }
+
+                // 写入目标文件
+                Status = "正在写入文件...";
+                await Task.Run(() => 
+                    _conversionService.Write(questions, targetPath, SelectedTargetFormat.Format, title));
+
+                Status = $"转换完成，共 {questions.Count} 道题目。";
+                LlmProgress = string.Empty;
+                Util.OpenFileWithExplorer(targetPath);
+            } catch (OperationCanceledException) {
+                Status = "转换已取消";
             } catch (Exception ex) {
                 Status = $"错误：{ex.Message}";
             } finally {
                 IsBusy = false;
             }
         }
+
+        private void OnLlmProgressChanged(object? sender, AnalysisProgressEventArgs e) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                LlmProgress = $"{e.ProcessedCount} / {e.TotalCount}" + 
+                    (e.FromCache ? " (缓存)" : "") +
+                    (e.ErrorMessage != null ? $" ⚠ {e.ErrorMessage}" : "");
+                
+                if (e.ErrorMessage == null) {
+                    Status = $"正在生成解析... {e.ProcessedCount}/{e.TotalCount}";
+                }
+            });
+        }
+
+        #endregion
+
+        #region 辅助方法
 
         private async Task<IStorageFile?> DoOpenFilePickerAsync() {
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
@@ -188,9 +367,10 @@ namespace ModerBox.ViewModels {
                 Title = "选择题库源文件",
                 AllowMultiple = false,
                 FileTypeFilter = new[] {
-                    new FilePickerFileType("所有支持的文件") { Patterns = new[] { "*.txt", "*.xlsx", "*.xls" } },
+                    new FilePickerFileType("所有支持的文件") { Patterns = new[] { "*.txt", "*.xlsx", "*.xls", "*.json" } },
                     new FilePickerFileType("文本文件") { Patterns = new[] { "*.txt" } },
                     new FilePickerFileType("Excel 文件") { Patterns = new[] { "*.xlsx", "*.xls" } },
+                    new FilePickerFileType("JSON 文件") { Patterns = new[] { "*.json" } },
                     FilePickerFileTypes.All
                 }
             });
@@ -241,5 +421,7 @@ namespace ModerBox.ViewModels {
 
             return InfoBarSeverity.Informational;
         }
+
+        #endregion
     }
 }

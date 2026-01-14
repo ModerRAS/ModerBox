@@ -111,6 +111,95 @@
                         Severity="{Binding StatusSeverity}"
                         Message="{Binding Status}"/>
 
+            <!-- 大模型解析配置 -->
+            <ui:InfoBar Title="大模型解析配置"
+                        Severity="Informational"
+                        IsClosable="False"
+                        IsOpen="True"
+                        Padding="15">
+                <StackPanel Spacing="12">
+                    <!-- 启用开关 -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <ToggleSwitch IsChecked="{Binding LlmEnabled}"
+                                      OnContent="已启用"
+                                      OffContent="已禁用"/>
+                        <TextBlock Text="启用大模型自动生成题目解析"
+                                   VerticalAlignment="Center"
+                                   Opacity="0.8"/>
+                    </StackPanel>
+
+                    <!-- 配置面板（仅在启用时显示） -->
+                    <StackPanel Spacing="10" IsVisible="{Binding LlmEnabled}">
+                        <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                            <!-- API URL -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                       Text="API 地址" 
+                                       VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                     Text="{Binding LlmApiUrl}"
+                                     Watermark="https://api.openai.com/v1/chat/completions"/>
+
+                            <!-- API Key -->
+                            <TextBlock Grid.Row="1" Grid.Column="0" 
+                                       Text="API Key" 
+                                       VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1"
+                                     Text="{Binding LlmApiKey}"
+                                     PasswordChar="•"
+                                     Watermark="sk-..."/>
+
+                            <!-- 模型名称 -->
+                            <TextBlock Grid.Row="2" Grid.Column="0" 
+                                       Text="模型名称" 
+                                       VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1"
+                                     Text="{Binding LlmModelName}"
+                                     Watermark="gpt-4o-mini"/>
+
+                            <!-- 并发数 -->
+                            <TextBlock Grid.Row="3" Grid.Column="0" 
+                                       Text="并发数" 
+                                       VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                           Value="{Binding LlmMaxConcurrency}"
+                                           Minimum="1"
+                                           Maximum="10"
+                                           Width="120"
+                                           HorizontalAlignment="Left"/>
+                        </Grid>
+
+                        <!-- 保存按钮 -->
+                        <Button Content="保存配置"
+                                Command="{Binding SaveLlmConfigCommand}"
+                                HorizontalAlignment="Left"/>
+
+                        <!-- 进度显示 -->
+                        <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding LlmProgress, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="解析进度：" Opacity="0.8"/>
+                            <TextBlock Text="{Binding LlmProgress}" FontWeight="SemiBold"/>
+                            <Button Content="取消" 
+                                    Command="{Binding CancelLlmCommand}"
+                                    IsVisible="{Binding IsBusy}"
+                                    Padding="8,2"/>
+                        </StackPanel>
+
+                        <!-- 缓存信息 -->
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding CacheStats}" Opacity="0.7"/>
+                            <Button Content="清除缓存" 
+                                    Command="{Binding ClearCacheCommand}"
+                                    Padding="8,2"/>
+                        </StackPanel>
+
+                        <!-- 说明 -->
+                        <TextBlock Text="提示：配置会自动保存到 AppData 目录，解析结果会缓存以支持断点续传。"
+                                   Opacity="0.6"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+            </ui:InfoBar>
+
             <!-- 支持的格式说明（自动从 QuestionBank 项目的枚举特性中读取） -->
             <ui:InfoBar Title="支持的格式说明"
                         Severity="Informational"
