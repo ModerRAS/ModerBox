@@ -161,9 +161,8 @@
                                        Text="并发数" 
                                        VerticalAlignment="Center"/>
                             <NumericUpDown Grid.Row="3" Grid.Column="1"
-                                           Value="{Binding LlmMaxConcurrency}"
+                                           Value="{Binding LlmMaxConcurrencyInput}"
                                            Minimum="1"
-                                           Maximum="10"
                                            Width="120"
                                            HorizontalAlignment="Left"/>
                         </Grid>

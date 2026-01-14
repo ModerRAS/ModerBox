@@ -127,7 +127,38 @@ namespace ModerBox.ViewModels {
         private int _llmMaxConcurrency = 3;
         public int LlmMaxConcurrency {
             get => _llmMaxConcurrency;
-            set => this.RaiseAndSetIfChanged(ref _llmMaxConcurrency, Math.Max(1, Math.Min(10, value)));
+            set {
+                var coerced = Math.Max(1, value);
+                if (_llmMaxConcurrency != coerced) {
+                    this.RaiseAndSetIfChanged(ref _llmMaxConcurrency, coerced);
+
+                    // 同步 UI 输入值（显示为整数）
+                    var asDecimal = (decimal)coerced;
+                    if (_llmMaxConcurrencyInput != asDecimal) {
+                        this.RaiseAndSetIfChanged(ref _llmMaxConcurrencyInput, asDecimal);
+                    }
+                }
+            }
+        }
+
+        // NumericUpDown 允许输入小数；这里把输入值自动“取整”为整数并同步回 UI。
+        // 规则：向下取整（floor），并且最小为 1。
+        private decimal _llmMaxConcurrencyInput = 3;
+        public decimal LlmMaxConcurrencyInput {
+            get => _llmMaxConcurrencyInput;
+            set {
+                var coercedInt = Math.Max(1, (int)Math.Floor(value));
+                var coercedDecimal = (decimal)coercedInt;
+
+                // 先同步整数值（供业务逻辑/配置使用）
+                if (_llmMaxConcurrency != coercedInt) {
+                    _llmMaxConcurrency = coercedInt;
+                    this.RaisePropertyChanged(nameof(LlmMaxConcurrency));
+                }
+
+                // 再把输入框显示值改成整数
+                this.RaiseAndSetIfChanged(ref _llmMaxConcurrencyInput, coercedDecimal);
+            }
         }
 
         private string _llmProgress = string.Empty;
@@ -196,7 +227,8 @@ namespace ModerBox.ViewModels {
             _llmApiUrl = config.ApiUrl;
             _llmApiKey = config.ApiKey;
             _llmModelName = config.ModelName;
-            _llmMaxConcurrency = config.MaxConcurrency;
+            _llmMaxConcurrency = Math.Max(1, config.MaxConcurrency);
+            _llmMaxConcurrencyInput = _llmMaxConcurrency;
         }
 
         private void SaveLlmConfig() {
