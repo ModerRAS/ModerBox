@@ -9,37 +9,56 @@ namespace ModerBox.QuestionBank;
 /// <summary>
 /// 题库源格式。
 /// </summary>
+/// <remarks>
+/// <para>添加新格式时，请同时添加以下特性：</para>
+/// <list type="bullet">
+/// <item>[Description("显示名称")] - 下拉框中显示的名称</item>
+/// <item>[FormatDetail("详细描述")] - 格式说明中显示的描述（可选，AutoDetect无需添加）</item>
+/// </list>
+/// <para>UI会通过反射自动读取这些特性，无需修改其他代码。</para>
+/// </remarks>
 public enum QuestionBankSourceFormat {
     [Description("自动检测")]
     AutoDetect,
 
     [Description("TXT 文本")]
+    [FormatDetail("从Word格式题库转换的文本文件")]
     Txt,
 
     [Description("网络大学 Excel")]
+    [FormatDetail("标准网络大学题库格式（G列题干，F列题型）")]
     Wldx,
 
     [Description("网络大学 4 列")]
+    [FormatDetail("简化版网络大学格式（4列数据）")]
     Wldx4,
 
     [Description("EXC 格式")]
+    [FormatDetail("特定的Excel题库格式")]
     Exc,
 
-    /// <summary>
-    /// 国电培训JSON格式
-    /// </summary>
     [Description("国电培训 JSON")]
+    [FormatDetail("国电培训系统导出的JSON格式题库")]
     Gdpx
 }
 
 /// <summary>
 /// 题库目标格式。
 /// </summary>
+/// <remarks>
+/// <para>添加新格式时，请同时添加以下特性：</para>
+/// <list type="bullet">
+/// <item>[Description("显示名称")] - 下拉框中显示的名称</item>
+/// <item>[FormatDetail("详细描述")] - 格式说明中显示的描述</item>
+/// </list>
+/// </remarks>
 public enum QuestionBankTargetFormat {
     [Description("考试宝 (.xlsx)")]
+    [FormatDetail("适用于考试宝App的题库格式")]
     Ksb,
 
     [Description("磨题帮 (.xlsx)")]
+    [FormatDetail("适用于磨题帮App的题库格式")]
     Mtb
 }
 

@@ -111,7 +111,7 @@
                         Severity="{Binding StatusSeverity}"
                         Message="{Binding Status}"/>
 
-            <!-- 支持的格式说明 -->
+            <!-- 支持的格式说明（自动从 QuestionBank 项目的枚举特性中读取） -->
             <ui:InfoBar Title="支持的格式说明"
                         Severity="Informational"
                         IsClosable="False"
@@ -120,16 +120,34 @@
                 <StackPanel Spacing="10">
                     <StackPanel Spacing="5">
                         <TextBlock Text="源格式：" FontWeight="Bold"/>
-                        <TextBlock Text="• TXT文本：从Word格式题库转换的文本文件" TextWrapping="Wrap"/>
-                        <TextBlock Text="• 网络大学Excel：标准网络大学题库格式（G列题干，F列题型）" TextWrapping="Wrap"/>
-                        <TextBlock Text="• 网络大学4列：简化版网络大学格式（4列数据）" TextWrapping="Wrap"/>
-                        <TextBlock Text="• EXC格式：特定的Excel题库格式" TextWrapping="Wrap"/>
+                        <ItemsControl ItemsSource="{Binding SourceFormatDescriptions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock TextWrapping="Wrap">
+                                        <Run Text="• "/>
+                                        <Run Text="{Binding DisplayName}"/>
+                                        <Run Text="："/>
+                                        <Run Text="{Binding Detail}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
 
                     <StackPanel Spacing="5">
                         <TextBlock Text="目标格式：" FontWeight="Bold"/>
-                        <TextBlock Text="• 考试宝：适用于考试宝App的题库格式" TextWrapping="Wrap"/>
-                        <TextBlock Text="• 磨题帮：适用于磨题帮App的题库格式" TextWrapping="Wrap"/>
+                        <ItemsControl ItemsSource="{Binding TargetFormatDescriptions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock TextWrapping="Wrap">
+                                        <Run Text="• "/>
+                                        <Run Text="{Binding DisplayName}"/>
+                                        <Run Text="："/>
+                                        <Run Text="{Binding Detail}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </StackPanel>
             </ui:InfoBar>
