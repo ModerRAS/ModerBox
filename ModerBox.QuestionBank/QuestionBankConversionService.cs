@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 
@@ -9,18 +10,36 @@ namespace ModerBox.QuestionBank;
 /// 题库源格式。
 /// </summary>
 public enum QuestionBankSourceFormat {
+    [Description("自动检测")]
     AutoDetect,
+
+    [Description("TXT 文本")]
     Txt,
+
+    [Description("网络大学 Excel")]
     Wldx,
+
+    [Description("网络大学 4 列")]
     Wldx4,
-    Exc
+
+    [Description("EXC 格式")]
+    Exc,
+
+    /// <summary>
+    /// 国电培训JSON格式
+    /// </summary>
+    [Description("国电培训 JSON")]
+    Gdpx
 }
 
 /// <summary>
 /// 题库目标格式。
 /// </summary>
 public enum QuestionBankTargetFormat {
+    [Description("考试宝 (.xlsx)")]
     Ksb,
+
+    [Description("磨题帮 (.xlsx)")]
     Mtb
 }
 
@@ -46,6 +65,14 @@ public class QuestionBankConversionService {
             return DetectExcelFormat(filePath);
         }
 
+        if (extension == ".json") {
+            // 检测是否为国电培训格式
+            if (GdpxReader.IsGdpxFormat(filePath)) {
+                return QuestionBankSourceFormat.Gdpx;
+            }
+            throw new NotSupportedException($"未识别的JSON格式");
+        }
+
         throw new NotSupportedException($"暂不支持的文件格式: {extension}");
     }
 
@@ -63,6 +90,7 @@ public class QuestionBankConversionService {
             QuestionBankSourceFormat.Wldx => ExcelReader.ReadWLDXFormat(filePath),
             QuestionBankSourceFormat.Wldx4 => ExcelReader.ReadWLDX4Format(filePath),
             QuestionBankSourceFormat.Exc => ExcelReader.ReadEXCFormat(filePath),
+            QuestionBankSourceFormat.Gdpx => GdpxReader.ReadFromFile(filePath),
             _ => throw new NotSupportedException($"暂不支持的读取格式: {format}")
         };
     }
