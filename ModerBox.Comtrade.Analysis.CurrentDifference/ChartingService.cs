@@ -49,13 +49,13 @@ namespace ModerBox.Comtrade.Analysis.CurrentDifference
 
             // Plot the four channels
             var sig1 = plt.Add.Signal(idel1.Data);
-            sig1.Label = "IDEL1";
+            sig1.LegendText = "IDEL1";
             var sig2 = plt.Add.Signal(idel2.Data);
-            sig2.Label = "IDEL2";
+            sig2.LegendText = "IDEL2";
             var sig3 = plt.Add.Signal(idee1.Data);
-            sig3.Label = "IDEE1";
+            sig3.LegendText = "IDEE1";
             var sig4 = plt.Add.Signal(idee2.Data);
-            sig4.Label = "IDEE2";
+            sig4.LegendText = "IDEE2";
             
             // Highlight the point of maximum difference
             var vline = plt.Add.VerticalLine(result.TimePoint, color: Colors.Red, width: 2);
