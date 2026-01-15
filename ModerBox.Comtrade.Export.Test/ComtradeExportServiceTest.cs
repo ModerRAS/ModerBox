@@ -1,9 +1,14 @@
+using System.Text;
 using ModerBox.Comtrade;
 using ModerBox.Comtrade.Export;
 
 namespace ModerBox.Comtrade.Export.Test;
 
 public class ComtradeExportServiceTest {
+    static ComtradeExportServiceTest() {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     [Fact]
     public async Task ExportAsync_ShouldExportSelectedChannels() {
         // Arrange

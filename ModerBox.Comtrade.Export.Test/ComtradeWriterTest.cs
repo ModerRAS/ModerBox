@@ -1,9 +1,14 @@
+using System.Text;
 using ModerBox.Comtrade;
 using ModerBox.Comtrade.Export;
 
 namespace ModerBox.Comtrade.Export.Test;
 
 public class ComtradeWriterTest {
+    static ComtradeWriterTest() {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     [Fact]
     public async Task WriteCfgAsync_ShouldCreateValidCfgFile() {
         // Arrange
