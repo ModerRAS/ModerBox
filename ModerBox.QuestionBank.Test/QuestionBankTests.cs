@@ -52,6 +52,40 @@ public class QuestionBankTests {
     }
 
     [TestMethod]
+    public void TestKSBReader_Roundtrip() {
+        var questions = new List<Question> {
+            new Question {
+                Topic = "1+1等于几？",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "1", "2", "3", "4" },
+                CorrectAnswer = "B",
+                Analysis = "因为 1+1=2"
+            },
+            new Question {
+                Topic = "以下哪些是编程语言？",
+                TopicType = QuestionType.MultipleChoice,
+                Answer = new List<string> { "C#", "Java", "Python", "HTML" },
+                CorrectAnswer = "ABC"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_ksb_roundtrip_{Guid.NewGuid():N}.xlsx");
+        try {
+            QuestionBankWriter.WriteToKSBFormat(questions, outputPath, "测试题库");
+            var readBack = KsbReader.ReadFromFile(outputPath);
+
+            Assert.AreEqual(2, readBack.Count);
+            Assert.AreEqual("1+1等于几？", readBack[0].Topic);
+            Assert.AreEqual(QuestionType.SingleChoice, readBack[0].TopicType);
+            Assert.AreEqual("B", readBack[0].CorrectAnswer);
+            Assert.AreEqual(4, readBack[0].Answer.Count);
+            Assert.AreEqual("因为 1+1=2", readBack[0].Analysis);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
     public void TestMTBWriter() {
         var questions = new List<Question> {
             new Question {
@@ -67,6 +101,86 @@ public class QuestionBankTests {
 
         Assert.IsTrue(File.Exists(outputPath));
         File.Delete(outputPath);
+    }
+
+    [TestMethod]
+    public void TestMTBReader_Roundtrip() {
+        var questions = new List<Question> {
+            new Question {
+                Topic = "1+1等于几？",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "1", "2", "3", "4" },
+                CorrectAnswer = "B",
+                Analysis = "因为 1+1=2"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_mtb_roundtrip_{Guid.NewGuid():N}.xlsx");
+        try {
+            QuestionBankWriter.WriteToMTBFormat(questions, outputPath, "测试题库");
+            var readBack = MtbReader.ReadFromFile(outputPath);
+
+            Assert.AreEqual(1, readBack.Count);
+            Assert.AreEqual("1+1等于几？", readBack[0].Topic);
+            Assert.AreEqual(QuestionType.SingleChoice, readBack[0].TopicType);
+            Assert.AreEqual("B", readBack[0].CorrectAnswer);
+            Assert.AreEqual(4, readBack[0].Answer.Count);
+            Assert.AreEqual("因为 1+1=2", readBack[0].Analysis);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestWLDXWriter_Roundtrip() {
+        var questions = new List<Question> {
+            new() {
+                Topic = "网络大学标准题干",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "选项A", "选项B", "选项C" },
+                CorrectAnswer = "A"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"wldx_roundtrip_{Guid.NewGuid():N}.xlsx");
+        try {
+            QuestionBankWriter.WriteToWLDXFormat(questions, outputPath);
+
+            var readBack = ExcelReader.ReadWLDXFormat(outputPath);
+            Assert.AreEqual(1, readBack.Count);
+            Assert.AreEqual(questions[0].Topic, readBack[0].Topic);
+            Assert.AreEqual(questions[0].TopicType, readBack[0].TopicType);
+            CollectionAssert.AreEqual(questions[0].Answer, readBack[0].Answer);
+            Assert.AreEqual(questions[0].CorrectAnswer, readBack[0].CorrectAnswer);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestWLDX4Writer_Roundtrip() {
+        var questions = new List<Question> {
+            new() {
+                Topic = "网络大学4列题干",
+                TopicType = QuestionType.MultipleChoice,
+                Answer = new List<string> { "选项1", "选项2", "选项3", "选项4" },
+                CorrectAnswer = "AC"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"wldx4_roundtrip_{Guid.NewGuid():N}.xlsx");
+        try {
+            QuestionBankWriter.WriteToWLDX4Format(questions, outputPath);
+
+            var readBack = ExcelReader.ReadWLDX4Format(outputPath);
+            Assert.AreEqual(1, readBack.Count);
+            Assert.AreEqual(questions[0].Topic, readBack[0].Topic);
+            Assert.AreEqual(questions[0].TopicType, readBack[0].TopicType);
+            CollectionAssert.AreEqual(questions[0].Answer, readBack[0].Answer);
+            Assert.AreEqual(questions[0].CorrectAnswer, readBack[0].CorrectAnswer);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
     }
 
     #region 国电培训格式测试
@@ -88,6 +202,7 @@ public class QuestionBankTests {
                 "解析": "发电机通常设计为滞后功率因数运行"
             }
         ]
+
         """;
 
         var questions = GdpxReader.ReadFromJson(json);

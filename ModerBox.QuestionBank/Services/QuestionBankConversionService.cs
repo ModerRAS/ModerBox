@@ -59,7 +59,15 @@ public enum QuestionBankTargetFormat {
 
     [Description("磨题帮 (.xlsx)")]
     [FormatDetail("适用于磨题帮App的题库格式")]
-    Mtb
+    Mtb,
+
+    [Description("网络大学 Excel (.xlsx)")]
+    [FormatDetail("标准网络大学题库格式（F列题型，G列题干，H列选项，I列答案；数据从第3行开始）")]
+    Wldx,
+
+    [Description("网络大学 4 列 (.xlsx)")]
+    [FormatDetail("简化版网络大学格式（A题型，B题干，C选项，D答案；数据从第2行开始）")]
+    Wldx4
 }
 
 /// <summary>
@@ -140,6 +148,12 @@ public class QuestionBankConversionService {
                 break;
             case QuestionBankTargetFormat.Mtb:
                 QuestionBankWriter.WriteToMTBFormat(questionList, filePath, title);
+                break;
+            case QuestionBankTargetFormat.Wldx:
+                QuestionBankWriter.WriteToWLDXFormat(questionList, filePath);
+                break;
+            case QuestionBankTargetFormat.Wldx4:
+                QuestionBankWriter.WriteToWLDX4Format(questionList, filePath);
                 break;
             default:
                 throw new NotSupportedException($"暂不支持的导出格式: {targetFormat}");
