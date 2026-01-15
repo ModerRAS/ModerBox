@@ -19,14 +19,13 @@ public class AnalysisProgressEventArgs : EventArgs {
 /// 处理进度计数器（用于异步方法中替代 ref 参数）
 /// </summary>
 internal class ProgressCounter {
-    public int Value { get; set; }
-    public void Increment() => Interlocked.Increment(ref _value);
     private int _value;
 
     public ProgressCounter(int initial = 0) {
         _value = initial;
-        Value = initial;
     }
+
+    public int Current => Volatile.Read(ref _value);
 
     public int GetAndIncrement() {
         return Interlocked.Increment(ref _value);
@@ -79,20 +78,20 @@ public class LlmAnalysisService : IDisposable {
         List<Question> questions,
         string sourceFile,
         bool continueFromProgress = true) {
-        
+
         if (!_config.Enabled || string.IsNullOrWhiteSpace(_config.ApiKey)) {
             return questions;
         }
 
         _cts = new CancellationTokenSource();
         _semaphore = new SemaphoreSlim(_config.MaxConcurrency);
-        
+
         // 加载缓存
         _cacheService.LoadCache();
 
         // 加载进度
-        var progress = continueFromProgress 
-            ? _cacheService.LoadProgress(sourceFile) 
+        var progress = continueFromProgress
+            ? _cacheService.LoadProgress(sourceFile)
             : new AnalysisProgress { SourceFile = sourceFile };
         progress.TotalCount = questions.Count;
 
@@ -113,7 +112,7 @@ public class LlmAnalysisService : IDisposable {
             foreach (var (question, index) in pendingQuestions) {
                 if (_cts.Token.IsCancellationRequested) break;
 
-                var task = ProcessQuestionAsync(question, index, progress, results, lockObj, 
+                var task = ProcessQuestionAsync(question, index, progress, results, lockObj,
                     processedCounter, totalCount, sourceFile);
                 tasks.Add(task);
             }
@@ -132,7 +131,7 @@ public class LlmAnalysisService : IDisposable {
 
         // 从缓存恢复已处理题目的解析
         for (int i = 0; i < questions.Count; i++) {
-            if (string.IsNullOrEmpty(questions[i].Analysis) && 
+            if (string.IsNullOrEmpty(questions[i].Analysis) &&
                 _cacheService.TryGetAnalysis(questions[i], out var cachedAnalysis)) {
                 questions[i].Analysis = cachedAnalysis;
             }
@@ -150,9 +149,9 @@ public class LlmAnalysisService : IDisposable {
         ProgressCounter processedCounter,
         int totalCount,
         string sourceFile) {
-        
+
         await _semaphore!.WaitAsync(_cts!.Token);
-        
+
         try {
             if (_cts.Token.IsCancellationRequested) return;
 
@@ -178,7 +177,7 @@ public class LlmAnalysisService : IDisposable {
 
             // 调用 API
             var analysis = await CallLlmApiAsync(question, _cts.Token);
-            
+
             if (!string.IsNullOrEmpty(analysis)) {
                 // 保存到缓存
                 _cacheService.AddAnalysis(question, analysis);
@@ -207,7 +206,7 @@ public class LlmAnalysisService : IDisposable {
             // 取消时静默处理
         } catch (Exception ex) {
             OnProgressChanged(new AnalysisProgressEventArgs {
-                ProcessedCount = processedCounter.Value,
+                ProcessedCount = processedCounter.Current,
                 TotalCount = totalCount,
                 CurrentQuestionId = GetQuestionId(question, index),
                 ErrorMessage = ex.Message
