@@ -31,4 +31,11 @@ public class QuestionBankWriter {
     public static void WriteToWLDX4Format(List<Question> questions, string filePath) {
         Wldx4ExcelWriter.WriteToFile(questions, filePath);
     }
+
+    /// <summary>
+    /// 导出为小包搜题格式
+    /// </summary>
+    public static void WriteToXiaobaoFormat(List<Question> questions, string filePath) {
+        XiaobaoWriter.WriteToFile(questions, filePath);
+    }
 }

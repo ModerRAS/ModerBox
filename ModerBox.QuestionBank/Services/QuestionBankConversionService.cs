@@ -71,7 +71,11 @@ public enum QuestionBankTargetFormat {
 
     [Description("网络大学 4 列 (.xlsx)")]
     [FormatDetail("简化版网络大学格式（A题型，B题干，C选项，D答案；数据从第2行开始）")]
-    Wldx4
+    Wldx4,
+
+    [Description("小包搜题 (.xlsx)")]
+    [FormatDetail("小包搜题格式（第一列题干，第二列答案，第三列起为ABCD各选项内容）")]
+    Xiaobao
 }
 
 /// <summary>
@@ -159,6 +163,9 @@ public class QuestionBankConversionService {
                 break;
             case QuestionBankTargetFormat.Wldx4:
                 QuestionBankWriter.WriteToWLDX4Format(questionList, filePath);
+                break;
+            case QuestionBankTargetFormat.Xiaobao:
+                QuestionBankWriter.WriteToXiaobaoFormat(questionList, filePath);
                 break;
             default:
                 throw new NotSupportedException($"暂不支持的导出格式: {targetFormat}");
