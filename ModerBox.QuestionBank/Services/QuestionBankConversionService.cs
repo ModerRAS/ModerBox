@@ -42,7 +42,7 @@ public enum QuestionBankSourceFormat {
     Gdpx,
 
     [Description("简单 Excel")]
-    [FormatDetail("简单5列格式（A专业，B题型，C题目，D选项，E正确答案）")]
+    [FormatDetail("简单5列格式（A专业，B题型，C题目，D选项，E正确答案）；D列选项用逗号分隔，格式如 A. 选项1,B. 选项2；E列答案可写 A. 选项1 或 A. 选项1,C. 选项3，系统仅提取字母答案")]
     Simple
 }
 
@@ -74,7 +74,7 @@ public enum QuestionBankTargetFormat {
     Wldx4,
 
     [Description("小包搜题 (.xlsx)")]
-    [FormatDetail("小包搜题格式（第一列题干，第二列答案，第三列起为ABCD各选项内容）")]
+    [FormatDetail("小包搜题格式（第一列题干，第二列答案字母，第三列起为ABCD各选项内容）")]
     Xiaobao,
 
     [Description("小包搜题 TXT (.txt)")]
