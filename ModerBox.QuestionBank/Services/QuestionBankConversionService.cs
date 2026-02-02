@@ -75,7 +75,11 @@ public enum QuestionBankTargetFormat {
 
     [Description("小包搜题 (.xlsx)")]
     [FormatDetail("小包搜题格式（第一列题干，第二列答案，第三列起为ABCD各选项内容）")]
-    Xiaobao
+    Xiaobao,
+
+    [Description("小包搜题 TXT (.txt)")]
+    [FormatDetail("小包搜题TXT格式（每行一个JSON：{q:题目, a:选项数组, ans:答案}）")]
+    XiaobaoTxt
 }
 
 /// <summary>
@@ -166,6 +170,9 @@ public class QuestionBankConversionService {
                 break;
             case QuestionBankTargetFormat.Xiaobao:
                 QuestionBankWriter.WriteToXiaobaoFormat(questionList, filePath);
+                break;
+            case QuestionBankTargetFormat.XiaobaoTxt:
+                QuestionBankWriter.WriteToXiaobaoTxtFormat(questionList, filePath);
                 break;
             default:
                 throw new NotSupportedException($"暂不支持的导出格式: {targetFormat}");

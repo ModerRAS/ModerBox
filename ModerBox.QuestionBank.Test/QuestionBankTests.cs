@@ -671,6 +671,76 @@ public class QuestionBankTests {
         }
     }
 
+    [TestMethod]
+    public void TestXiaobaoTxtWriter_BasicOutput() {
+        var questions = new List<Question> {
+            new Question {
+                Topic = "犬咬伤后应立即用浓肥皂水或清水冲洗伤口至少（　　）min。",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "A. 5.0", "B. 10.0", "C. 15.0", "D. 20.0" },
+                CorrectAnswer = "C"
+            },
+            new Question {
+                Topic = "本规程适用于哪些设备？",
+                TopicType = QuestionType.MultipleChoice,
+                Answer = new List<string> { "A. 发电", "B. 输电", "C. 变电", "D. 配电" },
+                CorrectAnswer = "ABCD"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_xiaobao_txt_{Guid.NewGuid():N}.txt");
+        try {
+            XiaobaoTxtWriter.WriteToFile(questions, outputPath);
+
+            Assert.IsTrue(File.Exists(outputPath));
+
+            // 读取验证输出内容
+            var lines = File.ReadAllLines(outputPath);
+            Assert.AreEqual(2, lines.Length);
+
+            // 解析验证第一行
+            var json1 = System.Text.Json.JsonDocument.Parse(lines[0]);
+            Assert.AreEqual("犬咬伤后应立即用浓肥皂水或清水冲洗伤口至少（　　）min。", json1.RootElement.GetProperty("q").GetString());
+            Assert.AreEqual("C", json1.RootElement.GetProperty("ans").GetString());
+            var options1 = json1.RootElement.GetProperty("a");
+            Assert.AreEqual(4, options1.GetArrayLength());
+            Assert.AreEqual("5.0", options1[0].GetString()); // 不应包含 "A. " 前缀
+
+            // 解析验证第二行
+            var json2 = System.Text.Json.JsonDocument.Parse(lines[1]);
+            Assert.AreEqual("ABCD", json2.RootElement.GetProperty("ans").GetString());
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestXiaobaoTxtWriter_ViaConversionService() {
+        var questions = new List<Question> {
+            new Question {
+                Topic = "测试题目",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "A. 选项1", "B. 选项2" },
+                CorrectAnswer = "A"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_xiaobao_txt_service_{Guid.NewGuid():N}.txt");
+        try {
+            var service = new QuestionBankConversionService();
+            service.Write(questions, outputPath, QuestionBankTargetFormat.XiaobaoTxt);
+
+            Assert.IsTrue(File.Exists(outputPath));
+
+            var content = File.ReadAllText(outputPath).Trim();
+            Assert.IsTrue(content.Contains("\"q\":\"测试题目\""));
+            Assert.IsTrue(content.Contains("\"ans\":\"A\""));
+            Assert.IsTrue(content.Contains("\"选项1\""));
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
     #endregion
 }
 

@@ -38,4 +38,11 @@ public class QuestionBankWriter {
     public static void WriteToXiaobaoFormat(List<Question> questions, string filePath) {
         XiaobaoWriter.WriteToFile(questions, filePath);
     }
+
+    /// <summary>
+    /// 导出为小包搜题 TXT 格式
+    /// </summary>
+    public static void WriteToXiaobaoTxtFormat(List<Question> questions, string filePath) {
+        XiaobaoTxtWriter.WriteToFile(questions, filePath);
+    }
 }
