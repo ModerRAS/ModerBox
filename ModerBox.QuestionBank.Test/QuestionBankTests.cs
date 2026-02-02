@@ -445,13 +445,13 @@ public class QuestionBankTests {
                 ws.Cell(2, 2).Value = "单选题";
                 ws.Cell(2, 3).Value = "变压器的额定容量单位是？";
                 ws.Cell(2, 4).Value = "A. kW,B. kVA,C. kVar,D. A";
-                ws.Cell(2, 5).Value = "B";
+                ws.Cell(2, 5).Value = "B. kVA";
 
                 ws.Cell(3, 1).Value = "电气";
                 ws.Cell(3, 2).Value = "多选题";
                 ws.Cell(3, 3).Value = "以下哪些是电力设备？";
                 ws.Cell(3, 4).Value = "A. 变压器,B. 断路器,C. 电容器,D. 电脑";
-                ws.Cell(3, 5).Value = "ABC";
+                ws.Cell(3, 5).Value = "A. 变压器,B. 断路器,C. 电容器";
 
                 workbook.SaveAs(outputPath);
             }
