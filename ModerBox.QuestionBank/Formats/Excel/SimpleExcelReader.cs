@@ -58,7 +58,7 @@ public static class SimpleExcelReader {
                     Topic = ExcelReadCommon.CleanCellString(topicCell.GetString()),
                     TopicType = ExcelReadCommon.ParseQuestionType(topicTypeCell.GetString()),
                     Answer = ParseSimpleOptions(optionsCell.GetString()),
-                    CorrectAnswer = ExcelReadCommon.NormalizeAnswer(correctAnswerCell.GetString())
+                    CorrectAnswer = ExtractAnswerLetters(correctAnswerCell.GetString())
                 };
 
                 // 可选：读取专业作为章节
@@ -127,6 +127,53 @@ public static class SimpleExcelReader {
         // 检查是否包含 "A." 或 "A、" 开头的选项标记
         var trimmed = optionValue.Trim();
         return trimmed.StartsWith("A.") || trimmed.StartsWith("A、") || trimmed.StartsWith("A．");
+    }
+
+    /// <summary>
+    /// 从答案内容中提取字母
+    /// 输入格式：A. 3.00 或 A. 存在的危险因素,C. 防范措施,D. 事故紧急处理措施
+    /// 输出：A 或 ACD
+    /// </summary>
+    private static string ExtractAnswerLetters(string answerString) {
+        if (string.IsNullOrWhiteSpace(answerString)) {
+            return string.Empty;
+        }
+
+        var normalized = ExcelReadCommon.CleanCellString(answerString)
+            .Replace("；", ",")
+            .Replace("，", ",");
+
+        var letters = new System.Text.StringBuilder();
+        var optionMarkers = new[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H' };
+
+        // 按逗号分割，提取每个部分的首字母
+        var parts = normalized.Split(',');
+        foreach (var part in parts) {
+            var trimmed = part.Trim();
+            if (trimmed.Length >= 2) {
+                var firstChar = char.ToUpperInvariant(trimmed[0]);
+                var secondChar = trimmed[1];
+                // 检查是否是 "X." 或 "X、" 或 "X．" 格式
+                if (optionMarkers.Contains(firstChar) && 
+                    (secondChar == '.' || secondChar == '、' || secondChar == '．')) {
+                    if (!letters.ToString().Contains(firstChar)) {
+                        letters.Append(firstChar);
+                    }
+                }
+            }
+        }
+
+        // 如果没有找到有效格式，尝试直接提取大写字母
+        if (letters.Length == 0) {
+            foreach (var c in normalized) {
+                var upper = char.ToUpperInvariant(c);
+                if (optionMarkers.Contains(upper) && !letters.ToString().Contains(upper)) {
+                    letters.Append(upper);
+                }
+            }
+        }
+
+        return letters.ToString();
     }
 
     /// <summary>
