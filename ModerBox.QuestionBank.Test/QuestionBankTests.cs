@@ -591,5 +591,86 @@ public class QuestionBankTests {
     }
 
     #endregion
+
+    #region 小包搜题格式测试
+
+    [TestMethod]
+    public void TestXiaobaoWriter_BasicOutput() {
+        var questions = new List<Question> {
+            new Question {
+                Topic = "变压器的额定容量单位是？",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "A. kW", "B. kVA", "C. kVar", "D. A" },
+                CorrectAnswer = "B"
+            },
+            new Question {
+                Topic = "以下哪些是电力设备？",
+                TopicType = QuestionType.MultipleChoice,
+                Answer = new List<string> { "A. 变压器", "B. 断路器", "C. 电容器", "D. 电脑" },
+                CorrectAnswer = "ABC"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_xiaobao_{Guid.NewGuid():N}.xlsx");
+        try {
+            XiaobaoWriter.WriteToFile(questions, outputPath);
+
+            Assert.IsTrue(File.Exists(outputPath));
+
+            // 读取验证输出格式
+            using var workbook = new ClosedXML.Excel.XLWorkbook(outputPath);
+            var ws = workbook.Worksheet(1);
+
+            // 验证表头
+            Assert.AreEqual("题干", ws.Cell(1, 1).GetString());
+            Assert.AreEqual("答案", ws.Cell(1, 2).GetString());
+            Assert.AreEqual("A", ws.Cell(1, 3).GetString());
+            Assert.AreEqual("B", ws.Cell(1, 4).GetString());
+
+            // 验证第一条数据
+            Assert.AreEqual("变压器的额定容量单位是？", ws.Cell(2, 1).GetString());
+            Assert.AreEqual("B", ws.Cell(2, 2).GetString());
+            Assert.AreEqual("kW", ws.Cell(2, 3).GetString()); // 应该去掉 "A. " 前缀
+            Assert.AreEqual("kVA", ws.Cell(2, 4).GetString());
+
+            // 验证第二条数据
+            Assert.AreEqual("以下哪些是电力设备？", ws.Cell(3, 1).GetString());
+            Assert.AreEqual("ABC", ws.Cell(3, 2).GetString());
+            Assert.AreEqual("变压器", ws.Cell(3, 3).GetString());
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestXiaobaoWriter_ViaConversionService() {
+        var questions = new List<Question> {
+            new Question {
+                Topic = "测试题目",
+                TopicType = QuestionType.SingleChoice,
+                Answer = new List<string> { "A. 选项1", "B. 选项2", "C. 选项3" },
+                CorrectAnswer = "A"
+            }
+        };
+
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_xiaobao_service_{Guid.NewGuid():N}.xlsx");
+        try {
+            var service = new QuestionBankConversionService();
+            service.Write(questions, outputPath, QuestionBankTargetFormat.Xiaobao);
+
+            Assert.IsTrue(File.Exists(outputPath));
+
+            using var workbook = new ClosedXML.Excel.XLWorkbook(outputPath);
+            var ws = workbook.Worksheet(1);
+
+            Assert.AreEqual("测试题目", ws.Cell(2, 1).GetString());
+            Assert.AreEqual("A", ws.Cell(2, 2).GetString());
+            Assert.AreEqual("选项1", ws.Cell(2, 3).GetString());
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    #endregion
 }
 
