@@ -423,4 +423,173 @@ public class QuestionBankTests {
     }
 
     #endregion
+
+    #region 简单Excel格式测试
+
+    [TestMethod]
+    public void TestSimpleExcelReader_BasicParsing() {
+        // 创建测试Excel文件
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_simple_{Guid.NewGuid():N}.xlsx");
+        try {
+            using (var workbook = new ClosedXML.Excel.XLWorkbook()) {
+                var ws = workbook.AddWorksheet("题库");
+                // 写入表头
+                ws.Cell(1, 1).Value = "专业";
+                ws.Cell(1, 2).Value = "题型";
+                ws.Cell(1, 3).Value = "题目";
+                ws.Cell(1, 4).Value = "选项";
+                ws.Cell(1, 5).Value = "正确答案";
+
+                // 写入测试数据
+                ws.Cell(2, 1).Value = "电气";
+                ws.Cell(2, 2).Value = "单选题";
+                ws.Cell(2, 3).Value = "变压器的额定容量单位是？";
+                ws.Cell(2, 4).Value = "A. kW,B. kVA,C. kVar,D. A";
+                ws.Cell(2, 5).Value = "B";
+
+                ws.Cell(3, 1).Value = "电气";
+                ws.Cell(3, 2).Value = "多选题";
+                ws.Cell(3, 3).Value = "以下哪些是电力设备？";
+                ws.Cell(3, 4).Value = "A. 变压器,B. 断路器,C. 电容器,D. 电脑";
+                ws.Cell(3, 5).Value = "ABC";
+
+                workbook.SaveAs(outputPath);
+            }
+
+            // 测试读取
+            var questions = SimpleExcelReader.ReadFromFile(outputPath);
+
+            Assert.AreEqual(2, questions.Count);
+
+            // 验证第一个题目
+            Assert.AreEqual("变压器的额定容量单位是？", questions[0].Topic);
+            Assert.AreEqual(QuestionType.SingleChoice, questions[0].TopicType);
+            Assert.AreEqual(4, questions[0].Answer.Count);
+            Assert.AreEqual("A. kW", questions[0].Answer[0]);
+            Assert.AreEqual("B. kVA", questions[0].Answer[1]);
+            Assert.AreEqual("B", questions[0].CorrectAnswer);
+            Assert.AreEqual("电气", questions[0].Chapter);
+
+            // 验证第二个题目
+            Assert.AreEqual("以下哪些是电力设备？", questions[1].Topic);
+            Assert.AreEqual(QuestionType.MultipleChoice, questions[1].TopicType);
+            Assert.AreEqual("ABC", questions[1].CorrectAnswer);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestSimpleExcelReader_FormatDetection() {
+        // 创建测试Excel文件
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_simple_detect_{Guid.NewGuid():N}.xlsx");
+        try {
+            using (var workbook = new ClosedXML.Excel.XLWorkbook()) {
+                var ws = workbook.AddWorksheet("Sheet1");
+                ws.Cell(1, 1).Value = "专业";
+                ws.Cell(1, 2).Value = "题型";
+                ws.Cell(1, 3).Value = "题目";
+                ws.Cell(1, 4).Value = "选项";
+                ws.Cell(1, 5).Value = "正确答案";
+
+                ws.Cell(2, 1).Value = "测试";
+                ws.Cell(2, 2).Value = "单选题";
+                ws.Cell(2, 3).Value = "测试题目";
+                ws.Cell(2, 4).Value = "A. 选项1,B. 选项2";
+                ws.Cell(2, 5).Value = "A";
+
+                workbook.SaveAs(outputPath);
+            }
+
+            // 测试格式检测
+            var service = new QuestionBankConversionService();
+            var format = service.DetectSourceFormat(outputPath);
+
+            Assert.AreEqual(QuestionBankSourceFormat.Simple, format);
+
+            // 测试自动检测读取
+            var questions = service.Read(outputPath, QuestionBankSourceFormat.AutoDetect);
+            Assert.AreEqual(1, questions.Count);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestSimpleExcelReader_MultipleWorksheets() {
+        // 测试多工作表
+        var outputPath = Path.Combine(Path.GetTempPath(), $"test_simple_multi_{Guid.NewGuid():N}.xlsx");
+        try {
+            using (var workbook = new ClosedXML.Excel.XLWorkbook()) {
+                // 创建两个格式相同的工作表
+                for (int i = 1; i <= 2; i++) {
+                    var ws = workbook.AddWorksheet($"题库{i}");
+                    ws.Cell(1, 1).Value = "专业";
+                    ws.Cell(1, 2).Value = "题型";
+                    ws.Cell(1, 3).Value = "题目";
+                    ws.Cell(1, 4).Value = "选项";
+                    ws.Cell(1, 5).Value = "正确答案";
+
+                    ws.Cell(2, 1).Value = $"专业{i}";
+                    ws.Cell(2, 2).Value = "单选题";
+                    ws.Cell(2, 3).Value = $"题目{i}";
+                    ws.Cell(2, 4).Value = "A. 选项1,B. 选项2";
+                    ws.Cell(2, 5).Value = "A";
+                }
+
+                workbook.SaveAs(outputPath);
+            }
+
+            var questions = SimpleExcelReader.ReadFromFile(outputPath);
+
+            // 应该读取到两个工作表的题目
+            Assert.AreEqual(2, questions.Count);
+            Assert.AreEqual("题目1", questions[0].Topic);
+            Assert.AreEqual("题目2", questions[1].Topic);
+        } finally {
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void TestSimpleExcelReader_OptionParsing() {
+        // 测试各种选项格式
+        var testCases = new Dictionary<string, string[]> {
+            { "A. 3.00,B. 2.80,C. 2.70,D. 2.55", new[] { "A. 3.00", "B. 2.80", "C. 2.70", "D. 2.55" } },
+            { "A. 选项A,B. 选项B,C. 选项C", new[] { "A. 选项A", "B. 选项B", "C. 选项C" } },
+            { "A. 含有,逗号,B. 正常选项", new[] { "A. 含有,逗号", "B. 正常选项" } }
+        };
+
+        foreach (var testCase in testCases) {
+            var outputPath = Path.Combine(Path.GetTempPath(), $"test_simple_opt_{Guid.NewGuid():N}.xlsx");
+            try {
+                using (var workbook = new ClosedXML.Excel.XLWorkbook()) {
+                    var ws = workbook.AddWorksheet("Sheet1");
+                    ws.Cell(1, 1).Value = "专业";
+                    ws.Cell(1, 2).Value = "题型";
+                    ws.Cell(1, 3).Value = "题目";
+                    ws.Cell(1, 4).Value = "选项";
+                    ws.Cell(1, 5).Value = "正确答案";
+
+                    ws.Cell(2, 1).Value = "测试";
+                    ws.Cell(2, 2).Value = "单选题";
+                    ws.Cell(2, 3).Value = "测试题目";
+                    ws.Cell(2, 4).Value = testCase.Key;
+                    ws.Cell(2, 5).Value = "A";
+
+                    workbook.SaveAs(outputPath);
+                }
+
+                var questions = SimpleExcelReader.ReadFromFile(outputPath);
+                Assert.AreEqual(1, questions.Count);
+                CollectionAssert.AreEqual(testCase.Value, questions[0].Answer.ToArray(),
+                    $"选项解析失败: {testCase.Key}");
+            } finally {
+                if (File.Exists(outputPath)) File.Delete(outputPath);
+            }
+        }
+    }
+
+    #endregion
 }
+

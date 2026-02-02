@@ -25,6 +25,13 @@ public class ExcelReader {
     }
 
     /// <summary>
+    /// 从Excel文件读取题目（简单5列格式：专业、题型、题目、选项、正确答案）
+    /// </summary>
+    public static List<Question> ReadSimpleFormat(string filePath) {
+        return SimpleExcelReader.ReadFromFile(filePath);
+    }
+
+    /// <summary>
     /// 从Excel文件读取题目（EXC格式）
     /// </summary>
     public static List<Question> ReadEXCFormat(string filePath) {

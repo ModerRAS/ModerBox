@@ -39,7 +39,11 @@ public enum QuestionBankSourceFormat {
 
     [Description("国电培训 JSON")]
     [FormatDetail("国电培训系统导出的JSON格式题库")]
-    Gdpx
+    Gdpx,
+
+    [Description("简单 Excel")]
+    [FormatDetail("简单5列格式（A专业，B题型，C题目，D选项，E正确答案）")]
+    Simple
 }
 
 /// <summary>
@@ -118,6 +122,7 @@ public class QuestionBankConversionService {
             QuestionBankSourceFormat.Wldx4 => ExcelReader.ReadWLDX4Format(filePath),
             QuestionBankSourceFormat.Exc => ExcelReader.ReadEXCFormat(filePath),
             QuestionBankSourceFormat.Gdpx => GdpxReader.ReadFromFile(filePath),
+            QuestionBankSourceFormat.Simple => ExcelReader.ReadSimpleFormat(filePath),
             _ => throw new NotSupportedException($"暂不支持的读取格式: {format}")
         };
     }
@@ -182,6 +187,11 @@ public class QuestionBankConversionService {
     }
 
     private static QuestionBankSourceFormat DetectExcelFormat(string filePath) {
+        // 优先检测 Simple 格式（专业、题型、题目、选项、正确答案）
+        if (SimpleExcelReader.IsMatchingFormat(filePath)) {
+            return QuestionBankSourceFormat.Simple;
+        }
+
         using var workbook = new XLWorkbook(filePath);
         var worksheet = workbook.Worksheet(1);
         var usedRange = worksheet.RangeUsed();
