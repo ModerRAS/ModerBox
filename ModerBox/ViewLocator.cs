@@ -13,6 +13,7 @@ namespace ModerBox {
             { typeof(PeriodicWorkViewModel), () => new PeriodicWork() },
             { typeof(HarmonicCalculateViewModel), () => new HarmonicCalculate() },
             { typeof(FilterWaveformSwitchIntervalViewModel), () => new FilterWaveformSwitchInterval() },
+            { typeof(FilterWaveformSwitchCopyViewModel), () => new FilterWaveformSwitchCopy() },
             { typeof(CurrentDifferenceAnalysisViewModel), () => new CurrentDifferenceAnalysis() },
             { typeof(ThreePhaseIdeeAnalysisViewModel), () => new ThreePhaseIdeeAnalysis() },
             { typeof(NewCurrentDifferenceAnalysisViewModel), () => new NewCurrentDifferenceAnalysis() },
