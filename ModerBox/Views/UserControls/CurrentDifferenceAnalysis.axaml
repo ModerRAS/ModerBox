@@ -29,8 +29,7 @@
                  Margin="0,34,0,10"/>
 
       <!-- 配置区域 -->
-      <Border Grid.Row="1" 
-              Background="LightBlue" 
+            <Border Grid.Row="1" 
               CornerRadius="8" 
               Padding="15" 
               Margin="0,0,0,15">
@@ -112,8 +111,7 @@
                 CanUserResizeColumns="True"
                 CanUserSortColumns="True"
                 GridLinesVisibility="All"
-                BorderThickness="1"
-                BorderBrush="Gray">
+                BorderThickness="1">
         
         <DataGrid.Columns>
           <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="120"/>
