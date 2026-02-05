@@ -17,7 +17,9 @@ namespace ModerBox {
             { typeof(CurrentDifferenceAnalysisViewModel), () => new CurrentDifferenceAnalysis() },
             { typeof(ThreePhaseIdeeAnalysisViewModel), () => new ThreePhaseIdeeAnalysis() },
             { typeof(NewCurrentDifferenceAnalysisViewModel), () => new NewCurrentDifferenceAnalysis() },
-            { typeof(QuestionBankConversionViewModel), () => new QuestionBankConversion() }
+            { typeof(QuestionBankConversionViewModel), () => new QuestionBankConversion() },
+            { typeof(ComtradeExportViewModel), () => new ComtradeExport() },
+            { typeof(CableRoutingViewModel), () => new Views.UserControls.CableRouting() }
         };
 
         public Control? Build(object? data) {
