@@ -86,22 +86,31 @@ public class CableRenderer : IDisposable
             
             if (IsDirectConnection(p1, p2))
             {
-                // 直线连接
+                // 直线连接（观测点之间、同 pair 穿管之间）
                 _canvas.DrawLine(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
             }
             else
             {
-                // L型连接
-                var corner = corrector.FindCornerPoint(p1, p2);
-                if (corner.HasValue)
+                // L型或Z型连接
+                var corners = corrector.FindCornerPoints(p1, p2);
+                
+                if (corners.Count == 0)
                 {
-                    _canvas.DrawLine(p1.X, p1.Y, corner.Value.X, corner.Value.Y, pathPaint);
-                    _canvas.DrawLine(corner.Value.X, corner.Value.Y, p2.X, p2.Y, pathPaint);
+                    // 无拐点，直线
+                    _canvas.DrawLine(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
+                }
+                else if (corners.Count == 1)
+                {
+                    // L型连接
+                    _canvas.DrawLine(p1.X, p1.Y, corners[0].X, corners[0].Y, pathPaint);
+                    _canvas.DrawLine(corners[0].X, corners[0].Y, p2.X, p2.Y, pathPaint);
                 }
                 else
                 {
-                    // 无法找到拐点，直接直线
-                    _canvas.DrawLine(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
+                    // Z型连接（2个拐点）
+                    _canvas.DrawLine(p1.X, p1.Y, corners[0].X, corners[0].Y, pathPaint);
+                    _canvas.DrawLine(corners[0].X, corners[0].Y, corners[1].X, corners[1].Y, pathPaint);
+                    _canvas.DrawLine(corners[1].X, corners[1].Y, p2.X, p2.Y, pathPaint);
                 }
             }
         }

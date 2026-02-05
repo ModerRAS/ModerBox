@@ -43,22 +43,43 @@ public class OrthogonalCorrectorTest
     }
     
     [TestMethod]
-    public void FindCornerPoint_HasMatchingObservation_ReturnsObservationPosition()
+    public void FindCornerPoint_HasMatchingObservation_ReturnsCorner()
     {
         var corrector = new OrthogonalCorrector(CreateGridObservations());
         // A(100, 100) -> B(200, 200)
-        // O4(200, 200) 存在，但我们要找的是 (A.x=100, B.y=200) 即 O3 或 (B.x=200, A.y=100) 即 O2
+        // 由于有电缆沟 O1-O2(y=100) 和 O1-O3(x=100)，可能返回Z型或L型
         var a = new RoutePoint("A", PointType.Start, 100, 100);
         var b = new RoutePoint("B", PointType.End, 200, 200);
         
-        var corner = corrector.FindCornerPoint(a, b);
+        var corners = corrector.FindCornerPoints(a, b);
         
-        Assert.IsNotNull(corner);
-        // 应该找到 O3(100, 200) 或 O2(200, 100)
-        Assert.IsTrue(
-            (corner.Value.X == 100 && corner.Value.Y == 200) ||
-            (corner.Value.X == 200 && corner.Value.Y == 100)
-        );
+        // 应该找到至少一个拐点
+        Assert.IsTrue(corners.Count >= 1);
+    }
+    
+    [TestMethod]
+    public void FindCornerPoints_ZShape_ReturnsTwoCorners()
+    {
+        // 创建一条垂直电缆沟线 (x=150)
+        var observations = new List<RoutePoint>
+        {
+            new("O1", PointType.Observation, 150, 50),
+            new("O2", PointType.Observation, 150, 250)
+        };
+        var corrector = new OrthogonalCorrector(observations);
+        
+        // A(100, 100) -> B(200, 200)，中间有电缆沟 x=150
+        var a = new RoutePoint("A", PointType.Start, 100, 100);
+        var b = new RoutePoint("B", PointType.End, 200, 200);
+        
+        var corners = corrector.FindCornerPoints(a, b);
+        
+        // 应该返回 Z 型连接：A → (150, 100) → (150, 200) → B
+        Assert.AreEqual(2, corners.Count);
+        Assert.AreEqual(150, corners[0].X);
+        Assert.AreEqual(100, corners[0].Y);
+        Assert.AreEqual(150, corners[1].X);
+        Assert.AreEqual(200, corners[1].Y);
     }
     
     [TestMethod]

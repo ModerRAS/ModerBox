@@ -42,17 +42,17 @@ public class ObservationGraphTest
     }
     
     [TestMethod]
-    public void FindShortestPath_DiagonalPoints_ReturnsShortestPath()
+    public void FindShortestPath_DiagonalPoints_ReturnsManhattanDistance()
     {
         var graph = new ObservationGraph(CreateTestObservations());
         
         // O1(0,0) -> O3(100,100) 对角线
         var (path, distance) = graph.FindShortestPath("O1", "O3");
         
-        // 直接对角线距离是 sqrt(100^2 + 100^2) ≈ 141.42
-        // 如果经过 O2 或 O4 则是 200
+        // 使用曼哈顿距离：|100-0| + |100-0| = 200
+        // 电缆沟是横平竖直的，所以对角线距离 = dx + dy
         Assert.AreEqual(2, path.Count);
-        Assert.AreEqual(Math.Sqrt(20000), distance, 0.001);
+        Assert.AreEqual(200, distance, 0.001);
     }
     
     [TestMethod]
