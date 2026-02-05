@@ -18,8 +18,8 @@ public class CableRenderer : IDisposable
     
     private static readonly SKColor PathColor = new(255, 0, 0);  // 红色路径
     private const float PathWidth = 3f;
-    private const float PointRadius = 8f;
-    private const float FontSize = 14f;
+    private const float DefaultPointRadius = 8f;
+    private const float DefaultFontSize = 14f;
     
     private readonly SKBitmap _bitmap;
     private readonly SKCanvas _canvas;
@@ -28,6 +28,9 @@ public class CableRenderer : IDisposable
     
     public int Width => _bitmap.Width;
     public int Height => _bitmap.Height;
+
+    public float PointRadius { get; set; } = DefaultPointRadius;
+    public float FontSize { get; set; } = DefaultFontSize;
     
     /// <summary>
     /// 从图片文件创建渲染器

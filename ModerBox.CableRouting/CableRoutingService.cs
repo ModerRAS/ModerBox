@@ -63,6 +63,9 @@ public class CableRoutingService
             
             using (renderer)
             {
+                renderer.PointRadius = Math.Max(1f, config.PointRadius);
+                renderer.FontSize = Math.Max(1f, config.FontSize);
+
                 // 获取观测点列表
                 var observations = config.Points.Where(p => p.Type == PointType.Observation).ToList();
                 

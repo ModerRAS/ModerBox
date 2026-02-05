@@ -22,6 +22,14 @@ public class CableRoutingConfig
     /// <summary>终点业务表格数据</summary>
     [JsonPropertyName("endTable")]
     public EndTableData? EndTable { get; set; }
+
+    /// <summary>点位圆圈半径（像素）</summary>
+    [JsonPropertyName("pointRadius")]
+    public float PointRadius { get; set; } = 8f;
+
+    /// <summary>点位文字大小（像素）</summary>
+    [JsonPropertyName("fontSize")]
+    public float FontSize { get; set; } = 14f;
     
     /// <summary>
     /// 创建示例配置
@@ -32,6 +40,8 @@ public class CableRoutingConfig
         {
             BaseImagePath = "base.jpg",
             OutputPath = "result.png",
+            PointRadius = 8f,
+            FontSize = 14f,
             Points = new List<RoutePoint>
             {
                 // 起点
