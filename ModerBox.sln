@@ -51,6 +51,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.Export", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.Comtrade.Export.Test", "ModerBox.Comtrade.Export.Test\ModerBox.Comtrade.Export.Test.csproj", "{60080186-FBBB-4EBB-8795-673F40739BAB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.CableRouting", "ModerBox.CableRouting\ModerBox.CableRouting.csproj", "{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.CableRouting.Test", "ModerBox.CableRouting.Test\ModerBox.CableRouting.Test.csproj", "{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -313,6 +317,30 @@ Global
 		{60080186-FBBB-4EBB-8795-673F40739BAB}.Release|x64.Build.0 = Release|Any CPU
 		{60080186-FBBB-4EBB-8795-673F40739BAB}.Release|x86.ActiveCfg = Release|Any CPU
 		{60080186-FBBB-4EBB-8795-673F40739BAB}.Release|x86.Build.0 = Release|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Debug|x64.Build.0 = Debug|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Debug|x86.Build.0 = Debug|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Release|x64.ActiveCfg = Release|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Release|x64.Build.0 = Release|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Release|x86.ActiveCfg = Release|Any CPU
+		{22DDE1BA-85B7-43A6-9EF4-6BF589B60435}.Release|x86.Build.0 = Release|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Debug|x64.Build.0 = Debug|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Debug|x86.Build.0 = Debug|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x64.ActiveCfg = Release|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x64.Build.0 = Release|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x86.ActiveCfg = Release|Any CPU
+		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

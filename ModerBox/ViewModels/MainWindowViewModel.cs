@@ -23,7 +23,8 @@ namespace ModerBox.ViewModels {
                 new NewCurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析 (新版)", Icon = "RulerFilled" },
                 new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeBars" },
                 new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" },
-                new ComtradeExportViewModel { Title = "波形通道导出", Icon = "Save" }
+                new ComtradeExportViewModel { Title = "波形通道导出", Icon = "Save" },
+                new CableRoutingViewModel { Title = "电缆走向绘制", Icon = "Line" }
             };
             _currentPage = Pages.First();
         }
