@@ -24,7 +24,7 @@ namespace ModerBox.ViewModels {
                 new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeBars" },
                 new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" },
                 new ComtradeExportViewModel { Title = "波形通道导出", Icon = "Save" },
-                new CableRoutingViewModel { Title = "电缆走向绘制", Icon = "Line" }
+                new CableRoutingViewModel { Title = "电缆走向绘制", Icon = "RulerFilled" }
             };
             _currentPage = Pages.First();
         }
