@@ -2,6 +2,7 @@ namespace ModerBox.CableRouting;
 
 /// <summary>
 /// 观测点无向完全图 - 使用 Dijkstra 算法计算最短路径
+/// 电缆沟是横平竖直的，所以使用曼哈顿距离
 /// </summary>
 public class ObservationGraph
 {
@@ -17,7 +18,7 @@ public class ObservationGraph
     }
     
     /// <summary>
-    /// 构建无向完全图，边权为欧氏距离
+    /// 构建无向完全图，边权为曼哈顿距离（横平竖直）
     /// </summary>
     private Dictionary<string, List<(string, double)>> BuildGraph()
     {
@@ -32,7 +33,8 @@ public class ObservationGraph
             for (int j = i + 1; j < _observations.Count; j++)
             {
                 var p2 = _observations[j];
-                var distance = p1.DistanceTo(p2);
+                // 使用曼哈顿距离：电缆沟是横平竖直的
+                var distance = ManhattanDistance(p1, p2);
                 
                 graph[p1.Id].Add((p2.Id, distance));
                 graph[p2.Id].Add((p1.Id, distance));
@@ -40,6 +42,14 @@ public class ObservationGraph
         }
         
         return graph;
+    }
+    
+    /// <summary>
+    /// 曼哈顿距离（横平竖直的路径长度）
+    /// </summary>
+    private static double ManhattanDistance(RoutePoint p1, RoutePoint p2)
+    {
+        return Math.Abs(p1.X - p2.X) + Math.Abs(p1.Y - p2.Y);
     }
     
     /// <summary>

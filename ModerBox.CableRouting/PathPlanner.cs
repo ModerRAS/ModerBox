@@ -10,7 +10,7 @@ public class PathPlanner
     private readonly Dictionary<string, RoutePoint> _pointsById;
     private readonly Dictionary<string, List<RoutePoint>> _passPairs;
     private readonly ObservationGraph? _obsGraph;
-    
+
     public PathPlanner(IEnumerable<RoutePoint> points)
     {
         _points = points.ToList();
@@ -61,70 +61,79 @@ public class PathPlanner
             throw new InvalidOperationException("必须有起点和终点");
         }
         
+        // 无观测点时直接连接
         if (observations.Count == 0)
         {
-            // 没有观测点，直接连接
             return (new List<RoutePoint> { start, end }, start.DistanceTo(end));
         }
         
+        // 找到有效的穿管配对（pair 值相同的两个 Pass 点）
+        var validPassPair = FindValidPassPair(passes);
+        
+        // 如果没有穿管或穿管配对无效，只走观测点
+        if (validPassPair == null)
+        {
+            return PlanObservationOnlyRoute(start, end, observations);
+        }
+        
+        var (passA, passB) = validPassPair.Value;
+        
+        // 计算候选路线，选最短的
+        var candidates = new List<(List<RoutePoint> Route, double Length)>();
+        
+        // 路线1: Start → PassA → PassB → End（直接穿管，绘制时用Z型连接沿电缆沟）
+        candidates.Add(PlanDirectPassRoute(start, end, observations, passA, passB));
+        
+        // 路线2: Start → Obs → PassA → PassB → End（经过观测点到穿管）
+        candidates.Add(PlanRouteViaObs(start, end, observations, passA, passB, endViaObs: false));
+        
+        // 路线3: Start → Obs → PassA → PassB → Obs → End（穿管后经过观测点）
+        candidates.Add(PlanRouteViaObs(start, end, observations, passA, passB, endViaObs: true));
+        
+        // 路线4-6: 反向穿管
+        candidates.Add(PlanDirectPassRoute(start, end, observations, passB, passA));
+        candidates.Add(PlanRouteViaObs(start, end, observations, passB, passA, endViaObs: false));
+        candidates.Add(PlanRouteViaObs(start, end, observations, passB, passA, endViaObs: true));
+        
+        // 选择最短路线
+        return candidates.Where(c => c.Route.Count > 0)
+                         .OrderBy(c => c.Length)
+                         .First();
+    }
+    
+    /// <summary>
+    /// 找到有效的穿管配对
+    /// </summary>
+    private (RoutePoint passA, RoutePoint passB)? FindValidPassPair(List<RoutePoint> passes)
+    {
+        foreach (var kvp in _passPairs)
+        {
+            if (kvp.Value.Count >= 2)
+            {
+                return (kvp.Value[0], kvp.Value[1]);
+            }
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// 仅通过观测点的路线
+    /// </summary>
+    private (List<RoutePoint> Route, double Length) PlanObservationOnlyRoute(
+        RoutePoint start, RoutePoint end, List<RoutePoint> observations)
+    {
         var route = new List<RoutePoint> { start };
         double totalLength = 0.0;
         
-        // 1. start → 最近 observation
         var obsNearStart = FindNearest(start, observations);
-        route.Add(obsNearStart);
-        totalLength += start.DistanceTo(obsNearStart);
-        
-        var currentObs = obsNearStart;
-        
-        // 如果有穿管点，走穿管路线
-        if (passes.Count > 0)
-        {
-            // 2-3. 当前observation → 最近 pass
-            var passNear = FindNearest(currentObs, passes);
-            
-            // 通过 observation 图找到离 pass 最近的 observation
-            var obsNearPass = FindNearest(passNear, observations);
-            
-            if (currentObs.Id != obsNearPass.Id && _obsGraph != null)
-            {
-                // 使用 Dijkstra 找最短路
-                var (pathIds, pathDist) = _obsGraph.FindShortestPath(currentObs.Id, obsNearPass.Id);
-                
-                foreach (var pid in pathIds.Skip(1)) // 跳过起点（已在route中）
-                {
-                    route.Add(_pointsById[pid]);
-                }
-                totalLength += pathDist;
-                currentObs = obsNearPass;
-            }
-            
-            // 3. observation → pass
-            route.Add(passNear);
-            totalLength += currentObs.DistanceTo(passNear);
-            
-            // 4. pass A → pass B (同 pair)
-            var pairedPass = FindPairedPass(passNear);
-            if (pairedPass != null)
-            {
-                route.Add(pairedPass);
-                totalLength += passNear.DistanceTo(pairedPass);
-                
-                // 5. pass → 最近 observation（朝向 end）
-                var obsAfterPass = FindNearest(pairedPass, observations, end);
-                route.Add(obsAfterPass);
-                totalLength += pairedPass.DistanceTo(obsAfterPass);
-                currentObs = obsAfterPass;
-            }
-        }
-        
-        // 6. 找到离 end 最近的 observation
         var obsNearEnd = FindNearest(end, observations);
         
-        if (currentObs.Id != obsNearEnd.Id && _obsGraph != null)
+        route.Add(obsNearStart);
+        totalLength += CalculateLShapeDistance(start, obsNearStart);
+        
+        if (obsNearStart.Id != obsNearEnd.Id && _obsGraph != null)
         {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(currentObs.Id, obsNearEnd.Id);
-            
+            var (pathIds, pathDist) = _obsGraph.FindShortestPath(obsNearStart.Id, obsNearEnd.Id);
             foreach (var pid in pathIds.Skip(1))
             {
                 route.Add(_pointsById[pid]);
@@ -132,11 +141,129 @@ public class PathPlanner
             totalLength += pathDist;
         }
         
-        // 7. observation → end
         route.Add(end);
-        totalLength += obsNearEnd.DistanceTo(end);
+        totalLength += CalculateLShapeDistance(obsNearEnd, end);
         
         return (route, totalLength);
+    }
+    
+    /// <summary>
+    /// 直接穿管路线（Start → PassA → PassB → End）
+    /// 绘制时会用 Z 型连接沿电缆沟走
+    /// </summary>
+    private (List<RoutePoint> Route, double Length) PlanDirectPassRoute(
+        RoutePoint start, RoutePoint end, List<RoutePoint> observations,
+        RoutePoint passA, RoutePoint passB)
+    {
+        var corrector = new OrthogonalCorrector(observations);
+        var cornersToPass = corrector.FindCornerPoints(start, passA);
+        var cornersFromPass = corrector.FindCornerPoints(passB, end);
+        
+        var route = new List<RoutePoint> { start, passA, passB, end };
+        
+        // 计算曼哈顿距离（Z型连接的实际长度）
+        double lengthToPass = CalculateZShapeDistance(cornersToPass, start, passA);
+        double passLength = passA.DistanceTo(passB);  // 穿管直线
+        double lengthFromPass = CalculateZShapeDistance(cornersFromPass, passB, end);
+        
+        return (route, lengthToPass + passLength + lengthFromPass);
+    }
+    
+    /// <summary>
+    /// 计算 Z 型或 L 型连接的实际长度
+    /// </summary>
+    private static double CalculateZShapeDistance(List<(int X, int Y)> corners, RoutePoint start, RoutePoint end)
+    {
+        if (corners.Count == 0)
+        {
+            return CalculateLShapeDistance(start, end);
+        }
+        else if (corners.Count == 1)
+        {
+            return Math.Abs(start.X - corners[0].X) + Math.Abs(start.Y - corners[0].Y) +
+                   Math.Abs(corners[0].X - end.X) + Math.Abs(corners[0].Y - end.Y);
+        }
+        else
+        {
+            return Math.Abs(start.X - corners[0].X) + Math.Abs(start.Y - corners[0].Y) +
+                   Math.Abs(corners[0].X - corners[1].X) + Math.Abs(corners[0].Y - corners[1].Y) +
+                   Math.Abs(corners[1].X - end.X) + Math.Abs(corners[1].Y - end.Y);
+        }
+    }
+    
+    /// <summary>
+    /// 经过观测点的穿管路线
+    /// </summary>
+    private (List<RoutePoint> Route, double Length) PlanRouteViaObs(
+        RoutePoint start, RoutePoint end, List<RoutePoint> observations,
+        RoutePoint passA, RoutePoint passB, bool endViaObs)
+    {
+        var route = new List<RoutePoint> { start };
+        double totalLength = 0.0;
+        
+        var obsNearPassA = FindNearest(passA, observations);
+        var obsNearStart = FindNearest(start, observations);
+        
+        // Start → 最近观测点
+        route.Add(obsNearStart);
+        totalLength += CalculateLShapeDistance(start, obsNearStart);
+        
+        // 沿观测点网络到达 PassA 附近的观测点
+        if (obsNearStart.Id != obsNearPassA.Id && _obsGraph != null)
+        {
+            var (pathIds, pathDist) = _obsGraph.FindShortestPath(obsNearStart.Id, obsNearPassA.Id);
+            foreach (var pid in pathIds.Skip(1))
+            {
+                route.Add(_pointsById[pid]);
+            }
+            totalLength += pathDist;
+        }
+        
+        // 观测点 → PassA
+        route.Add(passA);
+        totalLength += CalculateLShapeDistance(obsNearPassA, passA);
+        
+        // PassA → PassB（穿管直线）
+        route.Add(passB);
+        totalLength += passA.DistanceTo(passB);
+        
+        // PassB → End
+        if (!endViaObs)
+        {
+            route.Add(end);
+            totalLength += CalculateLShapeDistance(passB, end);
+        }
+        else
+        {
+            var obsNearPassB = FindNearest(passB, observations, end);
+            var obsNearEnd = FindNearest(end, observations);
+            
+            route.Add(obsNearPassB);
+            totalLength += CalculateLShapeDistance(passB, obsNearPassB);
+            
+            if (obsNearPassB.Id != obsNearEnd.Id && _obsGraph != null)
+            {
+                var (pathIds, pathDist) = _obsGraph.FindShortestPath(obsNearPassB.Id, obsNearEnd.Id);
+                foreach (var pid in pathIds.Skip(1))
+                {
+                    route.Add(_pointsById[pid]);
+                }
+                totalLength += pathDist;
+            }
+            
+            route.Add(end);
+            totalLength += CalculateLShapeDistance(obsNearEnd, end);
+        }
+        
+        return (route, totalLength);
+    }
+    
+    /// <summary>
+    /// 计算 L 型连接的曼哈顿距离
+    /// </summary>
+    private static double CalculateLShapeDistance(RoutePoint p1, RoutePoint p2)
+    {
+        return Math.Abs(p1.X - p2.X) + Math.Abs(p1.Y - p2.Y);
     }
     
     /// <summary>
@@ -149,7 +276,6 @@ public class PathPlanner
         
         if (directionTarget != null)
         {
-            // 计算朝向终点的分数（距离越近且方向越对越好）
             return candidates.OrderBy(p =>
             {
                 var distToSource = source.DistanceTo(p);
@@ -159,17 +285,5 @@ public class PathPlanner
         }
         
         return candidates.OrderBy(p => source.DistanceTo(p)).First();
-    }
-    
-    /// <summary>
-    /// 找到配对的穿管点
-    /// </summary>
-    private RoutePoint? FindPairedPass(RoutePoint passPoint)
-    {
-        if (string.IsNullOrEmpty(passPoint.Pair))
-            return null;
-        
-        var pairPoints = _passPairs.GetValueOrDefault(passPoint.Pair, new List<RoutePoint>());
-        return pairPoints.FirstOrDefault(p => p.Id != passPoint.Id);
     }
 }
