@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 namespace ModerBox.CableRouting;
@@ -89,6 +90,20 @@ public class CableRoutingService
             
             result.Success = true;
             progressCallback?.Invoke($"✅ 图片已保存: {config.OutputPath}");
+            
+            // 输出经过观测点的文本记录
+            try
+            {
+                var txtPath = Path.ChangeExtension(config.OutputPath, ".txt");
+                var txtContent = GenerateRoutePointsText(route, config.Points);
+                File.WriteAllText(txtPath, txtContent, Encoding.UTF8);
+                result.RouteTextPath = txtPath;
+                progressCallback?.Invoke($"📄 观测点记录已保存: {txtPath}");
+            }
+            catch (Exception txtEx)
+            {
+                progressCallback?.Invoke($"⚠️ 观测点记录保存失败: {txtEx.Message}");
+            }
         }
         catch (Exception ex)
         {
@@ -163,5 +178,47 @@ public class CableRoutingService
     {
         var config = CableRoutingConfig.CreateSample();
         SaveConfig(config, path);
+    }
+    
+    /// <summary>
+    /// 生成路径经过观测点的文本记录
+    /// </summary>
+    private static string GenerateRoutePointsText(List<RoutePoint> route, List<RoutePoint> allPoints)
+    {
+        var sb = new StringBuilder();
+        
+        // 完整路径
+        sb.AppendLine("完整路径:");
+        sb.AppendLine(string.Join(" → ", route.Select(p => p.Id)));
+        sb.AppendLine();
+        
+        // 按路径顺序提取经过的观测点（包含起点和终点）
+        var keyPoints = route
+            .Where(p => p.Type == PointType.Observation || p.Type == PointType.Start || p.Type == PointType.End)
+            .ToList();
+        
+        sb.AppendLine("经过观测点（按顺序）:");
+        for (int i = 0; i < keyPoints.Count; i++)
+        {
+            var p = keyPoints[i];
+            var typeLabel = p.Type switch
+            {
+                PointType.Start => "[起点]",
+                PointType.End => "[终点]",
+                _ => ""
+            };
+            sb.AppendLine($"{i + 1}. {p.Id} {typeLabel}".TrimEnd());
+        }
+        sb.AppendLine();
+        
+        // 仅观测点ID列表，方便复制使用
+        var observations = route.Where(p => p.Type == PointType.Observation).ToList();
+        sb.AppendLine("观测点ID列表（纯列表，方便复制）:");
+        foreach (var obs in observations)
+        {
+            sb.AppendLine(obs.Id);
+        }
+        
+        return sb.ToString();
     }
 }
