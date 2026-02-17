@@ -17,6 +17,9 @@ public class RoutingResult
     /// <summary>输出文件路径</summary>
     public string OutputPath { get; set; } = string.Empty;
     
+    /// <summary>观测点记录文本文件路径</summary>
+    public string? RouteTextPath { get; set; }
+    
     /// <summary>是否成功</summary>
     public bool Success { get; set; }
     
