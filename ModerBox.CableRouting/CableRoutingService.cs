@@ -58,14 +58,20 @@ public class CableRoutingService
             }
             else
             {
-                progressCallback?.Invoke($"   ⚠️ 底图 {config.BaseImagePath} 不存在，创建空白画布...");
-                renderer = new CableRenderer(900, 700);
+                // 根据点位坐标自动计算画布尺寸（留足边距）
+                int maxX = config.Points.Max(p => p.X) + 500;
+                int maxY = config.Points.Max(p => p.Y) + 500;
+                int canvasW = Math.Max(900, maxX);
+                int canvasH = Math.Max(700, maxY);
+                progressCallback?.Invoke($"   ⚠️ 底图 {config.BaseImagePath} 不存在，创建空白画布 ({canvasW}x{canvasH})...");
+                renderer = new CableRenderer(canvasW, canvasH);
             }
             
             using (renderer)
             {
                 renderer.PointRadius = Math.Max(1f, config.PointRadius);
                 renderer.FontSize = Math.Max(1f, config.FontSize);
+                renderer.LineWidth = Math.Max(1f, config.LineWidth);
 
                 // 获取观测点列表
                 var observations = config.Points.Where(p => p.Type == PointType.Observation).ToList();

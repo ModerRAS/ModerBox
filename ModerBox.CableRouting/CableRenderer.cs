@@ -17,7 +17,6 @@ public class CableRenderer : IDisposable
     };
     
     private static readonly SKColor PathColor = new(255, 0, 0);  // 红色路径
-    private const float PathWidth = 3f;
     private const float DefaultPointRadius = 8f;
     private const float DefaultFontSize = 14f;
     
@@ -31,6 +30,7 @@ public class CableRenderer : IDisposable
 
     public float PointRadius { get; set; } = DefaultPointRadius;
     public float FontSize { get; set; } = DefaultFontSize;
+    public float LineWidth { get; set; } = 3f;
     
     /// <summary>
     /// 从图片文件创建渲染器
@@ -76,7 +76,7 @@ public class CableRenderer : IDisposable
         using var pathPaint = new SKPaint
         {
             Color = PathColor,
-            StrokeWidth = PathWidth,
+            StrokeWidth = LineWidth,
             Style = SKPaintStyle.Stroke,
             IsAntialias = true,
             StrokeCap = SKStrokeCap.Round
@@ -89,34 +89,44 @@ public class CableRenderer : IDisposable
             
             if (IsDirectConnection(p1, p2))
             {
-                // 直线连接（观测点之间、同 pair 穿管之间）
-                _canvas.DrawLine(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
+                DrawLineAndRegister(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
             }
             else
             {
-                // L型或Z型连接
                 var corners = corrector.FindCornerPoints(p1, p2);
                 
                 if (corners.Count == 0)
                 {
-                    // 无拐点，直线
-                    _canvas.DrawLine(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
+                    DrawLineAndRegister(p1.X, p1.Y, p2.X, p2.Y, pathPaint);
                 }
                 else if (corners.Count == 1)
                 {
-                    // L型连接
-                    _canvas.DrawLine(p1.X, p1.Y, corners[0].X, corners[0].Y, pathPaint);
-                    _canvas.DrawLine(corners[0].X, corners[0].Y, p2.X, p2.Y, pathPaint);
+                    DrawLineAndRegister(p1.X, p1.Y, corners[0].X, corners[0].Y, pathPaint);
+                    DrawLineAndRegister(corners[0].X, corners[0].Y, p2.X, p2.Y, pathPaint);
                 }
                 else
                 {
-                    // Z型连接（2个拐点）
-                    _canvas.DrawLine(p1.X, p1.Y, corners[0].X, corners[0].Y, pathPaint);
-                    _canvas.DrawLine(corners[0].X, corners[0].Y, corners[1].X, corners[1].Y, pathPaint);
-                    _canvas.DrawLine(corners[1].X, corners[1].Y, p2.X, p2.Y, pathPaint);
+                    DrawLineAndRegister(p1.X, p1.Y, corners[0].X, corners[0].Y, pathPaint);
+                    DrawLineAndRegister(corners[0].X, corners[0].Y, corners[1].X, corners[1].Y, pathPaint);
+                    DrawLineAndRegister(corners[1].X, corners[1].Y, p2.X, p2.Y, pathPaint);
                 }
             }
         }
+    }
+    
+    /// <summary>
+    /// 绘制线段并注册到占用区域（标签/表格会自动避让）
+    /// </summary>
+    private void DrawLineAndRegister(float x1, float y1, float x2, float y2, SKPaint paint)
+    {
+        _canvas.DrawLine(x1, y1, x2, y2, paint);
+        
+        int pad = Math.Max((int)LineWidth + 2, 5);
+        int minX = (int)Math.Min(x1, x2) - pad;
+        int minY = (int)Math.Min(y1, y2) - pad;
+        int w = (int)Math.Abs(x2 - x1) + pad * 2 + 1;
+        int h = (int)Math.Abs(y2 - y1) + pad * 2 + 1;
+        _occupiedRects.Add(new BoundingRect(minX, minY, Math.Max(w, 1), Math.Max(h, 1)));
     }
     
     /// <summary>
@@ -146,7 +156,7 @@ public class CableRenderer : IDisposable
     public void DrawPoints(IEnumerable<RoutePoint> points)
     {
         using var font = new SKFont(_typeface, FontSize);
-        var labelRects = new List<BoundingRect>();  // 已绘制的标签区域
+        using var measurePaint = new SKPaint { IsAntialias = true };
         
         foreach (var p in points)
         {
@@ -174,45 +184,62 @@ public class CableRenderer : IDisposable
             };
             _canvas.DrawCircle(p.X, p.Y, PointRadius, strokePaint);
             
-            // 测量文本宽度
-            using var measurePaint = new SKPaint { IsAntialias = true };
+            // 注册圆点占用区域
+            _occupiedRects.Add(new BoundingRect(
+                (int)(p.X - PointRadius) - 2,
+                (int)(p.Y - PointRadius) - 2,
+                (int)(PointRadius * 2) + 4,
+                (int)(PointRadius * 2) + 4));
+            
+            // 测量文本尺寸
             float textWidth = font.MeasureText(p.Id, out _, measurePaint);
             float textHeight = FontSize;
             float margin = PointRadius + 3;
             
-            // 尝试多个位置放置文本（右、左、上、下、右上、右下、左上、左下）
-            var candidatePositions = new (float x, float y)[]
+            // 在3个距离级别(近/中/远)的8个方向上生成候选位置
+            var candidates = new List<(float x, float y)>();
+            float[] distances = { margin, margin + textHeight, margin + textHeight * 2 };
+            foreach (float dist in distances)
             {
-                (p.X + margin, p.Y + textHeight / 3),                          // 右
-                (p.X - margin - textWidth, p.Y + textHeight / 3),              // 左
-                (p.X - textWidth / 2, p.Y - margin),                          // 上
-                (p.X - textWidth / 2, p.Y + margin + textHeight),             // 下
-                (p.X + margin, p.Y - margin),                                  // 右上
-                (p.X + margin, p.Y + margin + textHeight),                     // 右下
-                (p.X - margin - textWidth, p.Y - margin),                      // 左上
-                (p.X - margin - textWidth, p.Y + margin + textHeight),         // 左下
-            };
+                candidates.Add((p.X + dist, p.Y + textHeight / 3));                           // 右
+                candidates.Add((p.X - dist - textWidth, p.Y + textHeight / 3));               // 左
+                candidates.Add((p.X - textWidth / 2, p.Y - dist));                            // 上
+                candidates.Add((p.X - textWidth / 2, p.Y + dist + textHeight));               // 下
+                candidates.Add((p.X + dist, p.Y - dist));                                      // 右上
+                candidates.Add((p.X + dist, p.Y + dist + textHeight));                         // 右下
+                candidates.Add((p.X - dist - textWidth, p.Y - dist));                          // 左上
+                candidates.Add((p.X - dist - textWidth, p.Y + dist + textHeight));             // 左下
+            }
             
-            float textX = candidatePositions[0].x;
-            float textY = candidatePositions[0].y;
+            // 找到最佳位置（重叠面积最小）
+            float textX = candidates[0].x;
+            float textY = candidates[0].y;
+            long minOverlap = long.MaxValue;
             
-            foreach (var (cx, cy) in candidatePositions)
+            foreach (var (cx, cy) in candidates)
             {
-                var candidateRect = new BoundingRect(
+                var rect = new BoundingRect(
                     (int)cx - 2, (int)(cy - textHeight) - 2,
                     (int)textWidth + 4, (int)textHeight + 4);
                 
-                bool overlaps = labelRects.Any(r => candidateRect.Intersects(r));
-                if (!overlaps)
+                long overlap = rect.TotalOverlapArea(_occupiedRects);
+                if (overlap == 0)
                 {
                     textX = cx;
                     textY = cy;
+                    minOverlap = 0;
                     break;
+                }
+                if (overlap < minOverlap)
+                {
+                    minOverlap = overlap;
+                    textX = cx;
+                    textY = cy;
                 }
             }
             
-            // 记录标签占用区域
-            labelRects.Add(new BoundingRect(
+            // 注册标签占用区域
+            _occupiedRects.Add(new BoundingRect(
                 (int)textX - 2, (int)(textY - textHeight) - 2,
                 (int)textWidth + 4, (int)textHeight + 4));
             
@@ -234,14 +261,6 @@ public class CableRenderer : IDisposable
                 IsAntialias = true
             };
             _canvas.DrawText(p.Id, textX, textY, font, textPaint);
-            
-            // 记录点位占用区域（用于表格避让）
-            _occupiedRects.Add(new BoundingRect(
-                (int)(p.X - PointRadius - 5),
-                (int)(p.Y - PointRadius - 5),
-                (int)(PointRadius * 2 + textWidth + margin + 10),
-                (int)(PointRadius * 2 + 10)
-            ));
         }
     }
     
@@ -258,7 +277,7 @@ public class CableRenderer : IDisposable
         // 计算表格尺寸（自适应字体大小）
         int padding = Math.Max(10, (int)(FontSize * 0.7));
         int rowHeight = Math.Max(25, (int)(FontSize * 1.8));
-        int colCount = tableData.Data.Max(row => row.Count);  // 最多列数
+        int colCount = tableData.Data.Max(row => row.Count);
         int[] colWidths = new int[colCount];
         
         // 按实际文本宽度计算每列宽度
@@ -280,38 +299,57 @@ public class CableRenderer : IDisposable
         // 确保表格至少能容纳标题
         float titleWidth = font.MeasureText(tableData.Title, out _, measurePaint);
         int tableWidth = Math.Max(colWidths.Sum() + padding * 2, (int)titleWidth + padding * 2);
-        int tableHeight = tableData.Data.Count * rowHeight + padding * 2 + (int)(FontSize * 2);  // 包含标题空间
+        int tableHeight = tableData.Data.Count * rowHeight + padding * 2 + (int)(FontSize * 2);
         
-        // 尝试位置顺序：右上 → 右下 → 左上 → 左下 → 上 → 下
-        var positions = new[]
+        // 生成候选位置：在终点周围以递增偏移量搜索 + 图片四角
+        var candidates = new List<(int x, int y)>();
+        int[] offsets = { 30, 80, 150, 250, 400, 600, 900 };
+        foreach (int off in offsets)
         {
-            (endPoint.X + 30, endPoint.Y - tableHeight - 10),   // 右上
-            (endPoint.X + 30, endPoint.Y + 30),                  // 右下
-            (endPoint.X - tableWidth - 30, endPoint.Y - tableHeight - 10),  // 左上
-            (endPoint.X - tableWidth - 30, endPoint.Y + 30),    // 左下
-            (endPoint.X - tableWidth / 2, endPoint.Y - tableHeight - 40),   // 上
-            (endPoint.X - tableWidth / 2, endPoint.Y + 40)      // 下
-        };
+            candidates.Add((endPoint.X + off, endPoint.Y - tableHeight - off));               // 右上
+            candidates.Add((endPoint.X + off, endPoint.Y + off));                              // 右下
+            candidates.Add((endPoint.X - tableWidth - off, endPoint.Y - tableHeight - off));   // 左上
+            candidates.Add((endPoint.X - tableWidth - off, endPoint.Y + off));                 // 左下
+            candidates.Add((endPoint.X - tableWidth / 2, endPoint.Y - tableHeight - off));     // 正上
+            candidates.Add((endPoint.X - tableWidth / 2, endPoint.Y + off));                   // 正下
+        }
         
-        // 找到第一个无冲突位置
-        int tableX = positions[0].Item1;
-        int tableY = positions[0].Item2;
+        // 图片四角和边缘
+        int edgePad = 20;
+        candidates.Add((edgePad, edgePad));
+        candidates.Add((Width - tableWidth - edgePad, edgePad));
+        candidates.Add((edgePad, Height - tableHeight - edgePad));
+        candidates.Add((Width - tableWidth - edgePad, Height - tableHeight - edgePad));
+        // 边缘中点
+        candidates.Add((Width - tableWidth - edgePad, Height / 2 - tableHeight / 2));
+        candidates.Add((edgePad, Height / 2 - tableHeight / 2));
         
-        foreach (var (px, py) in positions)
+        // 找到最佳位置（重叠面积最小，优先完全无重叠）
+        int tableX = endPoint.X + 30;
+        int tableY = endPoint.Y + 30;
+        long minOverlap = long.MaxValue;
+        
+        foreach (var (px, py) in candidates)
         {
             // 边界检查
             if (px < 0 || py < 0) continue;
             if (px + tableWidth > Width || py + tableHeight > Height) continue;
             
-            // 碰撞检测
             var tableRect = new BoundingRect(px, py, tableWidth, tableHeight);
-            bool conflict = _occupiedRects.Any(r => tableRect.Intersects(r));
+            long overlapArea = tableRect.TotalOverlapArea(_occupiedRects);
             
-            if (!conflict)
+            if (overlapArea == 0)
             {
                 tableX = px;
                 tableY = py;
+                minOverlap = 0;
                 break;
+            }
+            if (overlapArea < minOverlap)
+            {
+                minOverlap = overlapArea;
+                tableX = px;
+                tableY = py;
             }
         }
         
