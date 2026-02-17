@@ -133,6 +133,10 @@ public class CableRenderer : IDisposable
             !string.IsNullOrEmpty(p1.Pair) && p1.Pair == p2.Pair)
             return true;
         
+        // 垂足点（路由中自动生成的中间点）与任何点直线连接
+        if (p1.Id == "_foot_" || p2.Id == "_foot_")
+            return true;
+        
         return false;
     }
     
@@ -142,9 +146,13 @@ public class CableRenderer : IDisposable
     public void DrawPoints(IEnumerable<RoutePoint> points)
     {
         using var font = new SKFont(_typeface, FontSize);
+        var labelRects = new List<BoundingRect>();  // 已绘制的标签区域
         
         foreach (var p in points)
         {
+            // 不绘制路由中间生成的垂足点
+            if (p.Id == "_foot_") continue;
+            
             var color = PointColors.GetValueOrDefault(p.Type, new SKColor(128, 128, 128));
             
             // 绘制圆点填充
@@ -166,9 +174,47 @@ public class CableRenderer : IDisposable
             };
             _canvas.DrawCircle(p.X, p.Y, PointRadius, strokePaint);
             
-            // 绘制ID文本
-            float textX = p.X + PointRadius + 3;
-            float textY = p.Y + FontSize / 3;
+            // 测量文本宽度
+            using var measurePaint = new SKPaint { IsAntialias = true };
+            float textWidth = font.MeasureText(p.Id, out _, measurePaint);
+            float textHeight = FontSize;
+            float margin = PointRadius + 3;
+            
+            // 尝试多个位置放置文本（右、左、上、下、右上、右下、左上、左下）
+            var candidatePositions = new (float x, float y)[]
+            {
+                (p.X + margin, p.Y + textHeight / 3),                          // 右
+                (p.X - margin - textWidth, p.Y + textHeight / 3),              // 左
+                (p.X - textWidth / 2, p.Y - margin),                          // 上
+                (p.X - textWidth / 2, p.Y + margin + textHeight),             // 下
+                (p.X + margin, p.Y - margin),                                  // 右上
+                (p.X + margin, p.Y + margin + textHeight),                     // 右下
+                (p.X - margin - textWidth, p.Y - margin),                      // 左上
+                (p.X - margin - textWidth, p.Y + margin + textHeight),         // 左下
+            };
+            
+            float textX = candidatePositions[0].x;
+            float textY = candidatePositions[0].y;
+            
+            foreach (var (cx, cy) in candidatePositions)
+            {
+                var candidateRect = new BoundingRect(
+                    (int)cx - 2, (int)(cy - textHeight) - 2,
+                    (int)textWidth + 4, (int)textHeight + 4);
+                
+                bool overlaps = labelRects.Any(r => candidateRect.Intersects(r));
+                if (!overlaps)
+                {
+                    textX = cx;
+                    textY = cy;
+                    break;
+                }
+            }
+            
+            // 记录标签占用区域
+            labelRects.Add(new BoundingRect(
+                (int)textX - 2, (int)(textY - textHeight) - 2,
+                (int)textWidth + 4, (int)textHeight + 4));
             
             // 文字描边效果（黑色阴影）
             using var shadowPaint = new SKPaint
@@ -189,32 +235,52 @@ public class CableRenderer : IDisposable
             };
             _canvas.DrawText(p.Id, textX, textY, font, textPaint);
             
-            // 记录点位占用区域
+            // 记录点位占用区域（用于表格避让）
             _occupiedRects.Add(new BoundingRect(
                 (int)(p.X - PointRadius - 5),
                 (int)(p.Y - PointRadius - 5),
-                (int)(PointRadius * 2 + 60),
+                (int)(PointRadius * 2 + textWidth + margin + 10),
                 (int)(PointRadius * 2 + 10)
             ));
         }
     }
     
     /// <summary>
-    /// 在终点附近绘制业务统计表格
+    /// 在终点附近绘制业务统计表格（二维数组格式）
     /// </summary>
     public void DrawEndTable(RoutePoint endPoint, EndTableData? tableData)
     {
-        if (tableData == null || tableData.Rows.Count == 0)
+        if (tableData == null || tableData.Data.Count == 0)
             return;
         
         using var font = new SKFont(_typeface, FontSize);
         
-        // 计算表格尺寸
-        const int padding = 10;
-        const int rowHeight = 25;
-        int[] colWidths = { 100, 50 };  // 名称列、数量列
-        int tableWidth = colWidths.Sum() + padding * 2;
-        int tableHeight = (tableData.Rows.Count + 1) * rowHeight + padding * 2;  // +1 为标题行
+        // 计算表格尺寸（自适应字体大小）
+        int padding = Math.Max(10, (int)(FontSize * 0.7));
+        int rowHeight = Math.Max(25, (int)(FontSize * 1.8));
+        int colCount = tableData.Data.Max(row => row.Count);  // 最多列数
+        int[] colWidths = new int[colCount];
+        
+        // 按实际文本宽度计算每列宽度
+        using var measurePaint = new SKPaint { IsAntialias = true };
+        for (int j = 0; j < colCount; j++)
+        {
+            float maxWidth = 0;
+            foreach (var row in tableData.Data)
+            {
+                if (j < row.Count)
+                {
+                    float w = font.MeasureText(row[j], out _, measurePaint);
+                    if (w > maxWidth) maxWidth = w;
+                }
+            }
+            colWidths[j] = (int)maxWidth + padding;
+        }
+        
+        // 确保表格至少能容纳标题
+        float titleWidth = font.MeasureText(tableData.Title, out _, measurePaint);
+        int tableWidth = Math.Max(colWidths.Sum() + padding * 2, (int)titleWidth + padding * 2);
+        int tableHeight = tableData.Data.Count * rowHeight + padding * 2 + (int)(FontSize * 2);  // 包含标题空间
         
         // 尝试位置顺序：右上 → 右下 → 左上 → 左下 → 上 → 下
         var positions = new[]
@@ -275,23 +341,28 @@ public class CableRenderer : IDisposable
         int titleY = tableY + padding + (int)(FontSize * 0.8);
         _canvas.DrawText(tableData.Title, tableX + padding, titleY, font, textPaint);
         
-        // 绘制分隔线
-        int lineY = tableY + padding + rowHeight;
+        // 绘制分隔线（在标题下方）
+        int headerLineY = tableY + padding + (int)(FontSize * 1.5);
         using var linePaint = new SKPaint
         {
             Color = SKColors.Black,
             StrokeWidth = 1
         };
-        _canvas.DrawLine(tableX, lineY, tableX + tableWidth, lineY, linePaint);
+        _canvas.DrawLine(tableX, headerLineY, tableX + tableWidth, headerLineY, linePaint);
         
-        // 绘制数据行
-        for (int i = 0; i < tableData.Rows.Count; i++)
+        // 绘制数据行（二维数组）
+        int dataStartY = headerLineY + 5;
+        for (int i = 0; i < tableData.Data.Count; i++)
         {
-            var row = tableData.Rows[i];
-            int rowY = lineY + i * rowHeight + 5 + (int)(FontSize * 0.8);
+            var row = tableData.Data[i];
+            int rowY = dataStartY + i * rowHeight + (int)(FontSize * 0.8);
             
-            _canvas.DrawText(row.Name, tableX + padding, rowY, font, textPaint);
-            _canvas.DrawText(row.Count.ToString(), tableX + padding + colWidths[0], rowY, font, textPaint);
+            int currentX = tableX + padding;
+            for (int j = 0; j < row.Count; j++)
+            {
+                _canvas.DrawText(row[j], currentX, rowY, font, textPaint);
+                currentX += colWidths[j];
+            }
         }
         
         // 记录表格占用区域

@@ -43,13 +43,11 @@ public class PathPlanner
             return (route, start.DistanceTo(end));
         }
         
-        // 起点入沟（朝终点方向选端点）
-        var (startOnTrench, startDist) = ConnectPointToTrench(start, observations, end);
-        route.Add(startOnTrench);
-        totalLength += startDist;
+        // 起点入沟：Start → foot → obsPoint
+        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, end);
         
-        // 终点入沟（选离垂足最近的端点）
-        var (endOnTrench, endDist) = ConnectPointToTrench(end, observations);
+        // 终点入沟（获取 obsPoint）
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations);
         
         // 沿电缆沟网络走
         if (startOnTrench.Id != endOnTrench.Id)
@@ -62,6 +60,8 @@ public class PathPlanner
             totalLength += pathDist;
         }
         
+        // 出沟到终点：foot → End
+        if (endFoot != null) route.Add(endFoot);
         route.Add(end);
         totalLength += endDist;
         
@@ -124,19 +124,15 @@ public class PathPlanner
         
         var (passA, passB) = validPassPair.Value;
         
-        // 计算候选路线，选最短的
-        // 必须先入沟（到观测点），沿电缆沟走，再出沟到穿管
+        // 计算候选路线（穿管正反向），选最短的
+        // 所有路线都必须走电缆沟
         var candidates = new List<(List<RoutePoint> Route, double Length)>();
         
-        // 路线1: Start → Obs → PassA → PassB → End（穿管后直接到终点）
-        candidates.Add(PlanRouteViaObs(start, end, observations, passA, passB, endViaObs: false));
+        // 路线1: Start → Obs → PassA → PassB → Obs → End
+        candidates.Add(PlanRouteViaObs(start, end, observations, passA, passB));
         
-        // 路线2: Start → Obs → PassA → PassB → Obs → End（穿管后经过观测点）
-        candidates.Add(PlanRouteViaObs(start, end, observations, passA, passB, endViaObs: true));
-        
-        // 路线3-4: 反向穿管
-        candidates.Add(PlanRouteViaObs(start, end, observations, passB, passA, endViaObs: false));
-        candidates.Add(PlanRouteViaObs(start, end, observations, passB, passA, endViaObs: true));
+        // 路线2: 反向穿管 Start → Obs → PassB → PassA → Obs → End
+        candidates.Add(PlanRouteViaObs(start, end, observations, passB, passA));
         
         // 选择最短路线
         return candidates.Where(c => c.Route.Count > 0)
@@ -168,13 +164,11 @@ public class PathPlanner
         var route = new List<RoutePoint> { start };
         double totalLength = 0.0;
         
-        // 起点入沟（朝终点方向选端点）
-        var (startOnTrench, startDist) = ConnectPointToTrench(start, observations, end);
-        route.Add(startOnTrench);
-        totalLength += startDist;
+        // 起点入沟：Start → foot → obsPoint
+        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, end);
         
-        // 终点入沟（选离垂足最近的端点）
-        var (endOnTrench, endDist) = ConnectPointToTrench(end, observations);
+        // 终点入沟（获取 obsPoint）
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations);
         
         // 沿电缆沟网络走
         if (startOnTrench.Id != endOnTrench.Id && _obsGraph != null)
@@ -187,6 +181,8 @@ public class PathPlanner
             totalLength += pathDist;
         }
         
+        // 出沟到终点：foot → End
+        if (endFoot != null) route.Add(endFoot);
         route.Add(end);
         totalLength += endDist;
         
@@ -194,31 +190,31 @@ public class PathPlanner
     }
     
     /// <summary>
-    /// 经过观测点的穿管路线（先入沟，沿电缆沟走，再出沟到穿管）
+    /// 经过穿管点的路线（所有段都通过电缆沟网络连接）
+    /// 路线: Start → [入沟] → Obs网络 → [出沟] → PassA → PassB → [入沟] → Obs网络 → [出沟] → End
     /// </summary>
     private (List<RoutePoint> Route, double Length) PlanRouteViaObs(
         RoutePoint start, RoutePoint end, List<RoutePoint> observations,
-        RoutePoint passA, RoutePoint passB, bool endViaObs)
+        RoutePoint passA, RoutePoint passB)
     {
         var route = new List<RoutePoint> { start };
         double totalLength = 0.0;
         
         if (_obsGraph == null)
         {
-            // 没有电缆沟，直接连接
             route.Add(passA);
             route.Add(passB);
             route.Add(end);
             return (route, start.DistanceTo(passA) + passA.DistanceTo(passB) + passB.DistanceTo(end));
         }
         
-        // === Start 入沟 ===
-        var (startOnTrench, startDist) = ConnectPointToTrench(start, observations, passA);
-        route.Add(startOnTrench);
-        totalLength += startDist;
+        // === 第一段: Start → 电缆沟 → PassA ===
         
-        // === PassA 入沟（穿管点到最近电缆沟，选离垂足最近的端点）===
-        var (passAOnTrench, passADist) = ConnectPointToTrench(passA, observations);
+        // Start 入沟：Start → foot → obsPoint
+        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, passA);
+        
+        // PassA 入沟（获取目标观测点和垂足）
+        var (passAOnTrench, passAFoot, passADist) = ConnectPointToTrench(passA, observations);
         
         // 沿电缆沟网络走到 passA 附近的观测点
         if (startOnTrench.Id != passAOnTrench.Id)
@@ -231,62 +227,56 @@ public class PathPlanner
             totalLength += pathDist;
         }
         
-        // 出沟到 PassA
+        // 出沟到 PassA：foot → PassA
+        if (passAFoot != null) route.Add(passAFoot);
         route.Add(passA);
         totalLength += passADist;
         
-        // === PassA → PassB（穿管直线）===
+        // === 第二段: PassA → PassB（穿管直线）===
         route.Add(passB);
         totalLength += passA.DistanceTo(passB);
         
-        // === PassB → End ===
-        if (!endViaObs)
+        // === 第三段: PassB → 电缆沟 → End ===
+        
+        // PassB 入沟：PassB → foot → obsPoint
+        var passBOnTrench = AddSourceToTrench(route, ref totalLength, passB, observations, end);
+        
+        // End 入沟（获取目标观测点和垂足）
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations);
+        
+        // 沿电缆沟网络走
+        if (passBOnTrench.Id != endOnTrench.Id)
         {
-            route.Add(end);
-            totalLength += passB.DistanceTo(end);
-        }
-        else
-        {
-            // PassB 入沟
-            var (passBOnTrench, passBDist) = ConnectPointToTrench(passB, observations, end);
-            route.Add(passBOnTrench);
-            totalLength += passBDist;
-            
-            // End 入沟（选离垂足最近的端点）
-            var (endOnTrench, endDist) = ConnectPointToTrench(end, observations);
-            
-            // 沿电缆沟网络走
-            if (passBOnTrench.Id != endOnTrench.Id)
+            var (pathIds, pathDist) = _obsGraph.FindShortestPath(passBOnTrench.Id, endOnTrench.Id);
+            foreach (var pid in pathIds.Skip(1))
             {
-                var (pathIds, pathDist) = _obsGraph.FindShortestPath(passBOnTrench.Id, endOnTrench.Id);
-                foreach (var pid in pathIds.Skip(1))
-                {
-                    route.Add(_pointsById[pid]);
-                }
-                totalLength += pathDist;
+                route.Add(_pointsById[pid]);
             }
-            
-            route.Add(end);
-            totalLength += endDist;
+            totalLength += pathDist;
         }
+        
+        // 出沟到 End：foot → End
+        if (endFoot != null) route.Add(endFoot);
+        route.Add(end);
+        totalLength += endDist;
         
         return (route, totalLength);
     }
     
     /// <summary>
     /// 将外部点连接到最近的电缆沟网络
-    /// 返回：入沟的观测点（电缆沟端点）和总距离（垂直入沟距离 + 沿沟到观测点距离）
+    /// 返回：入沟的观测点（电缆沟端点）、垂足点、总距离
     /// </summary>
     /// <param name="point">外部点（起点/终点/穿管点等）</param>
     /// <param name="observations">所有观测点（回退用）</param>
     /// <param name="directionHint">方向提示：选择电缆沟哪个端点时偏向此方向</param>
-    private (RoutePoint OnTrenchPoint, double Distance) ConnectPointToTrench(
+    private (RoutePoint OnTrenchPoint, RoutePoint? FootPoint, double Distance) ConnectPointToTrench(
         RoutePoint point, List<RoutePoint> observations, RoutePoint? directionHint = null)
     {
         if (_obsGraph == null)
         {
             var nearest = FindNearest(point, observations);
-            return (nearest, CalculateLShapeDistance(point, nearest));
+            return (nearest, null, CalculateLShapeDistance(point, nearest));
         }
         
         var (entryPoint, trench, entryDist) = _obsGraph.FindNearestTrench(point);
@@ -294,7 +284,7 @@ public class PathPlanner
         if (entryPoint == null || trench == null)
         {
             var nearest = FindNearest(point, observations);
-            return (nearest, CalculateLShapeDistance(point, nearest));
+            return (nearest, null, CalculateLShapeDistance(point, nearest));
         }
         
         // 选择电缆沟的哪个端点：朝方向提示更近的
@@ -313,9 +303,46 @@ public class PathPlanner
             onTrench = d1 < d2 ? trench.P1 : trench.P2;
         }
         
+        // 判断垂足是否与观测点重合（距离极近则无需额外点）
+        RoutePoint? footPoint = null;
+        if (entryPoint.DistanceTo(onTrench) > 5.0)
+        {
+            footPoint = new RoutePoint("_foot_", PointType.Observation, entryPoint.X, entryPoint.Y);
+        }
+        
         // 总距离 = 垂直入沟距离 + 沿电缆沟到观测点的距离
         double totalDist = entryDist + entryPoint.DistanceTo(onTrench);
-        return (onTrench, totalDist);
+        return (onTrench, footPoint, totalDist);
+    }
+    
+    /// <summary>
+    /// 将源点连接入电缆沟网络（添加到路由末尾）
+    /// 路由添加顺序：foot → obsPoint（先垂直入沟，再沿沟到观测点）
+    /// </summary>
+    private RoutePoint AddSourceToTrench(List<RoutePoint> route, ref double totalLength,
+        RoutePoint source, List<RoutePoint> observations, RoutePoint? directionHint)
+    {
+        var (onTrench, foot, dist) = ConnectPointToTrench(source, observations, directionHint);
+        if (foot != null) route.Add(foot);
+        route.Add(onTrench);
+        totalLength += dist;
+        return onTrench;
+    }
+    
+    /// <summary>
+    /// 将目的点从电缆沟网络连接出去（添加到路由末尾）
+    /// 路由添加顺序：foot → destination（先沿沟到垂足，再垂直出沟）
+    /// 注意：调用前 obsPoint 应该已在路由中
+    /// </summary>
+    private RoutePoint AddDestinationFromTrench(List<RoutePoint> route, ref double totalLength,
+        RoutePoint destination, List<RoutePoint> observations)
+    {
+        var (onTrench, foot, dist) = ConnectPointToTrench(destination, observations);
+        // onTrench 已通过图路径添加到 route 中
+        if (foot != null) route.Add(foot);
+        route.Add(destination);
+        totalLength += dist;
+        return onTrench;
     }
     
     /// <summary>
