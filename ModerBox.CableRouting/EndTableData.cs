@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace ModerBox.CableRouting;
 
 /// <summary>
-/// 终点业务表格数据
+/// 终点表格数据（纯粹的二维数组格式）
 /// </summary>
 public class EndTableData
 {
@@ -11,29 +11,18 @@ public class EndTableData
     [JsonPropertyName("title")]
     public string Title { get; set; } = "终点下级业务";
     
-    /// <summary>数据行（名称，数量）</summary>
-    [JsonPropertyName("rows")]
-    public List<TableRow> Rows { get; set; } = new();
-}
-
-/// <summary>
-/// 表格行数据
-/// </summary>
-public class TableRow
-{
-    /// <summary>业务名称</summary>
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-    
-    /// <summary>数量</summary>
-    [JsonPropertyName("count")]
-    public int Count { get; set; }
-    
-    public TableRow() { }
-    
-    public TableRow(string name, int count)
-    {
-        Name = name;
-        Count = count;
-    }
+    /// <summary>表格数据（二维数组，每行是一个单元格数组）</summary>
+    /// <remarks>
+    /// JSON示例：
+    /// {
+    ///   "title": "终点下级业务",
+    ///   "data": [
+    ///     ["业务名称", "数量"],
+    ///     ["业务1", "5"],
+    ///     ["业务2", "3"]
+    ///   ]
+    /// }
+    /// </remarks>
+    [JsonPropertyName("data")]
+    public List<List<string>> Data { get; set; } = new();
 }
