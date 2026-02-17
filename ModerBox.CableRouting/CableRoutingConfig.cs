@@ -30,6 +30,10 @@ public class CableRoutingConfig
     /// <summary>点位文字大小（像素）</summary>
     [JsonPropertyName("fontSize")]
     public float FontSize { get; set; } = 14f;
+
+    /// <summary>路径线条粗细（像素）</summary>
+    [JsonPropertyName("lineWidth")]
+    public float LineWidth { get; set; } = 3f;
     
     /// <summary>
     /// 创建示例配置
@@ -42,6 +46,7 @@ public class CableRoutingConfig
             OutputPath = "result.png",
             PointRadius = 8f,
             FontSize = 14f,
+            LineWidth = 3f,
             Points = new List<RoutePoint>
             {
                 // 起点
