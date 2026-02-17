@@ -14,7 +14,7 @@ public class CableRoutingConfigTest
         Assert.IsNotNull(config);
         Assert.IsTrue(config.Points.Count > 0);
         Assert.IsNotNull(config.EndTable);
-        Assert.IsTrue(config.EndTable.Rows.Count > 0);
+        Assert.IsTrue(config.EndTable.Data.Count > 0);
     }
     
     [TestMethod]

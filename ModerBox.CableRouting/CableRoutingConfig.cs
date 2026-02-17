@@ -65,12 +65,13 @@ public class CableRoutingConfig
             EndTable = new EndTableData
             {
                 Title = "终点下级业务",
-                Rows = new List<TableRow>
+                Data = new List<List<string>>
                 {
-                    new("摄像头", 6),
-                    new("AP", 4),
-                    new("门禁", 2),
-                    new("广播", 1)
+                    new List<string> { "业务名称", "数量" },
+                    new List<string> { "摄像头", "6" },
+                    new List<string> { "AP", "4" },
+                    new List<string> { "门禁", "2" },
+                    new List<string> { "广播", "1" }
                 }
             }
         };
