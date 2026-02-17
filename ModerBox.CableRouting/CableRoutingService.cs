@@ -187,14 +187,14 @@ public class CableRoutingService
     {
         var sb = new StringBuilder();
         
-        // 完整路径
+        // 完整路径（隐藏中间垂足点）
         sb.AppendLine("完整路径:");
-        sb.AppendLine(string.Join(" → ", route.Select(p => p.Id)));
+        sb.AppendLine(string.Join(" → ", route.Where(p => p.Id != "_foot_").Select(p => p.Id)));
         sb.AppendLine();
         
-        // 按路径顺序提取经过的观测点（包含起点和终点）
+        // 按路径顺序提取经过的观测点（包含起点和终点，排除垂足）
         var keyPoints = route
-            .Where(p => p.Type == PointType.Observation || p.Type == PointType.Start || p.Type == PointType.End)
+            .Where(p => p.Id != "_foot_" && (p.Type == PointType.Observation || p.Type == PointType.Start || p.Type == PointType.End))
             .ToList();
         
         sb.AppendLine("经过观测点（按顺序）:");
@@ -212,7 +212,7 @@ public class CableRoutingService
         sb.AppendLine();
         
         // 仅观测点ID列表，方便复制使用
-        var observations = route.Where(p => p.Type == PointType.Observation).ToList();
+        var observations = route.Where(p => p.Type == PointType.Observation && p.Id != "_foot_").ToList();
         sb.AppendLine("观测点ID列表（纯列表，方便复制）:");
         foreach (var obs in observations)
         {
