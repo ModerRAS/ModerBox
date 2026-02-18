@@ -35,7 +35,7 @@ public class ObservationGraph
             p => p.Id,
             _ => new List<(string, double)>()
         );
-        var trenches = new List<CableTrench>();
+        var allEdges = new List<CableTrench>();
         
         for (int i = 0; i < _observations.Count; i++)
         {
@@ -63,12 +63,78 @@ public class ObservationGraph
                     graph[p1.Id].Add((p2.Id, distance));
                     graph[p2.Id].Add((p1.Id, distance));
                     
-                    trenches.Add(new CableTrench(p1, p2, isHorizontal));
+                    allEdges.Add(new CableTrench(p1, p2, isHorizontal));
                 }
             }
         }
         
+        // 过滤电缆沟线段：只保留相邻线段（两端点之间没有其他观测点）
+        // 这避免了 FindNearestTrench 找到跨越中间点的长线段
+        var trenches = FilterToAdjacentTrenches(allEdges);
+        
         return (graph, trenches);
+    }
+    
+    /// <summary>
+    /// 过滤电缆沟线段，移除两端点之间存在其他共线观测点的跨越线段。
+    /// 例如 L1-3—L1-5—L1-6 共线时，保留 L1-3—L1-5 和 L1-5—L1-6，移除 L1-3—L1-6。
+    /// </summary>
+    private List<CableTrench> FilterToAdjacentTrenches(List<CableTrench> allEdges)
+    {
+        var result = new List<CableTrench>();
+        
+        foreach (var trench in allEdges)
+        {
+            bool hasIntermediate = false;
+            
+            if (trench.IsHorizontal)
+            {
+                // 水平线段：检查是否有其他点在同一水平线上且 X 坐标在两端点之间
+                int avgY = (trench.P1.Y + trench.P2.Y) / 2;
+                int minX = Math.Min(trench.P1.X, trench.P2.X);
+                int maxX = Math.Max(trench.P1.X, trench.P2.X);
+                
+                foreach (var obs in _observations)
+                {
+                    if (obs.Id == trench.P1.Id || obs.Id == trench.P2.Id)
+                        continue;
+                    
+                    // 检查该点是否在同一水平线上（Y坐标接近）且X在范围内
+                    if (Math.Abs(obs.Y - avgY) <= 10 && obs.X > minX + 5 && obs.X < maxX - 5)
+                    {
+                        hasIntermediate = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // 垂直线段：检查是否有其他点在同一垂直线上且 Y 坐标在两端点之间
+                int avgX = (trench.P1.X + trench.P2.X) / 2;
+                int minY = Math.Min(trench.P1.Y, trench.P2.Y);
+                int maxY = Math.Max(trench.P1.Y, trench.P2.Y);
+                
+                foreach (var obs in _observations)
+                {
+                    if (obs.Id == trench.P1.Id || obs.Id == trench.P2.Id)
+                        continue;
+                    
+                    // 检查该点是否在同一垂直线上（X坐标接近）且Y在范围内
+                    if (Math.Abs(obs.X - avgX) <= 10 && obs.Y > minY + 5 && obs.Y < maxY - 5)
+                    {
+                        hasIntermediate = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!hasIntermediate)
+            {
+                result.Add(trench);
+            }
+        }
+        
+        return result;
     }
     
     /// <summary>
