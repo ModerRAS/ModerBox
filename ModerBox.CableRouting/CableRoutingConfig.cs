@@ -28,6 +28,13 @@ public class CableRoutingConfig
     public float LineWidth { get; set; } = 3f;
 
     /// <summary>
+    /// 终点业务表格字典（key = 终点ID，value = 表格数据）。
+    /// 与 points 并列，按 endId 一一对应。
+    /// </summary>
+    [JsonPropertyName("endTables")]
+    public Dictionary<string, EndTableData>? EndTables { get; set; }
+
+    /// <summary>
     /// 绘制任务列表（多任务模式）。
     /// 每个任务指定一个起点、终点和输出路径，共享同一套观测点和穿管点。
     /// </summary>
@@ -40,7 +47,7 @@ public class CableRoutingConfig
     [JsonPropertyName("outputPath")]
     public string OutputPath { get; set; } = "result.png";
 
-    /// <summary>终点业务表格数据（单任务模式向后兼容）</summary>
+    /// <summary>终点业务表格数据（单任务模式向后兼容，优先使用 EndTables）</summary>
     [JsonPropertyName("endTable")]
     public EndTableData? EndTable { get; set; }
 
@@ -70,10 +77,20 @@ public class CableRoutingConfig
                 OutputPath = OutputPath,
                 StartId = start?.Id ?? string.Empty,
                 EndId = end?.Id ?? string.Empty,
-                EndTable = EndTable,
                 PassPair = null  // 使用所有穿管
             }
         };
+    }
+
+    /// <summary>
+    /// 根据终点ID获取对应的表格数据。
+    /// 优先从 EndTables 字典查找，回退到 EndTable（单任务兼容）。
+    /// </summary>
+    public EndTableData? GetEndTable(string endId)
+    {
+        if (EndTables != null && EndTables.TryGetValue(endId, out var table))
+            return table;
+        return EndTable;
     }
 
     /// <summary>
@@ -150,6 +167,29 @@ public class CableRoutingConfig
                 new("E1", PointType.End, 700, 400),
                 new("E2", PointType.End, 700, 600),
             },
+            EndTables = new Dictionary<string, EndTableData>
+            {
+                ["E1"] = new EndTableData
+                {
+                    Title = "E1下级业务",
+                    Data = new List<List<string>>
+                    {
+                        new() { "业务名称", "数量" },
+                        new() { "摄像头", "6" },
+                        new() { "AP", "4" },
+                    }
+                },
+                ["E2"] = new EndTableData
+                {
+                    Title = "E2下级业务",
+                    Data = new List<List<string>>
+                    {
+                        new() { "业务名称", "数量" },
+                        new() { "门禁", "2" },
+                        new() { "广播", "1" },
+                    }
+                }
+            },
             Tasks = new List<RoutingTask>
             {
                 new RoutingTask
@@ -158,16 +198,6 @@ public class CableRoutingConfig
                     StartId = "S1",
                     EndId = "E1",
                     PassPair = "P1",
-                    EndTable = new EndTableData
-                    {
-                        Title = "E1下级业务",
-                        Data = new List<List<string>>
-                        {
-                            new() { "业务名称", "数量" },
-                            new() { "摄像头", "6" },
-                            new() { "AP", "4" },
-                        }
-                    }
                 },
                 new RoutingTask
                 {
@@ -175,16 +205,6 @@ public class CableRoutingConfig
                     StartId = "S2",
                     EndId = "E2",
                     PassPair = null,  // 使用所有穿管
-                    EndTable = new EndTableData
-                    {
-                        Title = "E2下级业务",
-                        Data = new List<List<string>>
-                        {
-                            new() { "业务名称", "数量" },
-                            new() { "门禁", "2" },
-                            new() { "广播", "1" },
-                        }
-                    }
                 }
             }
         };

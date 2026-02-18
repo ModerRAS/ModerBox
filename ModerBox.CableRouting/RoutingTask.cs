@@ -25,8 +25,4 @@ public class RoutingTask
     /// </summary>
     [JsonPropertyName("passPair")]
     public string? PassPair { get; set; }
-
-    /// <summary>终点业务表格数据</summary>
-    [JsonPropertyName("endTable")]
-    public EndTableData? EndTable { get; set; }
 }

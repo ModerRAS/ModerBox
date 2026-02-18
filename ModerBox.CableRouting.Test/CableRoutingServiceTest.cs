@@ -89,7 +89,7 @@ public class CableRoutingServiceTest
         var content = File.ReadAllText(configPath);
         Assert.IsTrue(content.Contains("points"));
         Assert.IsTrue(content.Contains("tasks"));
-        Assert.IsTrue(content.Contains("endTable"));
+        Assert.IsTrue(content.Contains("endTables"));
     }
     
     [TestMethod]

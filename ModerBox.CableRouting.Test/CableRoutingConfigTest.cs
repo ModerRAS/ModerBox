@@ -15,8 +15,9 @@ public class CableRoutingConfigTest
         Assert.IsTrue(config.Points.Count > 0);
         Assert.IsTrue(config.IsMultiTask, "示例配置应为多任务模式");
         Assert.IsTrue(config.Tasks!.Count >= 2, "示例配置应至少包含2个任务");
-        Assert.IsNotNull(config.Tasks[0].EndTable);
-        Assert.IsTrue(config.Tasks[0].EndTable!.Data.Count > 0);
+        Assert.IsNotNull(config.EndTables);
+        Assert.IsTrue(config.EndTables.ContainsKey("E1"));
+        Assert.IsTrue(config.EndTables["E1"].Data.Count > 0);
     }
     
     [TestMethod]
@@ -44,6 +45,8 @@ public class CableRoutingConfigTest
         Assert.IsTrue(deserialized.IsMultiTask);
         Assert.AreEqual(original.Tasks!.Count, deserialized.Tasks!.Count);
         Assert.AreEqual(original.Tasks[0].OutputPath, deserialized.Tasks[0].OutputPath);
+        Assert.IsNotNull(deserialized.EndTables);
+        Assert.AreEqual(original.EndTables!.Count, deserialized.EndTables.Count);
     }
     
     [TestMethod]
@@ -102,8 +105,9 @@ public class CableRoutingConfigTest
         Assert.AreEqual("output.png", tasks[0].OutputPath);
         Assert.AreEqual("Start1", tasks[0].StartId);
         Assert.AreEqual("End1", tasks[0].EndId);
-        Assert.IsNotNull(tasks[0].EndTable);
         Assert.IsNull(tasks[0].PassPair); // 默认使用所有穿管
+        // EndTable 通过 config.GetEndTable(endId) 获取
+        Assert.IsNotNull(config.GetEndTable("End1"));
     }
 
     [TestMethod]
@@ -210,10 +214,16 @@ public class CableRoutingConfigTest
         Assert.AreEqual("S1", loaded.Tasks[0].StartId);
         Assert.AreEqual("E1", loaded.Tasks[0].EndId);
         Assert.AreEqual("P1", loaded.Tasks[0].PassPair);
-        Assert.IsNotNull(loaded.Tasks[0].EndTable);
 
         Assert.AreEqual("S2", loaded.Tasks[1].StartId);
         Assert.AreEqual("E2", loaded.Tasks[1].EndId);
         Assert.IsNull(loaded.Tasks[1].PassPair);
+
+        // endTables 字典验证
+        Assert.IsNotNull(loaded.EndTables);
+        Assert.AreEqual(2, loaded.EndTables.Count);
+        Assert.IsTrue(loaded.EndTables.ContainsKey("E1"));
+        Assert.IsTrue(loaded.EndTables.ContainsKey("E2"));
+        Assert.AreEqual("E1下级业务", loaded.EndTables["E1"].Title);
     }
 }
