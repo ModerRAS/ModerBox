@@ -249,6 +249,24 @@ public class CableRoutingViewModel : ViewModelBase
                 {
                     config.OutputPath = OutputPath;
                 }
+
+                // 处理相对路径（相对于配置文件目录）
+                var configDir = System.IO.Path.GetDirectoryName(ConfigFilePath) ?? "";
+                if (!string.IsNullOrEmpty(configDir))
+                {
+                    if (!System.IO.Path.IsPathRooted(config.BaseImagePath))
+                    {
+                        config.BaseImagePath = System.IO.Path.Combine(configDir, config.BaseImagePath);
+                    }
+
+                    foreach (var task in config.GetEffectiveTasks())
+                    {
+                        if (!System.IO.Path.IsPathRooted(task.OutputPath))
+                        {
+                            task.OutputPath = System.IO.Path.Combine(configDir, task.OutputPath);
+                        }
+                    }
+                }
                 
                 var service = new CableRoutingService();
                 var results = service.ExecuteAll(config, msg =>
