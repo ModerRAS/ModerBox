@@ -46,8 +46,8 @@ public class PathPlanner
         // 起点入沟：Start → foot → obsPoint
         var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, end);
         
-        // 终点入沟（获取 obsPoint）
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations);
+        // 终点入沟（获取 obsPoint）——传入来路方向，避免选择靠远侧端点导致折返
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, startOnTrench);
         
         // 沿电缆沟网络走
         if (startOnTrench.Id != endOnTrench.Id)
@@ -167,8 +167,8 @@ public class PathPlanner
         // 起点入沟：Start → foot → obsPoint
         var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, end);
         
-        // 终点入沟（获取 obsPoint）
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations);
+        // 终点入沟（获取 obsPoint）——传入来路方向，避免选择靠远侧端点导致折返
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, startOnTrench);
         
         // 沿电缆沟网络走
         if (startOnTrench.Id != endOnTrench.Id && _obsGraph != null)
@@ -213,8 +213,8 @@ public class PathPlanner
         // Start 入沟：Start → foot → obsPoint
         var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, passA);
         
-        // PassA 入沟（获取目标观测点和垂足）
-        var (passAOnTrench, passAFoot, passADist) = ConnectPointToTrench(passA, observations);
+        // PassA 入沟（获取目标观测点和垂足）——传入来路方向，避免选择靠远侧端点导致折返
+        var (passAOnTrench, passAFoot, passADist) = ConnectPointToTrench(passA, observations, startOnTrench);
         
         // 沿电缆沟网络走到 passA 附近的观测点
         if (startOnTrench.Id != passAOnTrench.Id)
@@ -241,8 +241,8 @@ public class PathPlanner
         // PassB 入沟：PassB → foot → obsPoint
         var passBOnTrench = AddSourceToTrench(route, ref totalLength, passB, observations, end);
         
-        // End 入沟（获取目标观测点和垂足）
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations);
+        // End 入沟（获取目标观测点和垂足）——传入来路方向，避免选择靠远侧端点导致折返
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, passBOnTrench);
         
         // 沿电缆沟网络走
         if (passBOnTrench.Id != endOnTrench.Id)
