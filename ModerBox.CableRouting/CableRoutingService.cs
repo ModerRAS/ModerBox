@@ -118,10 +118,11 @@ public class CableRoutingService
                 // 绘制点位（仅绘制此任务用到的点位）
                 renderer.DrawPoints(taskPoints);
 
-                // 绘制终点表格
-                if (endPoint != null && task.EndTable != null)
+                // 绘制终点表格（从 EndTables 字典按 endId 查找）
+                var endTable = config.GetEndTable(task.EndId);
+                if (endPoint != null && endTable != null)
                 {
-                    renderer.DrawEndTable(endPoint, task.EndTable);
+                    renderer.DrawEndTable(endPoint, endTable);
                 }
 
                 // 保存结果
