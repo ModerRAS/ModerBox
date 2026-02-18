@@ -5,6 +5,7 @@ using Avalonia.Platform.Storage;
 using ModerBox.CableRouting;
 using ReactiveUI;
 using System;
+using System.Linq;
 using System.Reactive;
 using System.Text;
 using System.Threading.Tasks;
@@ -237,42 +238,55 @@ public class CableRoutingViewModel : ViewModelBase
                     return;
                 }
                 
-                // 覆盖配置中的路径
+                // 覆盖配置中的底图路径
                 if (!string.IsNullOrEmpty(BaseImagePath))
                 {
                     config.BaseImagePath = BaseImagePath;
                 }
                 
-                if (!string.IsNullOrEmpty(OutputPath))
+                // 单任务模式下可覆盖输出路径
+                if (!string.IsNullOrEmpty(OutputPath) && !config.IsMultiTask)
                 {
                     config.OutputPath = OutputPath;
                 }
                 
                 var service = new CableRoutingService();
-                var result = service.Execute(config, msg =>
+                var results = service.ExecuteAll(config, msg =>
                 {
                     AppendLog(msg);
-                    Progress = Math.Min(Progress + 20, 90);
+                    Progress = Math.Min(Progress + 10, 90);
                 });
                 
-                if (result.Success)
+                Progress = 100;
+                AppendLog("");
+                AppendLog("=" + new string('=', 59));
+                AppendLog("📊 输出汇总");
+                AppendLog("=" + new string('=', 59));
+                
+                var successCount = results.Count(r => r.Success);
+                AppendLog($"   任务总数: {results.Count}  成功: {successCount}");
+                
+                foreach (var result in results)
                 {
-                    Progress = 100;
-                    AppendLog("");
-                    AppendLog("=" + new string('=', 59));
-                    AppendLog("📊 输出汇总");
-                    AppendLog("=" + new string('=', 59));
-                    AppendLog($"   输出文件: {result.OutputPath}");
-                    AppendLog($"   路径点序: {result.GetRouteDescription()}");
-                    AppendLog($"   路径总长: {result.TotalLength:F2} 像素");
-                    AppendLog("=" + new string('=', 59));
-                    
-                    // 打开输出文件所在目录
-                    result.OutputPath.OpenFileWithExplorer();
+                    if (result.Success)
+                    {
+                        AppendLog($"   ✅ {result.OutputPath}");
+                        AppendLog($"      路径: {result.GetRouteDescription()}");
+                        AppendLog($"      总长: {result.TotalLength:F2} 像素");
+                    }
+                    else
+                    {
+                        AppendLog($"   ❌ {result.OutputPath}: {result.ErrorMessage}");
+                    }
                 }
-                else
+                
+                AppendLog("=" + new string('=', 59));
+                
+                // 打开第一个成功的输出文件所在目录
+                var firstSuccess = results.FirstOrDefault(r => r.Success);
+                if (firstSuccess != null)
                 {
-                    AppendLog($"❌ 绘制失败: {result.ErrorMessage}");
+                    firstSuccess.OutputPath.OpenFileWithExplorer();
                 }
             });
         }

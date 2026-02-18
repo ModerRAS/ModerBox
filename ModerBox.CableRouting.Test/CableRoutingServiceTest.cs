@@ -27,7 +27,11 @@ public class CableRoutingServiceTest
     public void Execute_WithSampleConfig_Succeeds()
     {
         var config = CableRoutingConfig.CreateSample();
-        config.OutputPath = Path.Combine(_tempDir, "result.png");
+        // 多任务模式下需要设置每个任务的输出路径
+        foreach (var task in config.Tasks!)
+        {
+            task.OutputPath = Path.Combine(_tempDir, task.OutputPath);
+        }
         
         var service = new CableRoutingService();
         var result = service.Execute(config);
@@ -58,14 +62,17 @@ public class CableRoutingServiceTest
     public void Execute_CallsProgressCallback()
     {
         var config = CableRoutingConfig.CreateSample();
-        config.OutputPath = Path.Combine(_tempDir, "result.png");
+        foreach (var task in config.Tasks!)
+        {
+            task.OutputPath = Path.Combine(_tempDir, task.OutputPath);
+        }
         
         var messages = new List<string>();
         var service = new CableRoutingService();
         var result = service.Execute(config, msg => messages.Add(msg));
         
         Assert.IsTrue(messages.Count > 0);
-        Assert.IsTrue(messages.Any(m => m.Contains("解析点位")));
+        Assert.IsTrue(messages.Any(m => m.Contains("构建点位")));
         Assert.IsTrue(messages.Any(m => m.Contains("规划路径")));
         Assert.IsTrue(messages.Any(m => m.Contains("绘制图像")));
     }
@@ -81,6 +88,7 @@ public class CableRoutingServiceTest
         Assert.IsTrue(File.Exists(configPath));
         var content = File.ReadAllText(configPath);
         Assert.IsTrue(content.Contains("points"));
+        Assert.IsTrue(content.Contains("tasks"));
         Assert.IsTrue(content.Contains("endTable"));
     }
     
@@ -121,16 +129,16 @@ public class CableRoutingServiceTest
     public void ExecuteFromFile_WithValidConfig_Succeeds()
     {
         var config = CableRoutingConfig.CreateSample();
-        config.OutputPath = "result.png"; // 相对路径
         var configPath = Path.Combine(_tempDir, "config.json");
         CableRoutingService.SaveConfig(config, configPath);
         
         var service = new CableRoutingService();
-        var result = service.ExecuteFromFile(configPath);
+        var results = service.ExecuteFromFile(configPath);
         
-        Assert.IsTrue(result.Success, result.ErrorMessage);
+        Assert.IsTrue(results.Count > 0, "应返回至少一个结果");
+        Assert.IsTrue(results[0].Success, results[0].ErrorMessage);
         // 输出路径应该被转换为绝对路径
-        Assert.IsTrue(Path.IsPathRooted(result.OutputPath));
+        Assert.IsTrue(Path.IsPathRooted(results[0].OutputPath));
     }
     
     [TestMethod]
@@ -149,5 +157,96 @@ public class CableRoutingServiceTest
         var description = result.GetRouteDescription();
         
         Assert.AreEqual("S1 → O1 → E1", description);
+    }
+
+    // ──── 多任务测试 ────
+
+    [TestMethod]
+    public void ExecuteAll_MultiTask_ReturnsMultipleResults()
+    {
+        var config = CableRoutingConfig.CreateSample();
+        foreach (var task in config.Tasks!)
+        {
+            task.OutputPath = Path.Combine(_tempDir, task.OutputPath);
+        }
+
+        var service = new CableRoutingService();
+        var results = service.ExecuteAll(config);
+
+        Assert.AreEqual(2, results.Count, "应返回2个结果");
+        Assert.IsTrue(results[0].Success, $"任务1失败: {results[0].ErrorMessage}");
+        Assert.IsTrue(results[1].Success, $"任务2失败: {results[1].ErrorMessage}");
+        Assert.IsTrue(File.Exists(results[0].OutputPath));
+        Assert.IsTrue(File.Exists(results[1].OutputPath));
+        Assert.AreNotEqual(results[0].OutputPath, results[1].OutputPath);
+    }
+
+    [TestMethod]
+    public void ExecuteAll_MultiTask_EachTaskHasDistinctRoute()
+    {
+        var config = CableRoutingConfig.CreateSample();
+        foreach (var task in config.Tasks!)
+        {
+            task.OutputPath = Path.Combine(_tempDir, task.OutputPath);
+        }
+
+        var service = new CableRoutingService();
+        var results = service.ExecuteAll(config);
+
+        // 两个任务的路径起终点应不同
+        var route1Ids = results[0].RouteIds;
+        var route2Ids = results[1].RouteIds;
+
+        Assert.AreEqual("S1", route1Ids.First());
+        Assert.AreEqual("E1", route1Ids.Last());
+        Assert.AreEqual("S2", route2Ids.First());
+        Assert.AreEqual("E2", route2Ids.Last());
+    }
+
+    [TestMethod]
+    public void Execute_BackwardCompat_SingleTask_StillWorks()
+    {
+        // 不使用 Tasks，使用旧格式
+        var config = new CableRoutingConfig
+        {
+            OutputPath = Path.Combine(_tempDir, "single_result.png"),
+            Points = new List<RoutePoint>
+            {
+                new("S1", PointType.Start, 100, 200),
+                new("O1", PointType.Observation, 200, 200),
+                new("O2", PointType.Observation, 400, 200),
+                new("E1", PointType.End, 500, 200),
+            },
+            EndTable = new EndTableData
+            {
+                Title = "测试",
+                Data = new() { new() { "A" } }
+            }
+        };
+
+        Assert.IsFalse(config.IsMultiTask);
+
+        var service = new CableRoutingService();
+        var result = service.Execute(config);
+
+        Assert.IsTrue(result.Success, result.ErrorMessage);
+        Assert.AreEqual("S1", result.RouteIds.First());
+        Assert.AreEqual("E1", result.RouteIds.Last());
+        Assert.IsTrue(File.Exists(result.OutputPath));
+    }
+
+    [TestMethod]
+    public void ExecuteFromFile_MultiTask_ReturnsAllResults()
+    {
+        var config = CableRoutingConfig.CreateSample();
+        var configPath = Path.Combine(_tempDir, "multi_config.json");
+        CableRoutingService.SaveConfig(config, configPath);
+
+        var service = new CableRoutingService();
+        var results = service.ExecuteFromFile(configPath);
+
+        Assert.AreEqual(2, results.Count);
+        Assert.IsTrue(results.All(r => r.Success), "所有任务应成功");
+        Assert.IsTrue(results.All(r => Path.IsPathRooted(r.OutputPath)), "输出路径应为绝对路径");
     }
 }
