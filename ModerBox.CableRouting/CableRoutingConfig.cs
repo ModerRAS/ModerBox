@@ -103,18 +103,24 @@ public class CableRoutingConfig
         // 1. 所有观测点（共享）
         result.AddRange(Points.Where(p => p.Type == PointType.Observation));
 
-        // 2. 穿管点（按 passPair 过滤）
-        if (task.PassPair == null)
+        // 2. 穿管点（按 passPairs / passPair 过滤）
+        if (task.PassPairs != null)
         {
-            // null → 包含所有穿管
+            // 新格式：包含列表中所有穿管对
+            var pairSet = new HashSet<string>(task.PassPairs);
+            result.AddRange(Points.Where(p => p.Type == PointType.Pass && p.Pair != null && pairSet.Contains(p.Pair)));
+        }
+        else if (task.PassPair == null)
+        {
+            // 旧格式 null → 包含所有穿管
             result.AddRange(Points.Where(p => p.Type == PointType.Pass));
         }
         else if (task.PassPair != string.Empty)
         {
-            // 非空字符串 → 只包含匹配的穿管对
+            // 旧格式 非空字符串 → 只包含匹配的穿管对
             result.AddRange(Points.Where(p => p.Type == PointType.Pass && p.Pair == task.PassPair));
         }
-        // else: 空字符串 → 不包含任何穿管
+        // else: 旧格式 空字符串 → 不包含任何穿管
 
         // 3. 起点
         var startPoint = Points.FirstOrDefault(p => p.Id == task.StartId);

@@ -226,4 +226,172 @@ public class CableRoutingConfigTest
         Assert.IsTrue(loaded.EndTables.ContainsKey("E2"));
         Assert.AreEqual("E1下级业务", loaded.EndTables["E1"].Title);
     }
+
+    // ──── PassPairs 多穿管测试 ────
+
+    [TestMethod]
+    public void BuildPointsForTask_PassPairs_IncludesMatchingPasses()
+    {
+        var config = new CableRoutingConfig
+        {
+            Points = new List<RoutePoint>
+            {
+                new("S1", PointType.Start, 0, 0),
+                new("E1", PointType.End, 500, 0),
+                new("O1", PointType.Observation, 100, 50),
+                new("PA", PointType.Pass, 150, 50, "PairA"),
+                new("PB", PointType.Pass, 250, 50, "PairA"),
+                new("PC", PointType.Pass, 300, 50, "PairB"),
+                new("PD", PointType.Pass, 400, 50, "PairB"),
+                new("PE", PointType.Pass, 450, 50, "PairC"),
+                new("PF", PointType.Pass, 480, 50, "PairC"),
+            }
+        };
+
+        var task = new RoutingTask
+        {
+            StartId = "S1",
+            EndId = "E1",
+            PassPairs = new List<string> { "PairA", "PairB" }
+        };
+
+        var points = config.BuildPointsForTask(task);
+
+        // 应包含: 1 观测 + 4 穿管(PairA+PairB) + 1 起 + 1 终 = 7
+        Assert.AreEqual(7, points.Count);
+        Assert.IsTrue(points.Any(p => p.Id == "PA"));
+        Assert.IsTrue(points.Any(p => p.Id == "PB"));
+        Assert.IsTrue(points.Any(p => p.Id == "PC"));
+        Assert.IsTrue(points.Any(p => p.Id == "PD"));
+        Assert.IsFalse(points.Any(p => p.Id == "PE")); // PairC 不在列表中
+        Assert.IsFalse(points.Any(p => p.Id == "PF")); // PairC 不在列表中
+    }
+
+    [TestMethod]
+    public void BuildPointsForTask_EmptyPassPairs_ExcludesAllPasses()
+    {
+        var config = new CableRoutingConfig
+        {
+            Points = new List<RoutePoint>
+            {
+                new("S1", PointType.Start, 0, 0),
+                new("E1", PointType.End, 500, 0),
+                new("O1", PointType.Observation, 100, 50),
+                new("PA", PointType.Pass, 150, 50, "PairA"),
+                new("PB", PointType.Pass, 250, 50, "PairA"),
+            }
+        };
+
+        var task = new RoutingTask
+        {
+            StartId = "S1",
+            EndId = "E1",
+            PassPairs = new List<string>()  // 空列表 → 不包含穿管
+        };
+
+        var points = config.BuildPointsForTask(task);
+
+        // 空 PassPairs → 不包含穿管: 1 观测 + 0 穿管 + 1 起 + 1 终 = 3
+        Assert.AreEqual(3, points.Count);
+        Assert.IsFalse(points.Any(p => p.Type == PointType.Pass));
+    }
+
+    [TestMethod]
+    public void BuildPointsForTask_PassPairsOverridesPassPair()
+    {
+        var config = new CableRoutingConfig
+        {
+            Points = new List<RoutePoint>
+            {
+                new("S1", PointType.Start, 0, 0),
+                new("E1", PointType.End, 500, 0),
+                new("O1", PointType.Observation, 100, 50),
+                new("PA", PointType.Pass, 150, 50, "PairA"),
+                new("PB", PointType.Pass, 250, 50, "PairA"),
+                new("PC", PointType.Pass, 300, 50, "PairB"),
+                new("PD", PointType.Pass, 400, 50, "PairB"),
+            }
+        };
+
+        // PassPairs 和 PassPair 同时存在时，PassPairs 优先
+        var task = new RoutingTask
+        {
+            StartId = "S1",
+            EndId = "E1",
+            PassPair = "PairA",
+            PassPairs = new List<string> { "PairB" }
+        };
+
+        var points = config.BuildPointsForTask(task);
+
+        // PassPairs 优先 → 只包含 PairB
+        Assert.IsTrue(points.Any(p => p.Id == "PC"));
+        Assert.IsTrue(points.Any(p => p.Id == "PD"));
+        Assert.IsFalse(points.Any(p => p.Id == "PA"));
+        Assert.IsFalse(points.Any(p => p.Id == "PB"));
+    }
+
+    [TestMethod]
+    public void PassPairs_JsonSerializationRoundTrip()
+    {
+        var task = new RoutingTask
+        {
+            OutputPath = "output.png",
+            StartId = "S1",
+            EndId = "E1",
+            PassPairs = new List<string> { "pass1", "pass2" }
+        };
+
+        var json = JsonSerializer.Serialize(task);
+        var deserialized = JsonSerializer.Deserialize<RoutingTask>(json);
+
+        Assert.IsNotNull(deserialized);
+        Assert.IsNotNull(deserialized.PassPairs);
+        Assert.AreEqual(2, deserialized.PassPairs.Count);
+        Assert.AreEqual("pass1", deserialized.PassPairs[0]);
+        Assert.AreEqual("pass2", deserialized.PassPairs[1]);
+        Assert.IsNull(deserialized.PassPair); // PassPair 未设置
+    }
+
+    [TestMethod]
+    public void PassPairs_JsonDeserialization_FromIssueTestData()
+    {
+        // 从问题描述中的 JSON 反序列化
+        var json = """
+        {
+          "baseImagePath": "input.png",
+          "points": [
+            { "id": "来自1楼", "type": "Start", "x": 11431, "y": 3574, "pair": null },
+            { "id": "由此下沟", "type": "End", "x": 9405, "y": 10114, "pair": null },
+            { "id": "H2-1", "type": "Observation", "x": 11156, "y": 3574, "pair": null },
+            { "id": "H2-7", "type": "Pass", "x": 9690, "y": 5145, "pair": "pass1" },
+            { "id": "H2-8", "type": "Pass", "x": 9232, "y": 5145, "pair": "pass1" },
+            { "id": "H2-9", "type": "Pass", "x": 9232, "y": 9772, "pair": "pass2" },
+            { "id": "H2-10", "type": "Pass", "x": 9720, "y": 9772, "pair": "pass2" }
+          ],
+          "tasks": [
+            {
+              "outputPath": "output.png",
+              "startId": "来自1楼",
+              "endId": "由此下沟",
+              "passPairs": ["pass1", "pass2"]
+            }
+          ]
+        }
+        """;
+
+        var config = JsonSerializer.Deserialize<CableRoutingConfig>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.IsNotNull(config);
+        Assert.IsTrue(config.IsMultiTask);
+        Assert.AreEqual(1, config.Tasks!.Count);
+
+        var task = config.Tasks[0];
+        Assert.IsNotNull(task.PassPairs);
+        Assert.AreEqual(2, task.PassPairs.Count);
+        Assert.AreEqual("pass1", task.PassPairs[0]);
+        Assert.AreEqual("pass2", task.PassPairs[1]);
+        Assert.IsNull(task.PassPair); // passPair 未在 JSON 中设置
+    }
 }
