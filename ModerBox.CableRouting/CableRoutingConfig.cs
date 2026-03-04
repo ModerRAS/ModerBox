@@ -212,7 +212,7 @@ public class CableRoutingConfig
                     OutputPath = "route_S2_E2.png",
                     StartId = "S2",
                     EndId = "E2",
-                    PassPairs = new List<string> { "P1" },  // 使用所有穿管
+                    PassPairs = new List<string> { "P1" },  // 指定使用穿管 P1
                 }
             }
         };
