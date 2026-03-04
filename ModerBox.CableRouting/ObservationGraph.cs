@@ -12,7 +12,9 @@ public class ObservationGraph
     private readonly List<CableTrench> _trenches;  // 电缆沟线段列表
     
     // 角度容差：与水平/垂直的夹角在此范围内视为直线（度）
-    private const double AngleTolerance = 5.0;
+    // 设为 2°：足以覆盖图纸数字化误差（实测最大约 1.5°），同时拒绝真正倾斜的点对
+    // 角度超出此范围的点对将不建立连接（视为不同电缆沟）
+    private const double AngleTolerance = 2.0;
     
     public ObservationGraph(IEnumerable<RoutePoint> observations)
     {
@@ -57,20 +59,22 @@ public class ObservationGraph
                 
                 if (isHorizontal || isVertical)
                 {
-                    // 实际距离
-                    var distance = Math.Sqrt(dx * dx + dy * dy);
-                    
-                    graph[p1.Id].Add((p2.Id, distance));
-                    graph[p2.Id].Add((p1.Id, distance));
-                    
                     allEdges.Add(new CableTrench(p1, p2, isHorizontal));
                 }
             }
         }
         
         // 过滤电缆沟线段：只保留相邻线段（两端点之间没有其他观测点）
-        // 这避免了 FindNearestTrench 找到跨越中间点的长线段
+        // 这避免了 FindNearestTrench 找到跨越中间点的长线段，也避免 Dijkstra 使用跨越中间观测点的长线段走捷径
         var trenches = FilterToAdjacentTrenches(allEdges);
+        
+        // 仅从过滤后的相邻线段构建邻接表，防止 Dijkstra 跨越中间观测点走捷径
+        foreach (var trench in trenches)
+        {
+            var dist = trench.P1.DistanceTo(trench.P2);
+            graph[trench.P1.Id].Add((trench.P2.Id, dist));
+            graph[trench.P2.Id].Add((trench.P1.Id, dist));
+        }
         
         return (graph, trenches);
     }
