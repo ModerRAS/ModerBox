@@ -25,4 +25,12 @@ public class RoutingTask
     /// </summary>
     [JsonPropertyName("passPair")]
     public string? PassPair { get; set; }
+
+    /// <summary>
+    /// 有序穿管配对名列表（新格式，优先于 PassPair）。
+    /// 电缆路线按列表顺序依次穿管。
+    /// 当此属性非 null 时，PassPair 被忽略。
+    /// </summary>
+    [JsonPropertyName("passPairs")]
+    public List<string>? PassPairs { get; set; }
 }
