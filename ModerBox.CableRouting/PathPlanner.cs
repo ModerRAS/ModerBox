@@ -92,56 +92,61 @@ public class PathPlanner
     }
     
     /// <summary>
-    /// 规划完整路径
+    /// 规划完整路径。
     /// </summary>
+    /// <param name="orderedPairNames">
+    /// 按顺序需要经过的穿管配对名列表。
+    /// null 或空列表时退化为旧行为（自动选取第一个有效配对）。
+    /// </param>
     /// <returns>路径点列表和总长度</returns>
-    public (List<RoutePoint> Route, double TotalLength) PlanRoute()
+    public (List<RoutePoint> Route, double TotalLength) PlanRoute(List<string>? orderedPairNames = null)
     {
         var start = _pointsByType.GetValueOrDefault(PointType.Start)?.FirstOrDefault();
         var end = _pointsByType.GetValueOrDefault(PointType.End)?.FirstOrDefault();
         var observations = _pointsByType.GetValueOrDefault(PointType.Observation, new List<RoutePoint>());
         var passes = _pointsByType.GetValueOrDefault(PointType.Pass, new List<RoutePoint>());
-        
+
         if (start == null || end == null)
         {
             throw new InvalidOperationException("必须有起点和终点");
         }
-        
+
         // 无观测点时直接连接
         if (observations.Count == 0)
         {
             return (new List<RoutePoint> { start, end }, start.DistanceTo(end));
         }
-        
-        // 找到有效的穿管配对（pair 值相同的两个 Pass 点）
-        var validPassPair = FindValidPassPair(passes);
-        
-        // 如果没有穿管或穿管配对无效，只走观测点
-        if (validPassPair == null)
+
+        // 构建有序配对列表
+        List<(RoutePoint A, RoutePoint B)> orderedPairs;
+        if (orderedPairNames != null && orderedPairNames.Count > 0)
+        {
+            orderedPairs = orderedPairNames
+                .Where(name => _passPairs.TryGetValue(name, out var pts) && pts.Count >= 2)
+                .Select(name => (_passPairs[name][0], _passPairs[name][1]))
+                .ToList();
+        }
+        else
+        {
+            // 向后兼容：自动选取第一个有效配对
+            var single = FindValidPassPair(passes);
+            orderedPairs = single.HasValue
+                ? new List<(RoutePoint, RoutePoint)> { single.Value }
+                : new List<(RoutePoint, RoutePoint)>();
+        }
+
+        // 无有效穿管，只走观测点
+        if (orderedPairs.Count == 0)
         {
             return PlanObservationOnlyRoute(start, end, observations);
         }
-        
-        var (passA, passB) = validPassPair.Value;
-        
-        // 计算候选路线（穿管正反向），选最短的
-        // 所有路线都必须走电缆沟
-        var candidates = new List<(List<RoutePoint> Route, double Length)>();
-        
-        // 路线1: Start → Obs → PassA → PassB → Obs → End
-        candidates.Add(PlanRouteViaObs(start, end, observations, passA, passB));
-        
-        // 路线2: 反向穿管 Start → Obs → PassB → PassA → Obs → End
-        candidates.Add(PlanRouteViaObs(start, end, observations, passB, passA));
-        
-        // 选择最短路线
-        return candidates.Where(c => c.Route.Count > 0)
-                         .OrderBy(c => c.Length)
-                         .First();
+
+        // 枚举所有 2^N 方向组合，选最短路线
+        return BestRouteWithMultiplePairs(start, end, observations, orderedPairs);
     }
-    
+
     /// <summary>
-    /// 找到有效的穿管配对
+    /// 找到有效的穿管配对（向后兼容：返回字典中第一个有两个点的配对）
     /// </summary>
     private (RoutePoint passA, RoutePoint passB)? FindValidPassPair(List<RoutePoint> passes)
     {
@@ -153,6 +158,140 @@ public class PathPlanner
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// 枚举所有 N!×2^N 穿管排列+方向组合，选择总长度最短的路线。
+    /// 自动确定多个穿管对的最优遍历顺序及每对的穿越方向。
+    /// 注意：复杂度为 O(N!×2^N)，实际应用中 N 应不超过 5。
+    /// </summary>
+    private (List<RoutePoint> Route, double TotalLength) BestRouteWithMultiplePairs(
+        RoutePoint start, RoutePoint end, List<RoutePoint> observations,
+        List<(RoutePoint A, RoutePoint B)> orderedPairs)
+    {
+        int n = orderedPairs.Count;
+        var best = (Route: new List<RoutePoint>(), Length: double.MaxValue);
+
+        foreach (var permutation in GetPermutations(orderedPairs))
+        {
+            for (int mask = 0; mask < (1 << n); mask++)
+            {
+                // 根据 mask 的第 i 位决定第 i 对穿管的方向
+                var directedPairs = new List<(RoutePoint First, RoutePoint Second)>(n);
+                for (int i = 0; i < n; i++)
+                {
+                    bool forward = (mask & (1 << i)) == 0;
+                    var (a, b) = permutation[i];
+                    directedPairs.Add(forward ? (a, b) : (b, a));
+                }
+
+                var candidate = PlanRouteViaMultiplePairs(start, end, observations, directedPairs);
+                if (candidate.Route.Count > 0 && candidate.TotalLength < best.Length)
+                {
+                    best = (candidate.Route, candidate.TotalLength);
+                }
+            }
+        }
+
+        if (best.Route.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"无法规划经过 {n} 对穿管的路径，请检查穿管点和观测点的配置是否合理。");
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// 生成列表的所有排列
+    /// </summary>
+    private static IEnumerable<List<T>> GetPermutations<T>(List<T> list)
+    {
+        if (list.Count == 0)
+        {
+            yield return new List<T>();
+            yield break;
+        }
+        for (int i = 0; i < list.Count; i++)
+        {
+            var remaining = list.Where((_, idx) => idx != i).ToList();
+            foreach (var perm in GetPermutations(remaining))
+            {
+                var result = new List<T>(list.Count) { list[i] };
+                result.AddRange(perm);
+                yield return result;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 按指定方向顺序经过所有穿管对，规划完整路线：
+    /// Start → [obs] → Pair1.First → Pair1.Second → [obs] → Pair2.First → Pair2.Second → [obs] → ... → End
+    /// </summary>
+    private (List<RoutePoint> Route, double TotalLength) PlanRouteViaMultiplePairs(
+        RoutePoint start, RoutePoint end, List<RoutePoint> observations,
+        List<(RoutePoint First, RoutePoint Second)> directedPairs)
+    {
+        var route = new List<RoutePoint> { start };
+        double totalLength = 0.0;
+
+        if (_obsGraph == null)
+        {
+            // 无观测图时退化为直线连接
+            foreach (var (first, second) in directedPairs)
+            {
+                route.Add(first);
+                route.Add(second);
+            }
+            route.Add(end);
+            return (route, totalLength);
+        }
+
+        // 起点入沟，朝向第一个穿管入口
+        var firstTarget = directedPairs[0].First;
+        var currentOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, firstTarget);
+
+        for (int i = 0; i < directedPairs.Count; i++)
+        {
+            var (passFirst, passSecond) = directedPairs[i];
+            // 下一段的目标：下一对穿管的入口，或终点
+            var nextTarget = (i + 1 < directedPairs.Count) ? directedPairs[i + 1].First : end;
+
+            // 电缆沟网络 → passFirst
+            var (firstOnTrench, firstFoot, firstDist) = ConnectPointToTrench(passFirst, observations, currentOnTrench);
+            if (currentOnTrench.Id != firstOnTrench.Id)
+            {
+                var (pathIds, pathDist) = _obsGraph.FindShortestPath(currentOnTrench.Id, firstOnTrench.Id);
+                foreach (var pid in pathIds.Skip(1))
+                    route.Add(_pointsById[pid]);
+                totalLength += pathDist;
+            }
+            if (firstFoot != null) route.Add(firstFoot);
+            route.Add(passFirst);
+            totalLength += firstDist;
+
+            // 穿管直线段：passFirst → passSecond
+            route.Add(passSecond);
+            totalLength += passFirst.DistanceTo(passSecond);
+
+            // passSecond 入沟，朝向下一目标
+            currentOnTrench = AddSourceToTrench(route, ref totalLength, passSecond, observations, nextTarget);
+        }
+
+        // 最后一段：电缆沟网络 → End
+        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, currentOnTrench);
+        if (currentOnTrench.Id != endOnTrench.Id)
+        {
+            var (pathIds, pathDist) = _obsGraph.FindShortestPath(currentOnTrench.Id, endOnTrench.Id);
+            foreach (var pid in pathIds.Skip(1))
+                route.Add(_pointsById[pid]);
+            totalLength += pathDist;
+        }
+        if (endFoot != null) route.Add(endFoot);
+        route.Add(end);
+        totalLength += endDist;
+
+        return (route, totalLength);
     }
     
     /// <summary>
@@ -182,80 +321,6 @@ public class PathPlanner
         }
         
         // 出沟到终点：foot → End
-        if (endFoot != null) route.Add(endFoot);
-        route.Add(end);
-        totalLength += endDist;
-        
-        return (route, totalLength);
-    }
-    
-    /// <summary>
-    /// 经过穿管点的路线（所有段都通过电缆沟网络连接）
-    /// 路线: Start → [入沟] → Obs网络 → [出沟] → PassA → PassB → [入沟] → Obs网络 → [出沟] → End
-    /// </summary>
-    private (List<RoutePoint> Route, double Length) PlanRouteViaObs(
-        RoutePoint start, RoutePoint end, List<RoutePoint> observations,
-        RoutePoint passA, RoutePoint passB)
-    {
-        var route = new List<RoutePoint> { start };
-        double totalLength = 0.0;
-        
-        if (_obsGraph == null)
-        {
-            route.Add(passA);
-            route.Add(passB);
-            route.Add(end);
-            return (route, start.DistanceTo(passA) + passA.DistanceTo(passB) + passB.DistanceTo(end));
-        }
-        
-        // === 第一段: Start → 电缆沟 → PassA ===
-        
-        // Start 入沟：Start → foot → obsPoint
-        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, passA);
-        
-        // PassA 入沟（获取目标观测点和垂足）——传入来路方向，避免选择靠远侧端点导致折返
-        var (passAOnTrench, passAFoot, passADist) = ConnectPointToTrench(passA, observations, startOnTrench);
-        
-        // 沿电缆沟网络走到 passA 附近的观测点
-        if (startOnTrench.Id != passAOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(startOnTrench.Id, passAOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-            {
-                route.Add(_pointsById[pid]);
-            }
-            totalLength += pathDist;
-        }
-        
-        // 出沟到 PassA：foot → PassA
-        if (passAFoot != null) route.Add(passAFoot);
-        route.Add(passA);
-        totalLength += passADist;
-        
-        // === 第二段: PassA → PassB（穿管直线）===
-        route.Add(passB);
-        totalLength += passA.DistanceTo(passB);
-        
-        // === 第三段: PassB → 电缆沟 → End ===
-        
-        // PassB 入沟：PassB → foot → obsPoint
-        var passBOnTrench = AddSourceToTrench(route, ref totalLength, passB, observations, end);
-        
-        // End 入沟（获取目标观测点和垂足）——传入来路方向，避免选择靠远侧端点导致折返
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, passBOnTrench);
-        
-        // 沿电缆沟网络走
-        if (passBOnTrench.Id != endOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(passBOnTrench.Id, endOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-            {
-                route.Add(_pointsById[pid]);
-            }
-            totalLength += pathDist;
-        }
-        
-        // 出沟到 End：foot → End
         if (endFoot != null) route.Add(endFoot);
         route.Add(end);
         totalLength += endDist;

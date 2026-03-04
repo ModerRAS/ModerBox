@@ -76,7 +76,7 @@ public class CableRoutingService
             // 规划路径
             progressCallback?.Invoke("🛤️ 规划路径...");
             var planner = new PathPlanner(taskPoints);
-            var (route, totalLength) = planner.PlanRoute();
+            var (route, totalLength) = planner.PlanRoute(task.PassPairs);
 
             result.Route = route;
             result.TotalLength = totalLength;

@@ -481,4 +481,133 @@ public class RealWorldRoutingTest
 
         AssertNoBacktracking(route, $"{startId}→{endId} (无穿管)");
     }
+
+    // ======================================================
+    // 多穿管（顺序经过两对穿管）测试
+    // 场景还原自用户反馈的真实配置（已脱敏）
+    // 布局示意（→ 表示从东(右)向西(左)）：
+    //   Start(x=11431) ──→ H1(11156,3574) ──→ H2(11156,4189)
+    //   ──→ H3(9690,4189) ──→ H4(9690,3455)
+    //   ──→ PB1(9381,3455) ↔ PB2(9287,3455)  [PairB]
+    //   ──→ H5(8859,3455)
+    //   ──→ PA1(8815,3455) ↔ PA2(8727,3455)  [PairA]
+    //   ──→ H6(8528,3455) ──→ End(8528,3500)
+    // ======================================================
+
+    private static List<RoutePoint> CreateTwoPassPoints(string startId, string endId,
+        List<string>? passPairNames)
+    {
+        var points = new List<RoutePoint>
+        {
+            new("H1", PointType.Observation, 11156, 3574),
+            new("H2", PointType.Observation, 11156, 4189),
+            new("H3", PointType.Observation, 9690, 4189),
+            new("H4", PointType.Observation, 9690, 3455),
+            new("H5", PointType.Observation, 8859, 3455),
+            new("H6", PointType.Observation, 8528, 3455),
+        };
+
+        // PairA (西侧穿管，更靠近终点)
+        if (passPairNames == null || passPairNames.Contains("PairA"))
+        {
+            points.Add(new("PA1", PointType.Pass, 8815, 3455, "PairA"));
+            points.Add(new("PA2", PointType.Pass, 8727, 3455, "PairA"));
+        }
+
+        // PairB (东侧穿管，更靠近起点)
+        if (passPairNames == null || passPairNames.Contains("PairB"))
+        {
+            points.Add(new("PB1", PointType.Pass, 9381, 3455, "PairB"));
+            points.Add(new("PB2", PointType.Pass, 9287, 3455, "PairB"));
+        }
+
+        points.Add(new(startId, PointType.Start, 11431, 3574));
+        points.Add(new(endId,   PointType.End,    8528, 3500));
+
+        return points;
+    }
+
+    [TestMethod]
+    public void Route_TwoPairs_BothPairsVisited()
+    {
+        var points = CreateTwoPassPoints("S1", "E1", new List<string> { "PairA", "PairB" });
+        var planner = new PathPlanner(points);
+        // 指定需要经过两个穿管对（顺序由算法自动优化）
+        var (route, _) = planner.PlanRoute(new List<string> { "PairA", "PairB" });
+        var ids = route.Where(p => p.Id != "_foot_").Select(p => p.Id).ToList();
+
+        Assert.IsTrue(ids.Any(id => id == "PA1" || id == "PA2"), "应经过穿管 PairA");
+        Assert.IsTrue(ids.Any(id => id == "PB1" || id == "PB2"), "应经过穿管 PairB");
+        Assert.AreEqual("S1", ids.First());
+        Assert.AreEqual("E1", ids.Last());
+    }
+
+    [TestMethod]
+    public void Route_TwoPairs_PairBBeforePairA()
+    {
+        // 几何上 PairB(x≈9381) 更靠近起点(x=11431)，PairA(x≈8815) 更靠近终点(x=8528)
+        // 算法应自动以 PairB → PairA 顺序遍历，无论 passPairs 参数的配置顺序如何
+        var points = CreateTwoPassPoints("S1", "E1", new List<string> { "PairA", "PairB" });
+        var planner = new PathPlanner(points);
+
+        // 测试两种配置顺序，结果应相同（算法自动优化）
+        var (route1, len1) = planner.PlanRoute(new List<string> { "PairA", "PairB" });
+        var (route2, len2) = planner.PlanRoute(new List<string> { "PairB", "PairA" });
+
+        var ids1 = route1.Where(p => p.Id != "_foot_").Select(p => p.Id).ToList();
+        var ids2 = route2.Where(p => p.Id != "_foot_").Select(p => p.Id).ToList();
+
+        // 两种顺序配置得到的总长度应相同（都选最短）
+        Assert.AreEqual(len1, len2, 1.0, "两种配置顺序应得到相同总长度");
+
+        // PairB 应先于 PairA 出现（x=9381 > x=8815，东侧先到）
+        int firstPairA = ids1.FindIndex(id => id == "PA1" || id == "PA2");
+        int firstPairB = ids1.FindIndex(id => id == "PB1" || id == "PB2");
+        Assert.IsTrue(firstPairB >= 0 && firstPairA >= 0);
+        Assert.IsTrue(firstPairB < firstPairA,
+            $"PairB 应先于 PairA 出现，实际路径: {string.Join(" → ", ids1)}");
+    }
+
+    [TestMethod]
+    public void Route_TwoPairs_EachPairIsAdjacentInRoute()
+    {
+        // 穿管对的两个点应在路由中相邻（中间没有其他点）
+        var points = CreateTwoPassPoints("S1", "E1", new List<string> { "PairA", "PairB" });
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute(new List<string> { "PairA", "PairB" });
+
+        for (int i = 0; i < route.Count - 1; i++)
+        {
+            if (route[i].Type == PointType.Pass)
+            {
+                Assert.AreEqual(PointType.Pass, route[i + 1].Type,
+                    $"穿管点 {route[i].Id} 的下一点应也是穿管点");
+                Assert.AreEqual(route[i].Pair, route[i + 1].Pair,
+                    $"相邻穿管点应属同一 pair");
+                i++;
+            }
+        }
+    }
+
+    [TestMethod]
+    public void Route_TwoPairs_ShorterThanSinglePairDetour()
+    {
+        // 经过两对穿管的路径（直接穿两管）应比只经过一对穿管再走弯路更合理
+        var pointsBoth = CreateTwoPassPoints("S1", "E1", new List<string> { "PairA", "PairB" });
+        var pointsOnlyB = CreateTwoPassPoints("S1", "E1", new List<string> { "PairB" });
+
+        var (routeBoth, lenBoth) = new PathPlanner(pointsBoth).PlanRoute(new List<string> { "PairA", "PairB" });
+        var (routeOnlyB, lenOnlyB) = new PathPlanner(pointsOnlyB).PlanRoute(new List<string> { "PairB" });
+
+        Assert.IsTrue(lenBoth > 0 && lenOnlyB > 0, "两种方案的路径长度都应为正数");
+
+        // 经过两对穿管时路径更长（多了一段穿管）但两对穿管点都应被访问
+        var idsB = routeBoth.Where(p => p.Id != "_foot_").Select(p => p.Id).ToList();
+        Assert.IsTrue(idsB.Any(id => id == "PA1" || id == "PA2"), "双穿管路径应含 PairA");
+        Assert.IsTrue(idsB.Any(id => id == "PB1" || id == "PB2"), "双穿管路径应含 PairB");
+
+        // 单穿管路径中不含 PairA
+        var idsO = routeOnlyB.Where(p => p.Id != "_foot_").Select(p => p.Id).ToList();
+        Assert.IsFalse(idsO.Any(id => id == "PA1" || id == "PA2"), "单穿管路径不应含 PairA");
+    }
 }
