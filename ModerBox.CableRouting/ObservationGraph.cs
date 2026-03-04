@@ -12,9 +12,9 @@ public class ObservationGraph
     private readonly List<CableTrench> _trenches;  // 电缆沟线段列表
     
     // 角度容差：与水平/垂直的夹角在此范围内视为直线（度）
-    // 设为 2°：足以覆盖图纸数字化误差（实测最大约 1.5°），同时拒绝真正倾斜的点对
+    // 设为 0.5°：足以覆盖图纸数字化误差（实测最大约 1.5°），同时拒绝真正倾斜的点对
     // 角度超出此范围的点对将不建立连接（视为不同电缆沟）
-    private const double AngleTolerance = 2.0;
+    private const double AngleTolerance = 0.5;
     
     public ObservationGraph(IEnumerable<RoutePoint> observations)
     {
