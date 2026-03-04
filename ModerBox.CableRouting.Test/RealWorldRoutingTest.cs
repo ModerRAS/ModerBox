@@ -402,7 +402,7 @@ public class RealWorldRoutingTest
     public void ObservationGraph_DijkstraStillWorksAfterFilter()
     {
         // 过滤跨越线段后，Dijkstra 仍应能找到 O3→O6 的路径
-        // 邻接表中保留了 O3→O6 的直连边，所以 Dijkstra 路径可能是 2 步或 3 步
+        // 邻接表中只保留相邻线段（O3→O5, O5→O6），Dijkstra 路径经过3个节点（O3→O5→O6）
         var observations = new List<RoutePoint>
         {
             new("O3", PointType.Observation, 9804, 4189),
@@ -483,6 +483,7 @@ public class RealWorldRoutingTest
     }
 
     // ======================================================
+<<<<<<< copilot/update-cable-routing-config
     // 多穿管（顺序经过两对穿管）测试
     // 场景还原自用户反馈的真实配置（已脱敏）
     // 布局示意（→ 表示从东(右)向西(左)）：
@@ -523,11 +524,51 @@ public class RealWorldRoutingTest
 
         points.Add(new(startId, PointType.Start, 11431, 3574));
         points.Add(new(endId,   PointType.End,    8528, 3500));
+=======
+    // H2 型配置回归测试：U型6点观测网络（坐标已脱敏）
+    //
+    // 布局示意（不等比例）：
+    //   Start
+    //     │
+    //   O1 ── 垂直
+    //     │
+    //   O2 ──── O3
+    //              │
+    //   End  O6 ── O5 ── O4
+    //
+    // 历史 bug：O1 与 O4/O5/O6 之间存在近似水平的假连接（角度≈2.6°~4.6°），
+    // Dijkstra 走 O1→O4 捷径，跳过了 O2、O3。
+    // ======================================================
+
+    /// <summary>
+    /// 构建 H2 型场景（6个观测点形成U型路径，无穿管）
+    /// </summary>
+    private static List<RoutePoint> CreateH2StylePoints(string endId = "E1")
+    {
+        var points = new List<RoutePoint>
+        {
+            new("S1", PointType.Start,       11431, 3574),
+            new("O1", PointType.Observation, 11156, 3574),
+            new("O2", PointType.Observation, 11156, 4189),
+            new("O3", PointType.Observation,  9690, 4189),
+            new("O4", PointType.Observation,  9690, 3455),
+            new("O5", PointType.Observation,  8859, 3455),
+            new("O6", PointType.Observation,  8528, 3455),
+        };
+
+        points.Add(endId switch
+        {
+            "E1" => new("E1", PointType.End, 8528, 3500),
+            "E2" => new("E2", PointType.End, 8528, 3300),
+            _ => throw new ArgumentException($"未知终点 {endId}")
+        });
+>>>>>>> master
 
         return points;
     }
 
     [TestMethod]
+<<<<<<< copilot/update-cable-routing-config
     public void Route_TwoPairs_BothPairsVisited()
     {
         var points = CreateTwoPassPoints("S1", "E1", new List<string> { "PairA", "PairB" });
@@ -609,5 +650,92 @@ public class RealWorldRoutingTest
         // 单穿管路径中不含 PairA
         var idsO = routeOnlyB.Where(p => p.Id != "_foot_").Select(p => p.Id).ToList();
         Assert.IsFalse(idsO.Any(id => id == "PA1" || id == "PA2"), "单穿管路径不应含 PairA");
+=======
+    [DataRow("E1", DisplayName = "H2风格 S1→E1 应经过全部观测点且保持顺序")]
+    [DataRow("E2", DisplayName = "H2风格 S1→E2 应经过全部观测点且保持顺序")]
+    public void Route_H2Style_ShouldPassThroughAllObservationsInOrder(string endId)
+    {
+        var points = CreateH2StylePoints(endId);
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+        var ids = GetRouteIds(route);
+
+        // 不应走 O1→O4 捷径（曾因角度容差过大导致误连）
+        Assert.IsTrue(ids.Contains("O2"),
+            $"[{endId}] 路径应经过 O2，实际路径: {string.Join(" → ", ids)}");
+        Assert.IsTrue(ids.Contains("O3"),
+            $"[{endId}] 路径应经过 O3，实际路径: {string.Join(" → ", ids)}");
+
+        // 顺序：O1 → O2 → O3 → O4
+        int idxO1 = ids.IndexOf("O1");
+        int idxO2 = ids.IndexOf("O2");
+        int idxO3 = ids.IndexOf("O3");
+        int idxO4 = ids.IndexOf("O4");
+
+        Assert.IsTrue(idxO1 >= 0 && idxO1 < idxO2,
+            $"[{endId}] O1 应在 O2 之前，实际 O1@{idxO1}, O2@{idxO2}");
+        Assert.IsTrue(idxO2 < idxO3,
+            $"[{endId}] O2 应在 O3 之前，实际 O2@{idxO2}, O3@{idxO3}");
+        Assert.IsTrue(idxO3 < idxO4,
+            $"[{endId}] O3 应在 O4 之前，实际 O3@{idxO3}, O4@{idxO4}");
+    }
+
+    [TestMethod]
+    [DataRow("E1", DisplayName = "H2风格 S1→E1 无折返")]
+    [DataRow("E2", DisplayName = "H2风格 S1→E2 无折返")]
+    public void Route_H2Style_NoBacktracking(string endId)
+    {
+        var points = CreateH2StylePoints(endId);
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+
+        AssertNoBacktracking(route, $"H2风格 S1→{endId}");
+    }
+
+    [TestMethod]
+    public void ObservationGraph_H2Style_NoFalseHorizontalEdges()
+    {
+        // O1(11156,3574) 与 O4(9690,3455) 角度≈4.64°，不应被当作水平线段相连
+        // O1(11156,3574) 与 O5(8859,3455) 角度≈2.97°，也不应相连
+        var observations = new List<RoutePoint>
+        {
+            new("O1", PointType.Observation, 11156, 3574),
+            new("O2", PointType.Observation, 11156, 4189),
+            new("O3", PointType.Observation,  9690, 4189),
+            new("O4", PointType.Observation,  9690, 3455),
+            new("O5", PointType.Observation,  8859, 3455),
+            new("O6", PointType.Observation,  8528, 3455),
+        };
+
+        var graph = new ObservationGraph(observations);
+        var trenches = graph.GetTrenches();
+
+        // 应不存在 O1—O4/O5/O6 的假水平线段
+        Assert.IsFalse(trenches.Any(t =>
+            (t.P1.Id == "O1" && t.P2.Id == "O4") || (t.P1.Id == "O4" && t.P2.Id == "O1")),
+            "O1—O4 不应存在（角度≈4.64°，超出容差）");
+        Assert.IsFalse(trenches.Any(t =>
+            (t.P1.Id == "O1" && t.P2.Id == "O5") || (t.P1.Id == "O5" && t.P2.Id == "O1")),
+            "O1—O5 不应存在（角度≈2.97°，超出容差）");
+        Assert.IsFalse(trenches.Any(t =>
+            (t.P1.Id == "O1" && t.P2.Id == "O6") || (t.P1.Id == "O6" && t.P2.Id == "O1")),
+            "O1—O6 不应存在（角度≈2.59°，超出容差）");
+
+        // 正确的相邻连接应存在
+        Assert.IsTrue(trenches.Any(t =>
+            (t.P1.Id == "O1" && t.P2.Id == "O2") || (t.P1.Id == "O2" && t.P2.Id == "O1")),
+            "应存在 O1—O2（垂直）");
+        Assert.IsTrue(trenches.Any(t =>
+            (t.P1.Id == "O4" && t.P2.Id == "O5") || (t.P1.Id == "O5" && t.P2.Id == "O4")),
+            "应存在 O4—O5（水平）");
+        Assert.IsTrue(trenches.Any(t =>
+            (t.P1.Id == "O5" && t.P2.Id == "O6") || (t.P1.Id == "O6" && t.P2.Id == "O5")),
+            "应存在 O5—O6（水平）");
+
+        // 跨越线段 O4—O6 应被过滤（O5 在两者之间）
+        Assert.IsFalse(trenches.Any(t =>
+            (t.P1.Id == "O4" && t.P2.Id == "O6") || (t.P1.Id == "O6" && t.P2.Id == "O4")),
+            "O4—O6 跨越线段应被过滤（O5 在两者之间）");
+>>>>>>> master
     }
 }
