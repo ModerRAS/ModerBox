@@ -105,9 +105,35 @@ public class CableRoutingConfigTest
         Assert.AreEqual("output.png", tasks[0].OutputPath);
         Assert.AreEqual("Start1", tasks[0].StartId);
         Assert.AreEqual("End1", tasks[0].EndId);
-        Assert.IsNull(tasks[0].PassPair); // 默认使用所有穿管
+        Assert.IsNull(tasks[0].PassPairs); // 无穿管点时 PassPairs 为 null
         // EndTable 通过 config.GetEndTable(endId) 获取
         Assert.IsNotNull(config.GetEndTable("End1"));
+    }
+
+    [TestMethod]
+    public void GetEffectiveTasks_SingleTask_WithPassPoints_SetsPassPairs()
+    {
+        var config = new CableRoutingConfig
+        {
+            OutputPath = "output.png",
+            Points = new List<RoutePoint>
+            {
+                new("Start1", PointType.Start, 0, 0),
+                new("End1", PointType.End, 100, 100),
+                new("O1", PointType.Observation, 50, 50),
+                new("PA", PointType.Pass, 30, 30, "P1"),
+                new("PB", PointType.Pass, 70, 30, "P1"),
+            }
+        };
+
+        Assert.IsFalse(config.IsMultiTask);
+
+        var tasks = config.GetEffectiveTasks();
+
+        Assert.AreEqual(1, tasks.Count);
+        Assert.IsNotNull(tasks[0].PassPairs);
+        Assert.AreEqual(1, tasks[0].PassPairs!.Count);
+        Assert.AreEqual("P1", tasks[0].PassPairs[0]);
     }
 
     [TestMethod]
@@ -147,7 +173,7 @@ public class CableRoutingConfigTest
     }
 
     [TestMethod]
-    public void BuildPointsForTask_NullPassPair_IncludesAllPasses()
+    public void BuildPointsForTask_NullPassPairAndPassPairs_ExcludesAllPasses()
     {
         var config = new CableRoutingConfig
         {
@@ -167,12 +193,9 @@ public class CableRoutingConfigTest
 
         var points = config.BuildPointsForTask(task);
 
-        // null → 包含所有穿管: 1 观测 + 4 穿管 + 1 起 + 1 终 = 7
-        Assert.AreEqual(7, points.Count);
-        Assert.IsTrue(points.Any(p => p.Id == "PA"));
-        Assert.IsTrue(points.Any(p => p.Id == "PB"));
-        Assert.IsTrue(points.Any(p => p.Id == "PC"));
-        Assert.IsTrue(points.Any(p => p.Id == "PD"));
+        // 两者均为 null → 不包含穿管: 1 观测 + 0 穿管 + 1 起 + 1 终 = 3
+        Assert.AreEqual(3, points.Count);
+        Assert.IsFalse(points.Any(p => p.Type == PointType.Pass));
     }
 
     [TestMethod]
@@ -217,7 +240,9 @@ public class CableRoutingConfigTest
 
         Assert.AreEqual("S2", loaded.Tasks[1].StartId);
         Assert.AreEqual("E2", loaded.Tasks[1].EndId);
-        Assert.IsNull(loaded.Tasks[1].PassPair);
+        Assert.IsNotNull(loaded.Tasks[1].PassPairs);
+        Assert.AreEqual(1, loaded.Tasks[1].PassPairs!.Count);
+        Assert.AreEqual("P1", loaded.Tasks[1].PassPairs[0]);
 
         // endTables 字典验证
         Assert.IsNotNull(loaded.EndTables);

@@ -193,7 +193,7 @@ public class PathPlanner
             }
             
             var (route, length) = BuildMultiPassRoute(start, end, observations, ordered);
-            if (length < bestLength)
+            if (length < bestLength || bestRoute.Count == 0)
             {
                 bestLength = length;
                 bestRoute = route;

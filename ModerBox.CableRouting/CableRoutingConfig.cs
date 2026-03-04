@@ -70,6 +70,13 @@ public class CableRoutingConfig
         var start = Points.FirstOrDefault(p => p.Type == PointType.Start);
         var end = Points.FirstOrDefault(p => p.Type == PointType.End);
 
+        // 收集所有穿管配对名，保持向后兼容（旧单任务模式默认使用所有穿管）
+        var allPassPairNames = Points
+            .Where(p => p.Type == PointType.Pass && !string.IsNullOrEmpty(p.Pair))
+            .Select(p => p.Pair!)
+            .Distinct()
+            .ToList();
+
         return new List<RoutingTask>
         {
             new RoutingTask
@@ -77,7 +84,7 @@ public class CableRoutingConfig
                 OutputPath = OutputPath,
                 StartId = start?.Id ?? string.Empty,
                 EndId = end?.Id ?? string.Empty,
-                PassPair = null  // 使用所有穿管
+                PassPairs = allPassPairNames.Count > 0 ? allPassPairNames : null
             }
         };
     }
@@ -110,17 +117,12 @@ public class CableRoutingConfig
             var pairSet = new HashSet<string>(task.PassPairs);
             result.AddRange(Points.Where(p => p.Type == PointType.Pass && p.Pair != null && pairSet.Contains(p.Pair)));
         }
-        else if (task.PassPair == null)
-        {
-            // 旧格式 null → 包含所有穿管
-            result.AddRange(Points.Where(p => p.Type == PointType.Pass));
-        }
-        else if (task.PassPair != string.Empty)
+        else if (task.PassPair != null && task.PassPair != string.Empty)
         {
             // 旧格式 非空字符串 → 只包含匹配的穿管对
             result.AddRange(Points.Where(p => p.Type == PointType.Pass && p.Pair == task.PassPair));
         }
-        // else: 旧格式 空字符串 → 不包含任何穿管
+        // else: PassPair 为 null 或空字符串且 PassPairs 为 null → 不包含任何穿管
 
         // 3. 起点
         var startPoint = Points.FirstOrDefault(p => p.Id == task.StartId);
@@ -210,7 +212,7 @@ public class CableRoutingConfig
                     OutputPath = "route_S2_E2.png",
                     StartId = "S2",
                     EndId = "E2",
-                    PassPair = null,  // 使用所有穿管
+                    PassPairs = new List<string> { "P1" },  // 使用所有穿管
                 }
             }
         };
