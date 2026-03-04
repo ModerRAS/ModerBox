@@ -178,7 +178,8 @@ public class PathPlanner
         }
         
         // 枚举所有方向组合（2^N），选最短路线
-        int n = passPairPoints.Count;
+        // 穿管对数量较多时限制枚举范围以避免性能问题
+        int n = Math.Min(passPairPoints.Count, 20);
         var bestRoute = new List<RoutePoint>();
         double bestLength = double.PositiveInfinity;
         
