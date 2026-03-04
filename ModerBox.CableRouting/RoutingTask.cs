@@ -20,9 +20,9 @@ public class RoutingTask
     public string EndId { get; set; } = string.Empty;
 
     /// <summary>
-    /// 使用的穿管配对名（对应 Pass 点的 pair 字段）。
-    /// null 表示使用所有穿管点；空字符串 "" 表示不使用穿管。
+    /// 使用的穿管配对名列表（对应 Pass 点的 pair 字段）。
+    /// null 表示使用所有穿管点；空列表 [] 表示不使用穿管；非空列表则只包含匹配的穿管对。
     /// </summary>
-    [JsonPropertyName("passPair")]
-    public string? PassPair { get; set; }
+    [JsonPropertyName("passPairs")]
+    public List<string>? PassPairs { get; set; }
 }

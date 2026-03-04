@@ -77,7 +77,7 @@ public class CableRoutingConfig
                 OutputPath = OutputPath,
                 StartId = start?.Id ?? string.Empty,
                 EndId = end?.Id ?? string.Empty,
-                PassPair = null  // 使用所有穿管
+                PassPairs = null  // 使用所有穿管
             }
         };
     }
@@ -103,18 +103,18 @@ public class CableRoutingConfig
         // 1. 所有观测点（共享）
         result.AddRange(Points.Where(p => p.Type == PointType.Observation));
 
-        // 2. 穿管点（按 passPair 过滤）
-        if (task.PassPair == null)
+        // 2. 穿管点（按 passPairs 过滤）
+        if (task.PassPairs == null)
         {
             // null → 包含所有穿管
             result.AddRange(Points.Where(p => p.Type == PointType.Pass));
         }
-        else if (task.PassPair != string.Empty)
+        else if (task.PassPairs.Count > 0)
         {
-            // 非空字符串 → 只包含匹配的穿管对
-            result.AddRange(Points.Where(p => p.Type == PointType.Pass && p.Pair == task.PassPair));
+            // 非空列表 → 只包含匹配任意一个 pair 名的穿管点
+            result.AddRange(Points.Where(p => p.Type == PointType.Pass && p.Pair != null && task.PassPairs.Contains(p.Pair)));
         }
-        // else: 空字符串 → 不包含任何穿管
+        // else: 空列表 → 不包含任何穿管
 
         // 3. 起点
         var startPoint = Points.FirstOrDefault(p => p.Id == task.StartId);
@@ -197,14 +197,14 @@ public class CableRoutingConfig
                     OutputPath = "route_S1_E1.png",
                     StartId = "S1",
                     EndId = "E1",
-                    PassPair = "P1",
+                    PassPairs = new List<string> { "P1" },
                 },
                 new RoutingTask
                 {
                     OutputPath = "route_S2_E2.png",
                     StartId = "S2",
                     EndId = "E2",
-                    PassPair = null,  // 使用所有穿管
+                    PassPairs = null,  // 使用所有穿管
                 }
             }
         };

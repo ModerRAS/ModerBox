@@ -105,7 +105,7 @@ public class CableRoutingConfigTest
         Assert.AreEqual("output.png", tasks[0].OutputPath);
         Assert.AreEqual("Start1", tasks[0].StartId);
         Assert.AreEqual("End1", tasks[0].EndId);
-        Assert.IsNull(tasks[0].PassPair); // 默认使用所有穿管
+        Assert.IsNull(tasks[0].PassPairs); // 默认使用所有穿管
         // EndTable 通过 config.GetEndTable(endId) 获取
         Assert.IsNotNull(config.GetEndTable("End1"));
     }
@@ -129,7 +129,7 @@ public class CableRoutingConfigTest
             }
         };
 
-        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPair = "PairA" };
+        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPairs = new List<string> { "PairA" } };
 
         var points = config.BuildPointsForTask(task);
 
@@ -163,7 +163,7 @@ public class CableRoutingConfigTest
             }
         };
 
-        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPair = null };
+        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPairs = null };
 
         var points = config.BuildPointsForTask(task);
 
@@ -176,7 +176,7 @@ public class CableRoutingConfigTest
     }
 
     [TestMethod]
-    public void BuildPointsForTask_EmptyPassPair_ExcludesAllPasses()
+    public void BuildPointsForTask_EmptyPassPairs_ExcludesAllPasses()
     {
         var config = new CableRoutingConfig
         {
@@ -190,11 +190,11 @@ public class CableRoutingConfigTest
             }
         };
 
-        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPair = "" };
+        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPairs = new List<string>() };
 
         var points = config.BuildPointsForTask(task);
 
-        // 空字符串 → 不包含穿管: 1 观测 + 0 穿管 + 1 起 + 1 终 = 3
+        // 空列表 → 不包含穿管: 1 观测 + 0 穿管 + 1 起 + 1 终 = 3
         Assert.AreEqual(3, points.Count);
         Assert.IsFalse(points.Any(p => p.Type == PointType.Pass));
     }
@@ -213,11 +213,13 @@ public class CableRoutingConfigTest
 
         Assert.AreEqual("S1", loaded.Tasks[0].StartId);
         Assert.AreEqual("E1", loaded.Tasks[0].EndId);
-        Assert.AreEqual("P1", loaded.Tasks[0].PassPair);
+        Assert.IsNotNull(loaded.Tasks[0].PassPairs);
+        Assert.AreEqual(1, loaded.Tasks[0].PassPairs!.Count);
+        Assert.AreEqual("P1", loaded.Tasks[0].PassPairs![0]);
 
         Assert.AreEqual("S2", loaded.Tasks[1].StartId);
         Assert.AreEqual("E2", loaded.Tasks[1].EndId);
-        Assert.IsNull(loaded.Tasks[1].PassPair);
+        Assert.IsNull(loaded.Tasks[1].PassPairs);
 
         // endTables 字典验证
         Assert.IsNotNull(loaded.EndTables);
@@ -225,5 +227,38 @@ public class CableRoutingConfigTest
         Assert.IsTrue(loaded.EndTables.ContainsKey("E1"));
         Assert.IsTrue(loaded.EndTables.ContainsKey("E2"));
         Assert.AreEqual("E1下级业务", loaded.EndTables["E1"].Title);
+    }
+
+    [TestMethod]
+    public void BuildPointsForTask_MultiplePassPairs_IncludesAllMatchingPairs()
+    {
+        var config = new CableRoutingConfig
+        {
+            Points = new List<RoutePoint>
+            {
+                new("S1", PointType.Start, 0, 0),
+                new("E1", PointType.End, 500, 0),
+                new("O1", PointType.Observation, 100, 50),
+                new("PA", PointType.Pass, 150, 50, "PairA"),
+                new("PB", PointType.Pass, 250, 50, "PairA"),
+                new("PC", PointType.Pass, 300, 50, "PairB"),
+                new("PD", PointType.Pass, 400, 50, "PairB"),
+                new("PE", PointType.Pass, 450, 50, "PairC"),
+                new("PF", PointType.Pass, 480, 50, "PairC"),
+            }
+        };
+
+        var task = new RoutingTask { StartId = "S1", EndId = "E1", PassPairs = new List<string> { "PairA", "PairB" } };
+
+        var points = config.BuildPointsForTask(task);
+
+        // 应包含: 1 观测 + 4 穿管(PairA+PairB) + 1 起 + 1 终 = 7
+        Assert.AreEqual(7, points.Count);
+        Assert.IsTrue(points.Any(p => p.Id == "PA"));
+        Assert.IsTrue(points.Any(p => p.Id == "PB"));
+        Assert.IsTrue(points.Any(p => p.Id == "PC"));
+        Assert.IsTrue(points.Any(p => p.Id == "PD"));
+        Assert.IsFalse(points.Any(p => p.Id == "PE")); // PairC 被过滤
+        Assert.IsFalse(points.Any(p => p.Id == "PF")); // PairC 被过滤
     }
 }
