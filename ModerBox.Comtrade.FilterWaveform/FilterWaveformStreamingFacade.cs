@@ -73,6 +73,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var total = Math.Max(1, parser.Count);
             var done = 0;
 
+            // 预加载滤波器配置并构建名称索引，供回调中 O(1) 查找
+            if (parser.ACFilterData.Count == 0) {
+                await parser.GetFilterData();
+            }
+            var filtersByName = parser.ACFilterData.ToDictionary(f => f.Name);
+
             await parser.ParseAllComtrade(
                 _ => { },
                 async (info, spec) => {
@@ -85,6 +91,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                 var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
                                 imagePath = Path.Combine(folder, fileName);
                                 await File.WriteAllBytesAsync(imagePath, spec.SignalPicture);
+
+                                // 导出剔除无关通道后的波形文件（cfg + dat）
+                                if (filtersByName.TryGetValue(spec.Name, out var matchedFilter)) {
+                                    var comtradeBasePath = Path.Combine(folder, Path.GetFileNameWithoutExtension(fileName));
+                                    await ComtradeExportExtension.ExportFilteredComtradeAsync(info, matchedFilter, comtradeBasePath);
+                                }
                             }
 
                             await store.EnqueueResultWithProcessedAsync(spec, cfgPath: info.FileName, status: ProcessedComtradeFileStatus.Processed, imagePath: imagePath);
