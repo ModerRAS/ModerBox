@@ -1,7 +1,7 @@
 # ModerBox 开发指南
 
 ## 项目概述
-ModerBox 是一个跨平台电力系统工具箱，基于 Avalonia UI (.NET 9) 构建，专注于 COMTRADE 录波文件分析。
+ModerBox 是一个跨平台电力系统工具箱，基于 Avalonia UI (.NET 10) 构建，专注于 COMTRADE 录波文件分析。
 
 ## 架构设计
 

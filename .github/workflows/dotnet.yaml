@@ -18,7 +18,7 @@ jobs:
     - name: Install .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.1
     - name: Restore dependencies
@@ -62,7 +62,7 @@ jobs:
     - name: Install .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
     - name: Restore dependencies
       run: dotnet restore
     - name: Publish Application (${{ matrix.name }})
