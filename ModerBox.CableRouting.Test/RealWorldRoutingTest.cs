@@ -606,9 +606,158 @@ public class RealWorldRoutingTest
             (t.P1.Id == "O5" && t.P2.Id == "O6") || (t.P1.Id == "O6" && t.P2.Id == "O5")),
             "应存在 O5—O6（水平）");
 
-        // 跨越线段 O4—O6 应被过滤（O5 在两者之间）
+         // 跨越线段 O4—O6 应被过滤（O5 在两者之间）
         Assert.IsFalse(trenches.Any(t =>
             (t.P1.Id == "O4" && t.P2.Id == "O6") || (t.P1.Id == "O6" && t.P2.Id == "O4")),
             "O4—O6 跨越线段应被过滤（O5 在两者之间）");
+    }
+
+    // ======================================================
+    // 中段入沟折返回归测试：起点/终点投影在电缆沟中间时，
+    // 不应先走到近端点再折返另一端点（应选总距离最短的端点）。
+    //
+    // 布局示意（与上方观测点共用 O1~O10）：
+    //
+    //         O1 ───────── O10    E3(由此上楼)
+    //         │              │      │
+    //         O2 ── O3      O9 ── │
+    //         │      │       │
+    //   O4 ── │     O5      O8 ── O7 ── O6
+    //               │
+    //         S5 → [foot]   （S5 投影在 O5-O6 之间）
+    //               │
+    //              O6
+    //
+    // Issue 1 (S5→E3): S5(10040,5235) 投影到 O5-O6 中间，
+    //   旧算法选 O5 (近端) 但 Dijkstra 再走 O6 → 折返。
+    //   正确: 直接选 O6 端点，避免折返。
+    //
+    // Issue 2 (S6→E3): S6(10040,4635) 到 E3(11440,3888)，
+    //   终点投影到 O9-O10 中间，旧算法选 O9 (近方向提示) 但实际走 O10→O9→foot → 折返。
+    //   正确: 直接选 O10 端点。
+    // ======================================================
+
+    /// <summary>
+    /// 构建中段入沟测试场景。使用共享观测点 O1~O10，
+    /// 支持新起点(S5/S6)和新终点(E3)的无穿管路由。
+    /// </summary>
+    private static List<RoutePoint> CreateMidTrenchEntryPoints(string startId, string endId)
+    {
+        var points = new List<RoutePoint>
+        {
+            // 左侧垂直主干 x≈9580
+            new("O1",  PointType.Observation, 9578, 3331),
+            new("O2",  PointType.Observation, 9582, 4189),
+            new("O4",  PointType.Observation, 9582, 4982),
+
+            // 中间垂直主干 x≈9805（共线: O3-O5-O6）
+            new("O3",  PointType.Observation, 9804, 4189),
+            new("O5",  PointType.Observation, 9807, 4986),
+            new("O6",  PointType.Observation, 9807, 5881),
+
+            // 右侧垂直主干 x≈11060
+            new("O7",  PointType.Observation, 11060, 5882),
+            new("O8",  PointType.Observation, 11060, 4441),
+
+            // 最右侧垂直段 x≈11285
+            new("O9",  PointType.Observation, 11285, 4441),
+            new("O10", PointType.Observation, 11285, 3339),
+        };
+
+        points.Add(startId switch
+        {
+            // S5: 投影落在 O5-O6 垂直电缆沟中间
+            "S5" => new("S5", PointType.Start, 10040, 5235),
+            // S6: 投影落在 O3-O5 垂直电缆沟中间
+            "S6" => new("S6", PointType.Start, 10040, 4635),
+            _ => throw new ArgumentException($"未知起点 {startId}")
+        });
+
+        points.Add(endId switch
+        {
+            // E3: 投影落在 O9-O10 垂直电缆沟中间
+            "E3" => new("E3", PointType.End, 11440, 3888),
+            _ => throw new ArgumentException($"未知终点 {endId}")
+        });
+
+        return points;
+    }
+
+    [TestMethod]
+    public void Route_MidTrenchStart_S5_E3_ShouldNotBacktrack()
+    {
+        // Issue 1: S5(10040,5235) 投影到 O5(4986)-O6(5881) 中间。
+        // 旧算法: foot→O5→O6→…（经过 O5 后折返到 O6）
+        // 正确:   foot→O6→O7→O8→O9→O10→foot→E3
+        var points = CreateMidTrenchEntryPoints("S5", "E3");
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+        var ids = GetRouteIds(route);
+
+        // 不应出现 O5 → O6 的折返（如果路径包含 O5，则 O6 不应紧跟其后）
+        AssertNoBacktracking(route, "S5→E3 中段入沟");
+
+        // 路径应以 S5 开头，E3 结尾
+        Assert.AreEqual("S5", ids.First());
+        Assert.AreEqual("E3", ids.Last());
+    }
+
+    [TestMethod]
+    public void Route_MidTrenchEnd_S6_E3_ShouldNotBacktrack()
+    {
+        // Issue 2: S6(10040,4635) → E3(11440,3888)。
+        // E3 投影到 O9(4441)-O10(3339) 中间，foot 在 (11285,3888)。
+        // 旧算法: …→O10→O9→foot→E3（从 O10 下行到 O9 再折返上行到 foot）
+        // 正确:   …→O10→foot→E3（直接沿沟到 foot 即可）
+        var points = CreateMidTrenchEntryPoints("S6", "E3");
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+        var ids = GetRouteIds(route);
+
+        AssertNoBacktracking(route, "S6→E3 中段出沟");
+
+        Assert.AreEqual("S6", ids.First());
+        Assert.AreEqual("E3", ids.Last());
+    }
+
+    [TestMethod]
+    [DataRow("S5", "E3", DisplayName = "S5→E3 中段入沟路径连续")]
+    [DataRow("S6", "E3", DisplayName = "S6→E3 中段出沟路径连续")]
+    public void Route_MidTrenchEntry_ContinuousPath(string startId, string endId)
+    {
+        var points = CreateMidTrenchEntryPoints(startId, endId);
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+
+        AssertRouteContinuity(route, $"{startId}→{endId} 中段入沟", strict: true);
+    }
+
+    [TestMethod]
+    public void Route_MidTrenchStart_S5_E3_ExpectedRouteIds()
+    {
+        // 验证精确路径: S5 → foot → O6 → O7 → O8 → O9 → foot → E3
+        // O9 比 O10 更优: Dijkstra(O6,O9)=2919 + O9到E3=708 < Dijkstra(O6,O10)=4021 + O10到E3=704
+        var points = CreateMidTrenchEntryPoints("S5", "E3");
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+        var ids = GetRouteIds(route);
+
+        var expected = new List<string> { "S5", "O6", "O7", "O8", "O9", "E3" };
+        CollectionAssert.AreEqual(expected, ids,
+            $"预期: {string.Join("→", expected)}\n实际: {string.Join("→", ids)}");
+    }
+
+    [TestMethod]
+    public void Route_MidTrenchEnd_S6_E3_ExpectedRouteIds()
+    {
+        // 验证精确路径: S6 → foot → O3 → O2 → O1 → O10 → foot → E3
+        var points = CreateMidTrenchEntryPoints("S6", "E3");
+        var planner = new PathPlanner(points);
+        var (route, _) = planner.PlanRoute();
+        var ids = GetRouteIds(route);
+
+        var expected = new List<string> { "S6", "O3", "O2", "O1", "O10", "E3" };
+        CollectionAssert.AreEqual(expected, ids,
+            $"预期: {string.Join("→", expected)}\n实际: {string.Join("→", ids)}");
     }
 }
