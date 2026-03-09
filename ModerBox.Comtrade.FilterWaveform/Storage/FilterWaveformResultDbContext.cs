@@ -1,8 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace ModerBox.Comtrade.FilterWaveform.Storage {
+    /// <summary>
+    /// 滤波器波形结果数据库上下文，用于访问SQLite中的分合闸操作记录。
+    /// </summary>
     public class FilterWaveformResultDbContext : DbContext {
+        /// <summary>
+        /// 分合闸操作结果表。
+        /// </summary>
         public DbSet<FilterWaveformResultEntity> Results => Set<FilterWaveformResultEntity>();
+        
+        /// <summary>
+        /// 已处理的COMTRADE文件记录表。
+        /// </summary>
         public DbSet<ProcessedComtradeFileEntity> ProcessedFiles => Set<ProcessedComtradeFileEntity>();
 
         public FilterWaveformResultDbContext(DbContextOptions<FilterWaveformResultDbContext> options) : base(options) {
@@ -22,6 +32,11 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
             processed.HasIndex(x => x.LastUpdatedUtc);
         }
 
+        /// <summary>
+        /// 根据数据库文件路径创建数据库上下文。
+        /// </summary>
+        /// <param name="dbPath">SQLite数据库文件路径。</param>
+        /// <returns>数据库上下文实例。</returns>
         public static FilterWaveformResultDbContext Create(string dbPath) {
             var options = new DbContextOptionsBuilder<FilterWaveformResultDbContext>()
                 .UseSqlite($"Data Source={dbPath};Pooling=false")
