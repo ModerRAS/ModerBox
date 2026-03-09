@@ -7,8 +7,8 @@ using System.Windows.Input;
 
 namespace ModerBox.Models {
     public class MenuItem {
-        public string Icon { get; set; }
-        public string Title { get; set; }
-        public ICommand Command { get; set; }
+        public string Icon { get; set; } = "";
+        public string Title { get; set; } = "";
+        public ICommand Command { get; set; } = null!;
     }
 }

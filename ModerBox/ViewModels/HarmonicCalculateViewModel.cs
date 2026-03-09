@@ -30,13 +30,13 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _progressMax, value);
         }
 
-        private string _sourceFolder;
+        private string _sourceFolder = "";
         public string SourceFolder {
             get => _sourceFolder;
             set => this.RaiseAndSetIfChanged(ref _sourceFolder, value);
         }
 
-        private string _targetFile;
+        private string _targetFile = "";
         public string TargetFile {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
@@ -96,7 +96,7 @@ namespace ModerBox.ViewModels {
                     writer.SaveAs(TargetFile);
                     Progress = ProgressMax;
                     TargetFile.OpenFileWithExplorer();
-                } catch (Exception ex) { }
+                } catch { }
             });
             
         }

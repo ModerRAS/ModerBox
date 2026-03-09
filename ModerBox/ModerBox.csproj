@@ -36,7 +36,6 @@
   <PackageReference Include="VC-LTL" Version="5.2.1" />
   <PackageReference Include="Velopack" Version="0.0.1298" />
   <PackageReference Include="ClosedXML" Version="0.105.0" />
-<PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
