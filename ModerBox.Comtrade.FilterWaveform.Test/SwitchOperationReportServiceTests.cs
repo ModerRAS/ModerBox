@@ -84,11 +84,13 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             var result = SwitchOperationReportService.BuildReport(entities);
 
             Assert.AreEqual(1, result.OpenRows.Count);
-            Assert.AreEqual(3, result.OpenRows[0].Operations.Count);
-            // Should take the last 3 (Jan 24, 26, 28) in ascending order
-            Assert.AreEqual(3, result.OpenRows[0].Operations[0].PhaseATimeMs);
-            Assert.AreEqual(4, result.OpenRows[0].Operations[1].PhaseATimeMs);
-            Assert.AreEqual(5, result.OpenRows[0].Operations[2].PhaseATimeMs);
+            Assert.AreEqual(5, result.OpenRows[0].Operations.Count);
+            // Should take the last 5 (Jan 20, 22, 24, 26, 28) in ascending order
+            Assert.AreEqual(1, result.OpenRows[0].Operations[0].PhaseATimeMs);
+            Assert.AreEqual(2, result.OpenRows[0].Operations[1].PhaseATimeMs);
+            Assert.AreEqual(3, result.OpenRows[0].Operations[2].PhaseATimeMs);
+            Assert.AreEqual(4, result.OpenRows[0].Operations[3].PhaseATimeMs);
+            Assert.AreEqual(5, result.OpenRows[0].Operations[4].PhaseATimeMs);
         }
 
         [TestMethod]

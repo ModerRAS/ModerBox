@@ -76,7 +76,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
         /// <summary>
         /// 从指定目录下的所有 SQLite 数据库中查询指定时间段的分合闸数据，
-        /// 按开关分组并取最后三次操作（过滤掉三相时间都为0的误识别记录）。
+        /// 按开关分组并取最后七次操作（过滤掉三相时间都为0的误识别记录）。
         /// </summary>
         /// <param name="dbDirectory">包含 .sqlite 文件的目录路径。</param>
         /// <param name="startTime">时间段起始。</param>
@@ -88,7 +88,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
 
         /// <summary>
         /// 从指定目录下的所有 SQLite 数据库中查询指定时间段的分合闸数据，
-        /// 按开关分组并取最后三次操作（过滤掉三相时间都为0的误识别记录）。
+        /// 按开关分组并取最后七次操作（过滤掉三相时间都为0的误识别记录）。
         /// </summary>
         /// <param name="dbDirectory">包含 .sqlite 文件的目录路径。</param>
         /// <param name="startTime">时间段起始。</param>
@@ -157,18 +157,18 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 .ThenBy(g => g.Key.SwitchType);
 
             foreach (var group in grouped) {
-                // 取最后三次操作（按时间降序取3条，再正序排列），过滤掉三相时间都为0的误识别记录
-                var last3 = group
+                // 取最后七次操作（按时间降序取7条，再正序排列），过滤掉三相时间都为0的误识别记录
+                var last7 = group
                     .Where(r => !(r.PhaseATimeInterval == 0 && r.PhaseBTimeInterval == 0 && r.PhaseCTimeInterval == 0))
                     .OrderByDescending(r => r.Time)
-                    .Take(3)
+                    .Take(7)
                     .OrderBy(r => r.Time)
                     .Select(r => MapToOperationEntry(r, group.Key.SwitchType, group.Key.Name, dataSourceConfigs))
                     .ToList();
 
                 var row = new SwitchOperationRow {
                     SwitchName = group.Key.Name,
-                    Operations = last3
+                    Operations = last7
                 };
 
                 if (group.Key.SwitchType == SwitchType.Open) {
