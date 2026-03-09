@@ -7,6 +7,6 @@ using System.Threading.Tasks;
 
 namespace ModerBox {
     public class Env {
-        public static IHost host { get; set; }
+        public static IHost? host { get; set; }
     }
 }

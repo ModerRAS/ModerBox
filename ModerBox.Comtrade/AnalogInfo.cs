@@ -10,7 +10,7 @@ namespace ModerBox.Comtrade {
         public int Index;
 
         /// <summary>通道标识符 ch_id</summary>
-        public string Name;
+        public string Name = "";
 
         /// <summary>通道相别标识符 ph (A, B, C, N 或空)</summary>
         public string Phase = "";
@@ -19,13 +19,13 @@ namespace ModerBox.Comtrade {
         public string CircuitComponent = "";
 
         /// <summary>通道单位 uu</summary>
-        public string Unit;
+        public string Unit = "";
 
         /// <summary>相别 (向后兼容，对应 Phase)</summary>
-        public string ABCN;
+        public string ABCN = "";
 
         /// <summary>采样数据数组</summary>
-        public double[] Data;
+        public double[]? Data;
 
         /// <summary>运行时计算的最大值</summary>
         public double MaxValue;
@@ -43,10 +43,10 @@ namespace ModerBox.Comtrade {
         public double Skew;
 
         /// <summary>用户自定义键</summary>
-        public string Key;
+        public string Key = "";
 
         /// <summary>变量名</summary>
-        public string VarName;
+        public string VarName = "";
 
         /// <summary>通道数据值范围最小值 min - IEC 60255-24:2013</summary>
         public int CfgMin = -32767;
