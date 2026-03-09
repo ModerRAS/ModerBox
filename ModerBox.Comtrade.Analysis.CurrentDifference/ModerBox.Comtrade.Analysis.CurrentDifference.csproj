@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ScottPlot.Avalonia" Version="5.0.55" />
+    <PackageReference Include="ScottPlot.Avalonia" Version="5.1.57" />
   </ItemGroup>
 
   <PropertyGroup>
