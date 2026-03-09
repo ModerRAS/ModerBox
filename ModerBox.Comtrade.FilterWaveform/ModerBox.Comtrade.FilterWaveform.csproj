@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ModerBox.Common\ModerBox.Common.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.Export\ModerBox.Comtrade.Export.csproj" />
   </ItemGroup>
 
   <ItemGroup>
