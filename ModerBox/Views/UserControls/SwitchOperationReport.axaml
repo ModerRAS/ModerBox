@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ModerBox.Views.UserControls.SwitchOperationReport"
+             x:DataType="vm:SwitchOperationReportViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="15" MaxWidth="800" HorizontalAlignment="Left">
+
+            <!-- 标题 -->
+            <TextBlock Text="分合闸操作报表导出"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10"/>
+
+            <!-- 数据库目录选择 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="文件设置" FontWeight="Bold"/>
+
+                    <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+                        <TextBox Grid.Row="0" Grid.Column="0"
+                                 Watermark="SQLite 数据库目录路径"
+                                 Text="{Binding DbDirectory}" Margin="0,0,10,0"/>
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Command="{Binding SelectDbDirectory}"
+                                Content="选择目录"/>
+
+                        <TextBox Grid.Row="1" Grid.Column="0"
+                                 Watermark="导出文件路径 (.xlsx)"
+                                 Text="{Binding TargetFile}" Margin="0,10,10,0"/>
+                        <Button Grid.Row="1" Grid.Column="1"
+                                Command="{Binding SelectTargetFile}"
+                                Content="选择文件" Margin="0,10,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 时间范围选择 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="时间范围" FontWeight="Bold"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="20">
+                        <StackPanel>
+                            <TextBlock Text="开始时间"/>
+                            <DatePicker SelectedDate="{Binding StartDate}" Margin="0,5,0,0"/>
+                            <TimePicker SelectedTime="{Binding StartTime}" Margin="0,5,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="结束时间"/>
+                            <DatePicker SelectedDate="{Binding EndDate}" Margin="0,5,0,0"/>
+                            <TimePicker SelectedTime="{Binding EndTime}" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="将导出选定时间范围内每个开关的最后三次分闸和最后三次合闸记录"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 操作按钮与状态 -->
+            <StackPanel Spacing="10">
+                <Button Command="{Binding RunExport}"
+                        Classes="accent"
+                        Content="导出报表"
+                        IsEnabled="{Binding !IsRunning}"
+                        Width="120" HorizontalContentAlignment="Center"/>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
