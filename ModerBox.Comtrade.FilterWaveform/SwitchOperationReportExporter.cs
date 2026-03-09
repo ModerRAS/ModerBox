@@ -33,19 +33,20 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         private static int WriteSectionHeader(ClosedXML.Excel.IXLWorksheet worksheet, int startRow, string operationType) {
-            // Row 1: Merged headers for 第1次, 第2次, 第3次
+            // Row 1: Merged headers for 第1次 ~ 第7次
             worksheet.Cell(startRow, 1).Value = "";
             worksheet.Cell(startRow, 2).Value = "";
-            worksheet.Cell(startRow, 3).Value = "第1次";
-            worksheet.Range(startRow, 3, startRow, 7).Merge();
-            worksheet.Cell(startRow, 8).Value = "第2次";
-            worksheet.Range(startRow, 8, startRow, 12).Merge();
-            worksheet.Cell(startRow, 13).Value = "第3次";
-            worksheet.Range(startRow, 13, startRow, 17).Merge();
-            worksheet.Cell(startRow, 18).Value = "";
+            
+            for (int i = 0; i < 7; i++) {
+                int baseCol = 3 + i * 5;
+                worksheet.Cell(startRow, baseCol).Value = $"第{i + 1}次";
+                worksheet.Range(startRow, baseCol, startRow, baseCol + 4).Merge();
+            }
+            
+            worksheet.Cell(startRow, 38).Value = "";
 
             // Style the merged header
-            for (int col = 3; col <= 17; col++) {
+            for (int col = 3; col <= 37; col++) {
                 worksheet.Cell(startRow, col).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
                 worksheet.Cell(startRow, col).Style.Font.Bold = true;
             }
@@ -63,17 +64,17 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 "波形有无异常"
             };
 
-            for (int group = 0; group < 3; group++) {
+            for (int group = 0; group < 7; group++) {
                 int baseCol = 3 + group * 5;
                 for (int i = 0; i < subHeaders.Length; i++) {
                     worksheet.Cell(headerRow, baseCol + i).Value = subHeaders[i];
                 }
             }
 
-            worksheet.Cell(headerRow, 18).Value = "检查时间";
+            worksheet.Cell(headerRow, 38).Value = "检查时间";
 
             // Style header rows
-            for (int col = 1; col <= 18; col++) {
+            for (int col = 1; col <= 38; col++) {
                 worksheet.Cell(headerRow, col).Style.Font.Bold = true;
             }
 
@@ -91,7 +92,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 worksheet.Cell(currentRow, 1).Value = seq;
                 worksheet.Cell(currentRow, 2).Value = row.SwitchName;
 
-                for (int i = 0; i < 3; i++) {
+                for (int i = 0; i < 7; i++) {
                     int baseCol = 3 + i * 5;
                     if (i < row.Operations.Count) {
                         var op = row.Operations[i];
@@ -103,7 +104,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     }
                 }
 
-                worksheet.Cell(currentRow, 18).Value = checkTimeStr;
+                worksheet.Cell(currentRow, 38).Value = checkTimeStr;
 
                 seq++;
                 currentRow++;
