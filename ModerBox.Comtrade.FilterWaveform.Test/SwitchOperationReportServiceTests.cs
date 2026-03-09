@@ -84,11 +84,13 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             var result = SwitchOperationReportService.BuildReport(entities);
 
             Assert.AreEqual(1, result.OpenRows.Count);
-            Assert.AreEqual(3, result.OpenRows[0].Operations.Count);
-            // Should take the last 3 (Jan 24, 26, 28) in ascending order
-            Assert.AreEqual(3, result.OpenRows[0].Operations[0].PhaseATimeMs);
-            Assert.AreEqual(4, result.OpenRows[0].Operations[1].PhaseATimeMs);
-            Assert.AreEqual(5, result.OpenRows[0].Operations[2].PhaseATimeMs);
+            Assert.AreEqual(5, result.OpenRows[0].Operations.Count);
+            // Should take the last 5 (Jan 20, 22, 24, 26, 28) in ascending order
+            Assert.AreEqual(1, result.OpenRows[0].Operations[0].PhaseATimeMs);
+            Assert.AreEqual(2, result.OpenRows[0].Operations[1].PhaseATimeMs);
+            Assert.AreEqual(3, result.OpenRows[0].Operations[2].PhaseATimeMs);
+            Assert.AreEqual(4, result.OpenRows[0].Operations[3].PhaseATimeMs);
+            Assert.AreEqual(5, result.OpenRows[0].Operations[4].PhaseATimeMs);
         }
 
         [TestMethod]
@@ -285,6 +287,116 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             } finally {
                 Directory.Delete(tempDir, true);
             }
+        }
+
+        [TestMethod]
+        public void BuildReport_Close5xxxSwitch_UsesVoltageZeroCrossingDiff() {
+            var entities = new List<FilterWaveformResultEntity> {
+                new FilterWaveformResultEntity {
+                    Name = "5641",
+                    Time = new DateTime(2026, 1, 26, 22, 38, 0),
+                    SwitchType = SwitchType.Close,
+                    WorkType = WorkType.Ok,
+                    PhaseATimeInterval = 1.0,
+                    PhaseBTimeInterval = 2.0,
+                    PhaseCTimeInterval = 3.0,
+                    PhaseAVoltageZeroCrossingDiff = 10.1,
+                    PhaseBVoltageZeroCrossingDiff = 20.2,
+                    PhaseCVoltageZeroCrossingDiff = 30.3,
+                    PhaseAClosingResistorDurationMs = 100.0,
+                    PhaseBClosingResistorDurationMs = 200.0,
+                    PhaseCClosingResistorDurationMs = 300.0
+                }
+            };
+
+            var result = SwitchOperationReportService.BuildReport(entities);
+
+            Assert.AreEqual(1, result.CloseRows.Count);
+            Assert.AreEqual("5641", result.CloseRows[0].SwitchName);
+            var op = result.CloseRows[0].Operations[0];
+            Assert.AreEqual(10.1, op.PhaseATimeMs);
+            Assert.AreEqual(20.2, op.PhaseBTimeMs);
+            Assert.AreEqual(30.3, op.PhaseCTimeMs);
+        }
+
+        [TestMethod]
+        public void BuildReport_CloseTxxxSwitch_UsesClosingResistorDurationMs() {
+            var entities = new List<FilterWaveformResultEntity> {
+                new FilterWaveformResultEntity {
+                    Name = "T611",
+                    Time = new DateTime(2026, 1, 26, 22, 38, 0),
+                    SwitchType = SwitchType.Close,
+                    WorkType = WorkType.Ok,
+                    PhaseATimeInterval = 1.0,
+                    PhaseBTimeInterval = 2.0,
+                    PhaseCTimeInterval = 3.0,
+                    PhaseAVoltageZeroCrossingDiff = 10.1,
+                    PhaseBVoltageZeroCrossingDiff = 20.2,
+                    PhaseCVoltageZeroCrossingDiff = 30.3,
+                    PhaseAClosingResistorDurationMs = 100.0,
+                    PhaseBClosingResistorDurationMs = 200.0,
+                    PhaseCClosingResistorDurationMs = 300.0
+                }
+            };
+
+            var result = SwitchOperationReportService.BuildReport(entities);
+
+            Assert.AreEqual(1, result.CloseRows.Count);
+            Assert.AreEqual("T611", result.CloseRows[0].SwitchName);
+            var op = result.CloseRows[0].Operations[0];
+            Assert.AreEqual(100.0, op.PhaseATimeMs);
+            Assert.AreEqual(200.0, op.PhaseBTimeMs);
+            Assert.AreEqual(300.0, op.PhaseCTimeMs);
+        }
+
+        [TestMethod]
+        public void BuildReport_OpenSwitch_AlwaysUsesTimeInterval() {
+            var entities = new List<FilterWaveformResultEntity> {
+                new FilterWaveformResultEntity {
+                    Name = "5641",
+                    Time = new DateTime(2026, 1, 26, 22, 38, 0),
+                    SwitchType = SwitchType.Open,
+                    WorkType = WorkType.Ok,
+                    PhaseATimeInterval = 1.0,
+                    PhaseBTimeInterval = 2.0,
+                    PhaseCTimeInterval = 3.0,
+                    PhaseAVoltageZeroCrossingDiff = 10.1,
+                    PhaseBVoltageZeroCrossingDiff = 20.2,
+                    PhaseCVoltageZeroCrossingDiff = 30.3,
+                    PhaseAClosingResistorDurationMs = 100.0,
+                    PhaseBClosingResistorDurationMs = 200.0,
+                    PhaseCClosingResistorDurationMs = 300.0
+                },
+                new FilterWaveformResultEntity {
+                    Name = "T611",
+                    Time = new DateTime(2026, 1, 26, 22, 38, 0),
+                    SwitchType = SwitchType.Open,
+                    WorkType = WorkType.Ok,
+                    PhaseATimeInterval = 4.0,
+                    PhaseBTimeInterval = 5.0,
+                    PhaseCTimeInterval = 6.0,
+                    PhaseAVoltageZeroCrossingDiff = 40.0,
+                    PhaseBVoltageZeroCrossingDiff = 50.0,
+                    PhaseCVoltageZeroCrossingDiff = 60.0,
+                    PhaseAClosingResistorDurationMs = 400.0,
+                    PhaseBClosingResistorDurationMs = 500.0,
+                    PhaseCClosingResistorDurationMs = 600.0
+                }
+            };
+
+            var result = SwitchOperationReportService.BuildReport(entities);
+
+            Assert.AreEqual(2, result.OpenRows.Count);
+            // 5xxx open should use TimeInterval
+            var op5 = result.OpenRows[0].Operations[0];
+            Assert.AreEqual(1.0, op5.PhaseATimeMs);
+            Assert.AreEqual(2.0, op5.PhaseBTimeMs);
+            Assert.AreEqual(3.0, op5.PhaseCTimeMs);
+            // Txxx open should also use TimeInterval
+            var opT = result.OpenRows[1].Operations[0];
+            Assert.AreEqual(4.0, opT.PhaseATimeMs);
+            Assert.AreEqual(5.0, opT.PhaseBTimeMs);
+            Assert.AreEqual(6.0, opT.PhaseCTimeMs);
         }
 
         private static FilterWaveformResultEntity CreateEntity(
