@@ -32,40 +32,19 @@ public class PathPlanner
     /// </summary>
     public (List<RoutePoint> Route, double TotalLength) PlanRouteViaObservations(RoutePoint start, RoutePoint end)
     {
-        var route = new List<RoutePoint> { start };
-        double totalLength = 0.0;
-        
         var observations = _pointsByType.GetValueOrDefault(PointType.Observation, new List<RoutePoint>());
         
         if (observations.Count == 0 || _obsGraph == null)
         {
-            route.Add(end);
-            return (route, start.DistanceTo(end));
+            return (new List<RoutePoint> { start, end }, start.DistanceTo(end));
         }
         
-        // 起点入沟：Start → foot → obsPoint
-        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, end);
-        
-        // 终点入沟（获取 obsPoint）——传入来路方向，避免选择靠远侧端点导致折返
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, startOnTrench);
-        
-        // 沿电缆沟网络走
-        if (startOnTrench.Id != endOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(startOnTrench.Id, endOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-            {
-                route.Add(_pointsById[pid]);
-            }
-            totalLength += pathDist;
-        }
-        
-        // 出沟到终点：foot → End
-        if (endFoot != null) route.Add(endFoot);
+        var (segment, length) = PlanBestSegment(start, end, observations);
+        var route = new List<RoutePoint> { start };
+        route.AddRange(segment);
         route.Add(end);
-        totalLength += endDist;
         
-        return (route, totalLength);
+        return (route, length);
     }
     
     private Dictionary<PointType, List<RoutePoint>> GroupByType()
@@ -230,20 +209,10 @@ public class PathPlanner
         
         // === 第一段: Start → 电缆沟 → 第一个穿管入口 ===
         var firstEntry = orderedPasses[0].entry;
-        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, firstEntry);
-        var (passEntryOnTrench, passEntryFoot, passEntryDist) = ConnectPointToTrench(firstEntry, observations, startOnTrench);
-        
-        if (startOnTrench.Id != passEntryOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(startOnTrench.Id, passEntryOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-                route.Add(_pointsById[pid]);
-            totalLength += pathDist;
-        }
-        
-        if (passEntryFoot != null) route.Add(passEntryFoot);
+        var (seg1, len1) = PlanBestSegment(start, firstEntry, observations);
+        route.AddRange(seg1);
         route.Add(firstEntry);
-        totalLength += passEntryDist;
+        totalLength += len1;
         
         // === 穿管段: 依次穿管，相邻穿管之间直连 ===
         for (int i = 0; i < orderedPasses.Count; i++)
@@ -265,20 +234,10 @@ public class PathPlanner
         
         // === 最后一段: 最后穿管出口 → 电缆沟 → End ===
         var lastExit = orderedPasses[^1].exit;
-        var lastExitOnTrench = AddSourceToTrench(route, ref totalLength, lastExit, observations, end);
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, lastExitOnTrench);
-        
-        if (lastExitOnTrench.Id != endOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(lastExitOnTrench.Id, endOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-                route.Add(_pointsById[pid]);
-            totalLength += pathDist;
-        }
-        
-        if (endFoot != null) route.Add(endFoot);
+        var (seg2, len2) = PlanBestSegment(lastExit, end, observations);
+        route.AddRange(seg2);
         route.Add(end);
-        totalLength += endDist;
+        totalLength += len2;
         
         return (route, totalLength);
     }
@@ -304,32 +263,17 @@ public class PathPlanner
     private (List<RoutePoint> Route, double Length) PlanObservationOnlyRoute(
         RoutePoint start, RoutePoint end, List<RoutePoint> observations)
     {
-        var route = new List<RoutePoint> { start };
-        double totalLength = 0.0;
-        
-        // 起点入沟：Start → foot → obsPoint
-        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, end);
-        
-        // 终点入沟（获取 obsPoint）——传入来路方向，避免选择靠远侧端点导致折返
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, startOnTrench);
-        
-        // 沿电缆沟网络走
-        if (startOnTrench.Id != endOnTrench.Id && _obsGraph != null)
+        if (_obsGraph == null)
         {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(startOnTrench.Id, endOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-            {
-                route.Add(_pointsById[pid]);
-            }
-            totalLength += pathDist;
+            return (new List<RoutePoint> { start, end }, start.DistanceTo(end));
         }
         
-        // 出沟到终点：foot → End
-        if (endFoot != null) route.Add(endFoot);
+        var (segment, length) = PlanBestSegment(start, end, observations);
+        var route = new List<RoutePoint> { start };
+        route.AddRange(segment);
         route.Add(end);
-        totalLength += endDist;
         
-        return (route, totalLength);
+        return (route, length);
     }
     
     /// <summary>
@@ -340,68 +284,30 @@ public class PathPlanner
         RoutePoint start, RoutePoint end, List<RoutePoint> observations,
         RoutePoint passA, RoutePoint passB)
     {
+        if (_obsGraph == null)
+        {
+            var route0 = new List<RoutePoint> { start, passA, passB, end };
+            return (route0, start.DistanceTo(passA) + passA.DistanceTo(passB) + passB.DistanceTo(end));
+        }
+        
         var route = new List<RoutePoint> { start };
         double totalLength = 0.0;
         
-        if (_obsGraph == null)
-        {
-            route.Add(passA);
-            route.Add(passB);
-            route.Add(end);
-            return (route, start.DistanceTo(passA) + passA.DistanceTo(passB) + passB.DistanceTo(end));
-        }
-        
         // === 第一段: Start → 电缆沟 → PassA ===
-        
-        // Start 入沟：Start → foot → obsPoint
-        var startOnTrench = AddSourceToTrench(route, ref totalLength, start, observations, passA);
-        
-        // PassA 入沟（获取目标观测点和垂足）——传入来路方向，避免选择靠远侧端点导致折返
-        var (passAOnTrench, passAFoot, passADist) = ConnectPointToTrench(passA, observations, startOnTrench);
-        
-        // 沿电缆沟网络走到 passA 附近的观测点
-        if (startOnTrench.Id != passAOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(startOnTrench.Id, passAOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-            {
-                route.Add(_pointsById[pid]);
-            }
-            totalLength += pathDist;
-        }
-        
-        // 出沟到 PassA：foot → PassA
-        if (passAFoot != null) route.Add(passAFoot);
+        var (seg1, len1) = PlanBestSegment(start, passA, observations);
+        route.AddRange(seg1);
         route.Add(passA);
-        totalLength += passADist;
+        totalLength += len1;
         
         // === 第二段: PassA → PassB（穿管直线）===
         route.Add(passB);
         totalLength += passA.DistanceTo(passB);
         
         // === 第三段: PassB → 电缆沟 → End ===
-        
-        // PassB 入沟：PassB → foot → obsPoint
-        var passBOnTrench = AddSourceToTrench(route, ref totalLength, passB, observations, end);
-        
-        // End 入沟（获取目标观测点和垂足）——传入来路方向，避免选择靠远侧端点导致折返
-        var (endOnTrench, endFoot, endDist) = ConnectPointToTrench(end, observations, passBOnTrench);
-        
-        // 沿电缆沟网络走
-        if (passBOnTrench.Id != endOnTrench.Id)
-        {
-            var (pathIds, pathDist) = _obsGraph.FindShortestPath(passBOnTrench.Id, endOnTrench.Id);
-            foreach (var pid in pathIds.Skip(1))
-            {
-                route.Add(_pointsById[pid]);
-            }
-            totalLength += pathDist;
-        }
-        
-        // 出沟到 End：foot → End
-        if (endFoot != null) route.Add(endFoot);
+        var (seg2, len2) = PlanBestSegment(passB, end, observations);
+        route.AddRange(seg2);
         route.Add(end);
-        totalLength += endDist;
+        totalLength += len2;
         
         return (route, totalLength);
     }
@@ -459,6 +365,103 @@ public class PathPlanner
         // 总距离 = 垂直入沟距离 + 沿电缆沟到观测点的距离
         double totalDist = entryDist + entryPoint.DistanceTo(onTrench);
         return (onTrench, footPoint, totalDist);
+    }
+    
+    /// <summary>
+    /// 获取点到最近电缆沟两个端点的连接选项。
+    /// 返回两个选项（对应电缆沟的两个端点），调用方可评估总距离后选择更优的。
+    /// </summary>
+    private List<(RoutePoint OnTrench, RoutePoint? FootPoint, double Distance)>
+        ConnectPointToTrenchOptions(RoutePoint point, List<RoutePoint> observations)
+    {
+        if (_obsGraph == null)
+        {
+            var nearest = FindNearest(point, observations);
+            return new() { (nearest, null, CalculateLShapeDistance(point, nearest)) };
+        }
+        
+        var (entryPoint, trench, entryDist) = _obsGraph.FindNearestTrench(point);
+        
+        if (entryPoint == null || trench == null)
+        {
+            var nearest = FindNearest(point, observations);
+            return new() { (nearest, null, CalculateLShapeDistance(point, nearest)) };
+        }
+        
+        var results = new List<(RoutePoint, RoutePoint?, double)>();
+        
+        foreach (var endpoint in new[] { trench.P1, trench.P2 })
+        {
+            RoutePoint? footPoint = null;
+            double footDist = entryPoint.DistanceTo(endpoint);
+            if (footDist > 5.0)
+            {
+                var matchingObs = observations.FirstOrDefault(obs =>
+                    Math.Abs(obs.X - entryPoint.X) <= 5 && Math.Abs(obs.Y - entryPoint.Y) <= 5);
+                footPoint = matchingObs ?? new RoutePoint("_foot_", PointType.Observation, entryPoint.X, entryPoint.Y);
+            }
+            
+            double totalDist = entryDist + footDist;
+            results.Add((endpoint, footPoint, totalDist));
+        }
+        
+        return results;
+    }
+    
+    /// <summary>
+    /// 规划从源点到目的点经过观测点网络的最优路段。
+    /// 自动尝试最近电缆沟的两个端点组合（最多 2×2=4 种），选择总距离最短的路线。
+    /// 返回的路段不包含源点和目的点本身。
+    /// </summary>
+    private (List<RoutePoint> Segment, double Length) PlanBestSegment(
+        RoutePoint source, RoutePoint dest, List<RoutePoint> observations)
+    {
+        if (_obsGraph == null)
+        {
+            return (new List<RoutePoint>(), source.DistanceTo(dest));
+        }
+        
+        var sourceOptions = ConnectPointToTrenchOptions(source, observations);
+        var destOptions = ConnectPointToTrenchOptions(dest, observations);
+        
+        List<RoutePoint>? bestSegment = null;
+        double bestLength = double.PositiveInfinity;
+        
+        foreach (var (srcOnTrench, srcFoot, srcDist) in sourceOptions)
+        {
+            foreach (var (dstOnTrench, dstFoot, dstDist) in destOptions)
+            {
+                var segment = new List<RoutePoint>();
+                double length = srcDist + dstDist;
+                
+                if (srcFoot != null) segment.Add(srcFoot);
+                segment.Add(srcOnTrench);
+                
+                if (srcOnTrench.Id != dstOnTrench.Id)
+                {
+                    var (pathIds, pathDist) = _obsGraph.FindShortestPath(srcOnTrench.Id, dstOnTrench.Id);
+                    if (double.IsPositiveInfinity(pathDist)) continue;
+                    foreach (var pid in pathIds.Skip(1))
+                        segment.Add(_pointsById[pid]);
+                    length += pathDist;
+                }
+                
+                if (dstFoot != null) segment.Add(dstFoot);
+                
+                if (length < bestLength)
+                {
+                    bestLength = length;
+                    bestSegment = segment;
+                }
+            }
+        }
+        
+        if (bestSegment == null)
+        {
+            return (new List<RoutePoint>(), source.DistanceTo(dest));
+        }
+        
+        return (bestSegment, bestLength);
     }
     
     /// <summary>
