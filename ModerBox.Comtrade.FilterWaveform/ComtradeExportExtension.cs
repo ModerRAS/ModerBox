@@ -18,26 +18,37 @@ namespace ModerBox.Comtrade.FilterWaveform {
             ACFilter filter,
             string outputBasePath) {
 
+            // 预构建通道名称到索引的字典，避免多次线性搜索
+            var analogIndexMap = new Dictionary<string, int>(sourceComtrade.AData.Count);
+            for (int i = 0; i < sourceComtrade.AData.Count; i++) {
+                analogIndexMap.TryAdd(sourceComtrade.AData[i].Name, i);
+            }
+
+            var digitalIndexMap = new Dictionary<string, int>(sourceComtrade.DData.Count);
+            for (int i = 0; i < sourceComtrade.DData.Count; i++) {
+                digitalIndexMap.TryAdd(sourceComtrade.DData[i].Name, i);
+            }
+
             var analogChannels = new List<ChannelSelection>();
             var digitalChannels = new List<ChannelSelection>();
 
             // 三相交流电压
-            AddAnalogIfFound(sourceComtrade, filter.PhaseAVoltageWave, analogChannels);
-            AddAnalogIfFound(sourceComtrade, filter.PhaseBVoltageWave, analogChannels);
-            AddAnalogIfFound(sourceComtrade, filter.PhaseCVoltageWave, analogChannels);
+            AddIfFound(analogIndexMap, filter.PhaseAVoltageWave, true, analogChannels);
+            AddIfFound(analogIndexMap, filter.PhaseBVoltageWave, true, analogChannels);
+            AddIfFound(analogIndexMap, filter.PhaseCVoltageWave, true, analogChannels);
 
             // 三相滤波器电流
-            AddAnalogIfFound(sourceComtrade, filter.PhaseACurrentWave, analogChannels);
-            AddAnalogIfFound(sourceComtrade, filter.PhaseBCurrentWave, analogChannels);
-            AddAnalogIfFound(sourceComtrade, filter.PhaseCCurrentWave, analogChannels);
+            AddIfFound(analogIndexMap, filter.PhaseACurrentWave, true, analogChannels);
+            AddIfFound(analogIndexMap, filter.PhaseBCurrentWave, true, analogChannels);
+            AddIfFound(analogIndexMap, filter.PhaseCCurrentWave, true, analogChannels);
 
             // 分合闸开关量
-            AddDigitalIfFound(sourceComtrade, filter.PhaseASwitchClose, digitalChannels);
-            AddDigitalIfFound(sourceComtrade, filter.PhaseBSwitchClose, digitalChannels);
-            AddDigitalIfFound(sourceComtrade, filter.PhaseCSwitchClose, digitalChannels);
-            AddDigitalIfFound(sourceComtrade, filter.PhaseASwitchOpen, digitalChannels);
-            AddDigitalIfFound(sourceComtrade, filter.PhaseBSwitchOpen, digitalChannels);
-            AddDigitalIfFound(sourceComtrade, filter.PhaseCSwitchOpen, digitalChannels);
+            AddIfFound(digitalIndexMap, filter.PhaseASwitchClose, false, digitalChannels);
+            AddIfFound(digitalIndexMap, filter.PhaseBSwitchClose, false, digitalChannels);
+            AddIfFound(digitalIndexMap, filter.PhaseCSwitchClose, false, digitalChannels);
+            AddIfFound(digitalIndexMap, filter.PhaseASwitchOpen, false, digitalChannels);
+            AddIfFound(digitalIndexMap, filter.PhaseBSwitchOpen, false, digitalChannels);
+            AddIfFound(digitalIndexMap, filter.PhaseCSwitchOpen, false, digitalChannels);
 
             var options = new ExportOptions {
                 OutputPath = outputBasePath,
@@ -51,21 +62,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
             await ComtradeExportService.ExportAsync(sourceComtrade, options);
         }
 
-        private static void AddAnalogIfFound(ComtradeInfo source, string channelName, List<ChannelSelection> list) {
-            for (int i = 0; i < source.AData.Count; i++) {
-                if (source.AData[i].Name == channelName) {
-                    list.Add(new ChannelSelection { OriginalIndex = i, IsAnalog = true });
-                    return;
-                }
-            }
-        }
-
-        private static void AddDigitalIfFound(ComtradeInfo source, string channelName, List<ChannelSelection> list) {
-            for (int i = 0; i < source.DData.Count; i++) {
-                if (source.DData[i].Name == channelName) {
-                    list.Add(new ChannelSelection { OriginalIndex = i, IsAnalog = false });
-                    return;
-                }
+        private static void AddIfFound(Dictionary<string, int> indexMap, string channelName, bool isAnalog, List<ChannelSelection> list) {
+            if (indexMap.TryGetValue(channelName, out var index)) {
+                list.Add(new ChannelSelection { OriginalIndex = index, IsAnalog = isAnalog });
             }
         }
     }
