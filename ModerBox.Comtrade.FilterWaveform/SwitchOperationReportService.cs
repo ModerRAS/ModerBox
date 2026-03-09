@@ -100,13 +100,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     .OrderByDescending(r => r.Time)
                     .Take(7)
                     .OrderBy(r => r.Time)
-                    .Select(r => new OperationEntry {
-                        Time = r.Time,
-                        PhaseATimeMs = r.PhaseATimeInterval,
-                        PhaseBTimeMs = r.PhaseBTimeInterval,
-                        PhaseCTimeMs = r.PhaseCTimeInterval,
-                        HasAnomaly = r.WorkType != WorkType.Ok
-                    })
+                    .Select(r => MapToOperationEntry(r, group.Key.SwitchType, group.Key.Name))
                     .ToList();
 
                 var row = new SwitchOperationRow {
@@ -122,6 +116,35 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
 
             return report;
+        }
+
+        private static OperationEntry MapToOperationEntry(FilterWaveformResultEntity r, SwitchType switchType, string name) {
+            double phaseA, phaseB, phaseC;
+
+            if (switchType == SwitchType.Close && name.StartsWith("5", StringComparison.Ordinal)) {
+                // 5xxx 开关合闸：使用电压过零点时间差
+                phaseA = r.PhaseAVoltageZeroCrossingDiff;
+                phaseB = r.PhaseBVoltageZeroCrossingDiff;
+                phaseC = r.PhaseCVoltageZeroCrossingDiff;
+            } else if (switchType == SwitchType.Close && name.StartsWith("T", StringComparison.OrdinalIgnoreCase)) {
+                // Txxx 开关合闸：使用合闸电阻投入时间
+                phaseA = r.PhaseAClosingResistorDurationMs;
+                phaseB = r.PhaseBClosingResistorDurationMs;
+                phaseC = r.PhaseCClosingResistorDurationMs;
+            } else {
+                // 分闸及其他情况：使用时间间隔
+                phaseA = r.PhaseATimeInterval;
+                phaseB = r.PhaseBTimeInterval;
+                phaseC = r.PhaseCTimeInterval;
+            }
+
+            return new OperationEntry {
+                Time = r.Time,
+                PhaseATimeMs = phaseA,
+                PhaseBTimeMs = phaseB,
+                PhaseCTimeMs = phaseC,
+                HasAnomaly = r.WorkType != WorkType.Ok
+            };
         }
     }
 }
