@@ -24,7 +24,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
 
         public static FilterWaveformResultDbContext Create(string dbPath) {
             var options = new DbContextOptionsBuilder<FilterWaveformResultDbContext>()
-                .UseSqlite($"Data Source={dbPath}")
+                .UseSqlite($"Data Source={dbPath};Pooling=false")
                 .Options;
             return new FilterWaveformResultDbContext(options);
         }

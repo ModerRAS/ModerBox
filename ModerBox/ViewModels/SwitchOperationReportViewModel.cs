@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reactive;
@@ -12,11 +14,50 @@ using ModerBox.Comtrade.FilterWaveform;
 using ReactiveUI;
 
 namespace ModerBox.ViewModels {
+    public class SwitchDataSourceConfigViewModel : ViewModelBase {
+        private string _switchNamePattern = string.Empty;
+        private bool _isPrefixMatch = true;
+        private CloseDataSourceType _closeDataSource = CloseDataSourceType.TimeInterval;
+
+        public string SwitchNamePattern {
+            get => _switchNamePattern;
+            set => this.RaiseAndSetIfChanged(ref _switchNamePattern, value);
+        }
+
+        public bool IsPrefixMatch {
+            get => _isPrefixMatch;
+            set => this.RaiseAndSetIfChanged(ref _isPrefixMatch, value);
+        }
+
+        public CloseDataSourceType CloseDataSource {
+            get => _closeDataSource;
+            set => this.RaiseAndSetIfChanged(ref _closeDataSource, value);
+        }
+
+        public SwitchDataSourceConfig ToConfig() {
+            return new SwitchDataSourceConfig {
+                SwitchNamePattern = SwitchNamePattern,
+                IsPrefixMatch = IsPrefixMatch,
+                CloseDataSource = CloseDataSource
+            };
+        }
+
+        public static SwitchDataSourceConfigViewModel FromConfig(SwitchDataSourceConfig config) {
+            return new SwitchDataSourceConfigViewModel {
+                SwitchNamePattern = config.SwitchNamePattern,
+                IsPrefixMatch = config.IsPrefixMatch,
+                CloseDataSource = config.CloseDataSource
+            };
+        }
+    }
+
     public class SwitchOperationReportViewModel : ViewModelBase {
         private string _dbDirectory = string.Empty;
         private string _targetFile = string.Empty;
         private string _statusMessage = "准备就绪";
         private bool _isRunning;
+        private bool _useCustomConfig;
+        private bool _isConfigExpanded = true;
 
         private DateTimeOffset? _startDate = DateTimeOffset.Now.AddMonths(-1);
         private TimeSpan? _startTime = TimeSpan.Zero;
@@ -26,13 +67,49 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> SelectDbDirectory { get; }
         public ReactiveCommand<Unit, Unit> SelectTargetFile { get; }
         public ReactiveCommand<Unit, Unit> RunExport { get; }
+        public ReactiveCommand<Unit, Unit> AddConfig { get; }
+        public ReactiveCommand<SwitchDataSourceConfigViewModel, Unit> RemoveConfig { get; }
+
+        public ObservableCollection<SwitchDataSourceConfigViewModel> DataSourceConfigs { get; } = new();
+
+        public Array CloseDataSourceTypes => Enum.GetValues(typeof(CloseDataSourceType));
 
         public SwitchOperationReportViewModel() {
             SelectDbDirectory = ReactiveCommand.CreateFromTask(SelectDbDirectoryAsync);
             SelectTargetFile = ReactiveCommand.CreateFromTask(SelectTargetFileAsync);
+            AddConfig = ReactiveCommand.Create(AddConfigItem);
+            RemoveConfig = ReactiveCommand.Create<SwitchDataSourceConfigViewModel>(RemoveConfigItem);
 
             var canRun = this.WhenAnyValue(x => x.IsRunning, running => !running);
             RunExport = ReactiveCommand.CreateFromTask(RunExportAsync, canRun);
+
+            // 添加默认配置
+            AddDefaultConfigs();
+        }
+
+        private void AddDefaultConfigs() {
+            DataSourceConfigs.Add(new SwitchDataSourceConfigViewModel {
+                SwitchNamePattern = "5",
+                IsPrefixMatch = true,
+                CloseDataSource = CloseDataSourceType.VoltageZeroCrossing
+            });
+            DataSourceConfigs.Add(new SwitchDataSourceConfigViewModel {
+                SwitchNamePattern = "T",
+                IsPrefixMatch = true,
+                CloseDataSource = CloseDataSourceType.ClosingResistor
+            });
+        }
+
+        private void AddConfigItem() {
+            DataSourceConfigs.Add(new SwitchDataSourceConfigViewModel {
+                SwitchNamePattern = "",
+                IsPrefixMatch = true,
+                CloseDataSource = CloseDataSourceType.TimeInterval
+            });
+        }
+
+        private void RemoveConfigItem(SwitchDataSourceConfigViewModel item) {
+            DataSourceConfigs.Remove(item);
         }
 
         #region Properties
@@ -75,6 +152,16 @@ namespace ModerBox.ViewModels {
         public bool IsRunning {
             get => _isRunning;
             set => this.RaiseAndSetIfChanged(ref _isRunning, value);
+        }
+
+        public bool UseCustomConfig {
+            get => _useCustomConfig;
+            set => this.RaiseAndSetIfChanged(ref _useCustomConfig, value);
+        }
+
+        public bool IsConfigExpanded {
+            get => _isConfigExpanded;
+            set => this.RaiseAndSetIfChanged(ref _isConfigExpanded, value);
         }
 
         #endregion
@@ -139,8 +226,16 @@ namespace ModerBox.ViewModels {
             try {
                 SwitchOperationReportService.ReportData? reportData = null;
                 await Task.Run(() => {
+                    List<SwitchDataSourceConfig>? configs = null;
+                    if (UseCustomConfig && DataSourceConfigs.Count > 0) {
+                        configs = DataSourceConfigs
+                            .Where(c => !string.IsNullOrWhiteSpace(c.SwitchNamePattern))
+                            .Select(c => c.ToConfig())
+                            .ToList();
+                    }
+
                     reportData = SwitchOperationReportService.QueryReport(
-                        DbDirectory, startDateTime, endDateTime);
+                        DbDirectory, startDateTime, endDateTime, configs);
 
                     var writer = new DataWriter();
                     writer.WriteSwitchOperationReport(reportData, "分合闸操作报表");
