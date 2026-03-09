@@ -87,6 +87,38 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         /// <summary>
+        /// 从指定目录下的所有 SQLite 数据库中获取所有开关名称列表。
+        /// </summary>
+        /// <param name="dbDirectory">包含 .sqlite 文件的目录路径。</param>
+        /// <returns>开关名称列表（按字母顺序排列）。</returns>
+        public static List<string> GetAllSwitchNames(string dbDirectory) {
+            if (string.IsNullOrEmpty(dbDirectory) || !Directory.Exists(dbDirectory)) {
+                return new List<string>();
+            }
+
+            var dbFiles = Directory.GetFiles(dbDirectory, "*.sqlite", SearchOption.AllDirectories);
+            var switchNames = new HashSet<string>();
+
+            foreach (var dbFile in dbFiles) {
+                try {
+                    using var db = FilterWaveformResultDbContext.Create(dbFile);
+                    var names = db.Results
+                        .AsNoTracking()
+                        .Select(r => r.Name)
+                        .Distinct()
+                        .ToList();
+                    foreach (var name in names) {
+                        switchNames.Add(name);
+                    }
+                } catch {
+                    // Skip corrupted or inaccessible databases
+                }
+            }
+
+            return switchNames.OrderBy(n => n).ToList();
+        }
+
+        /// <summary>
         /// 从指定目录下的所有 SQLite 数据库中查询指定时间段的分合闸数据，
         /// 按开关分组并取最后七次操作（过滤掉三相时间都为0的误识别记录）。
         /// </summary>

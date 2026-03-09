@@ -3,13 +3,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:ModerBox.ViewModels"
-             xmlns:enums="clr-namespace:ModerBox.Comtrade.FilterWaveform"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
              x:Class="ModerBox.Views.UserControls.SwitchOperationReport"
              x:DataType="vm:SwitchOperationReportViewModel">
 
     <ScrollViewer>
-        <StackPanel Margin="20" Spacing="15" MaxWidth="800" HorizontalAlignment="Left">
+        <StackPanel Margin="20" Spacing="15" MaxWidth="900" HorizontalAlignment="Left">
 
             <!-- 标题 -->
             <TextBlock Text="分合闸操作报表导出"
@@ -61,68 +60,71 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Text="将导出选定时间范围内每个开关的最后三次分闸和最后三次合闸记录"
+                    <TextBlock Text="将导出选定时间范围内每个开关的最后七次分闸和合闸记录"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                 </StackPanel>
             </Border>
 
-            <!-- 合闸数据源配置 -->
+            <!-- 开关数据源配置 -->
             <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                     BorderThickness="1" CornerRadius="4" Padding="15">
                 <StackPanel Spacing="10">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Text="合闸数据源配置" FontWeight="Bold"/>
-                        <CheckBox Content="启用自定义配置" IsChecked="{Binding UseCustomConfig}"/>
-                    </StackPanel>
-
-                    <TextBlock Text="配置合闸时使用的数据源：5开头开关建议用选相合闸，T开头开关建议用合闸电阻"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                               IsVisible="{Binding UseCustomConfig}"/>
-
-                    <StackPanel IsVisible="{Binding UseCustomConfig}" Spacing="5">
-                        <Grid ColumnDefinitions="2*, 100, 200, 50" RowDefinitions="Auto">
-                            <TextBlock Grid.Column="0" Text="开关名称匹配" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Text="前缀匹配" FontWeight="SemiBold" TextAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="合闸数据源" FontWeight="SemiBold" TextAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="操作" FontWeight="SemiBold" TextAlignment="Center"/>
-                        </Grid>
-
-                        <ItemsControl ItemsSource="{Binding DataSourceConfigs}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:SwitchDataSourceConfigViewModel">
-                                    <Grid ColumnDefinitions="2*, 100, 200, 50" Margin="0,5,0,0">
-                                        <TextBox Grid.Column="0"
-                                                 Watermark="如: 5, T, 5612"
-                                                 Text="{Binding SwitchNamePattern}"/>
-                                        <CheckBox Grid.Column="1"
-                                                  IsChecked="{Binding IsPrefixMatch}"
-                                                  HorizontalAlignment="Center"/>
-                                        <ComboBox Grid.Column="2"
-                                                  ItemsSource="{Binding $parent[ItemsControl].((vm:SwitchOperationReportViewModel)DataContext).CloseDataSourceTypes}"
-                                                  SelectedItem="{Binding CloseDataSource}"
-                                                  HorizontalAlignment="Stretch"/>
-                                        <Button Grid.Column="3"
-                                                Command="{Binding $parent[ItemsControl].((vm:SwitchOperationReportViewModel)DataContext).RemoveConfig}"
-                                                CommandParameter="{Binding}"
-                                                Content="删除"
-                                                HorizontalAlignment="Center"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <Button Command="{Binding AddConfig}"
-                                Content="添加配置"
-                                HorizontalAlignment="Left"
-                                Margin="0,10,0,0"/>
-                    </StackPanel>
-
-                    <StackPanel IsVisible="{Binding !UseCustomConfig}" Spacing="5">
-                        <TextBlock Text="使用默认配置：5开头→选相合闸，T开头→合闸电阻，其他→时间间隔"
+                        <Button Command="{Binding ApplyDefaultMapping}"
+                                Content="应用默认映射"
+                                Padding="10,2"/>
+                        <TextBlock Text="(5开头→选相合闸，T开头→合闸电阻，其他→时间间隔)"
+                                   VerticalAlignment="Center"
                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                     </StackPanel>
+
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                    <!-- 表格头部 -->
+                    <Grid ColumnDefinitions="120, *, *, *" Margin="0,10,0,0" 
+                          IsVisible="{Binding HasLoadedSwitches}">
+                        <TextBlock Grid.Column="0" Text="开关名称" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="时间间隔" FontWeight="SemiBold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="选相合闸" FontWeight="SemiBold" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="合闸电阻" FontWeight="SemiBold" TextAlignment="Center"/>
+                    </Grid>
+
+                    <!-- 开关列表 -->
+                    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                            BorderThickness="1" CornerRadius="4" MaxHeight="300"
+                            IsVisible="{Binding HasLoadedSwitches}">
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding SwitchDataSources}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SwitchDataSourceItemViewModel">
+                                        <Grid ColumnDefinitions="120, *, *, *" Margin="5">
+                                            <TextBlock Grid.Column="0" Text="{Binding SwitchName}" 
+                                                       VerticalAlignment="Center"/>
+                                            <RadioButton Grid.Column="1" 
+                                                         IsChecked="{Binding UseTimeInterval}"
+                                                         GroupName="{Binding SwitchName}"
+                                                         HorizontalAlignment="Center"/>
+                                            <RadioButton Grid.Column="2" 
+                                                         IsChecked="{Binding UseVoltageZeroCrossing}"
+                                                         GroupName="{Binding SwitchName}"
+                                                         HorizontalAlignment="Center"/>
+                                            <RadioButton Grid.Column="3" 
+                                                         IsChecked="{Binding UseClosingResistor}"
+                                                         GroupName="{Binding SwitchName}"
+                                                         HorizontalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- 加载中 -->
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingSwitches}"
+                                 MaxWidth="200" HorizontalAlignment="Left"/>
                 </StackPanel>
             </Border>
 

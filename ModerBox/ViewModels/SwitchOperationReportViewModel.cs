@@ -14,50 +14,39 @@ using ModerBox.Comtrade.FilterWaveform;
 using ReactiveUI;
 
 namespace ModerBox.ViewModels {
-    public class SwitchDataSourceConfigViewModel : ViewModelBase {
-        private string _switchNamePattern = string.Empty;
-        private bool _isPrefixMatch = true;
+    public class SwitchDataSourceItemViewModel : ViewModelBase {
         private CloseDataSourceType _closeDataSource = CloseDataSourceType.TimeInterval;
 
-        public string SwitchNamePattern {
-            get => _switchNamePattern;
-            set => this.RaiseAndSetIfChanged(ref _switchNamePattern, value);
-        }
-
-        public bool IsPrefixMatch {
-            get => _isPrefixMatch;
-            set => this.RaiseAndSetIfChanged(ref _isPrefixMatch, value);
-        }
+        public string SwitchName { get; set; } = string.Empty;
 
         public CloseDataSourceType CloseDataSource {
             get => _closeDataSource;
             set => this.RaiseAndSetIfChanged(ref _closeDataSource, value);
         }
 
-        public SwitchDataSourceConfig ToConfig() {
-            return new SwitchDataSourceConfig {
-                SwitchNamePattern = SwitchNamePattern,
-                IsPrefixMatch = IsPrefixMatch,
-                CloseDataSource = CloseDataSource
-            };
+        public bool UseTimeInterval {
+            get => _closeDataSource == CloseDataSourceType.TimeInterval;
+            set { if (value) CloseDataSource = CloseDataSourceType.TimeInterval; }
         }
 
-        public static SwitchDataSourceConfigViewModel FromConfig(SwitchDataSourceConfig config) {
-            return new SwitchDataSourceConfigViewModel {
-                SwitchNamePattern = config.SwitchNamePattern,
-                IsPrefixMatch = config.IsPrefixMatch,
-                CloseDataSource = config.CloseDataSource
-            };
+        public bool UseVoltageZeroCrossing {
+            get => _closeDataSource == CloseDataSourceType.VoltageZeroCrossing;
+            set { if (value) CloseDataSource = CloseDataSourceType.VoltageZeroCrossing; }
+        }
+
+        public bool UseClosingResistor {
+            get => _closeDataSource == CloseDataSourceType.ClosingResistor;
+            set { if (value) CloseDataSource = CloseDataSourceType.ClosingResistor; }
         }
     }
 
     public class SwitchOperationReportViewModel : ViewModelBase {
         private string _dbDirectory = string.Empty;
         private string _targetFile = string.Empty;
-        private string _statusMessage = "准备就绪";
+        private string _statusMessage = "请选择数据库目录";
         private bool _isRunning;
-        private bool _useCustomConfig;
-        private bool _isConfigExpanded = true;
+        private bool _isLoadingSwitches;
+        private bool _hasLoadedSwitches;
 
         private DateTimeOffset? _startDate = DateTimeOffset.Now.AddMonths(-1);
         private TimeSpan? _startTime = TimeSpan.Zero;
@@ -67,49 +56,34 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> SelectDbDirectory { get; }
         public ReactiveCommand<Unit, Unit> SelectTargetFile { get; }
         public ReactiveCommand<Unit, Unit> RunExport { get; }
-        public ReactiveCommand<Unit, Unit> AddConfig { get; }
-        public ReactiveCommand<SwitchDataSourceConfigViewModel, Unit> RemoveConfig { get; }
+        public ReactiveCommand<Unit, Unit> LoadSwitches { get; }
+        public ReactiveCommand<Unit, Unit> ApplyDefaultMapping { get; }
 
-        public ObservableCollection<SwitchDataSourceConfigViewModel> DataSourceConfigs { get; } = new();
+        public ObservableCollection<SwitchDataSourceItemViewModel> SwitchDataSources { get; } = new();
 
         public Array CloseDataSourceTypes => Enum.GetValues(typeof(CloseDataSourceType));
 
         public SwitchOperationReportViewModel() {
             SelectDbDirectory = ReactiveCommand.CreateFromTask(SelectDbDirectoryAsync);
             SelectTargetFile = ReactiveCommand.CreateFromTask(SelectTargetFileAsync);
-            AddConfig = ReactiveCommand.Create(AddConfigItem);
-            RemoveConfig = ReactiveCommand.Create<SwitchDataSourceConfigViewModel>(RemoveConfigItem);
+            LoadSwitches = ReactiveCommand.CreateFromTask(LoadSwitchesAsync);
+            ApplyDefaultMapping = ReactiveCommand.Create(ApplyDefaultMappingAction);
 
             var canRun = this.WhenAnyValue(x => x.IsRunning, running => !running);
             RunExport = ReactiveCommand.CreateFromTask(RunExportAsync, canRun);
-
-            // 添加默认配置
-            AddDefaultConfigs();
         }
 
-        private void AddDefaultConfigs() {
-            DataSourceConfigs.Add(new SwitchDataSourceConfigViewModel {
-                SwitchNamePattern = "5",
-                IsPrefixMatch = true,
-                CloseDataSource = CloseDataSourceType.VoltageZeroCrossing
-            });
-            DataSourceConfigs.Add(new SwitchDataSourceConfigViewModel {
-                SwitchNamePattern = "T",
-                IsPrefixMatch = true,
-                CloseDataSource = CloseDataSourceType.ClosingResistor
-            });
-        }
-
-        private void AddConfigItem() {
-            DataSourceConfigs.Add(new SwitchDataSourceConfigViewModel {
-                SwitchNamePattern = "",
-                IsPrefixMatch = true,
-                CloseDataSource = CloseDataSourceType.TimeInterval
-            });
-        }
-
-        private void RemoveConfigItem(SwitchDataSourceConfigViewModel item) {
-            DataSourceConfigs.Remove(item);
+        private void ApplyDefaultMappingAction() {
+            foreach (var item in SwitchDataSources) {
+                if (item.SwitchName.StartsWith("5", StringComparison.Ordinal)) {
+                    item.CloseDataSource = CloseDataSourceType.VoltageZeroCrossing;
+                } else if (item.SwitchName.StartsWith("T", StringComparison.OrdinalIgnoreCase)) {
+                    item.CloseDataSource = CloseDataSourceType.ClosingResistor;
+                } else {
+                    item.CloseDataSource = CloseDataSourceType.TimeInterval;
+                }
+            }
+            StatusMessage = "已应用默认映射规则";
         }
 
         #region Properties
@@ -154,14 +128,14 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _isRunning, value);
         }
 
-        public bool UseCustomConfig {
-            get => _useCustomConfig;
-            set => this.RaiseAndSetIfChanged(ref _useCustomConfig, value);
+        public bool IsLoadingSwitches {
+            get => _isLoadingSwitches;
+            set => this.RaiseAndSetIfChanged(ref _isLoadingSwitches, value);
         }
 
-        public bool IsConfigExpanded {
-            get => _isConfigExpanded;
-            set => this.RaiseAndSetIfChanged(ref _isConfigExpanded, value);
+        public bool HasLoadedSwitches {
+            get => _hasLoadedSwitches;
+            set => this.RaiseAndSetIfChanged(ref _hasLoadedSwitches, value);
         }
 
         #endregion
@@ -179,6 +153,9 @@ namespace ModerBox.ViewModels {
             var folder = folders?.FirstOrDefault();
             if (folder != null) {
                 DbDirectory = folder.TryGetLocalPath() ?? folder.Path.ToString();
+                HasLoadedSwitches = false;
+                SwitchDataSources.Clear();
+                await LoadSwitchesAsync();
             }
         }
 
@@ -195,6 +172,41 @@ namespace ModerBox.ViewModels {
 
             if (file != null) {
                 TargetFile = file.TryGetLocalPath() ?? file.Path.ToString();
+            }
+        }
+
+        private async Task LoadSwitchesAsync() {
+            if (string.IsNullOrWhiteSpace(DbDirectory) || !Directory.Exists(DbDirectory)) {
+                StatusMessage = "请选择有效的数据库目录";
+                return;
+            }
+
+            IsLoadingSwitches = true;
+            StatusMessage = "正在加载开关列表...";
+
+            try {
+                var switchNames = await Task.Run(() => 
+                    SwitchOperationReportService.GetAllSwitchNames(DbDirectory));
+
+                SwitchDataSources.Clear();
+                foreach (var name in switchNames) {
+                    var item = new SwitchDataSourceItemViewModel { SwitchName = name };
+                    if (name.StartsWith("5", StringComparison.Ordinal)) {
+                        item.CloseDataSource = CloseDataSourceType.VoltageZeroCrossing;
+                    } else if (name.StartsWith("T", StringComparison.OrdinalIgnoreCase)) {
+                        item.CloseDataSource = CloseDataSourceType.ClosingResistor;
+                    } else {
+                        item.CloseDataSource = CloseDataSourceType.TimeInterval;
+                    }
+                    SwitchDataSources.Add(item);
+                }
+
+                HasLoadedSwitches = true;
+                StatusMessage = $"已加载 {switchNames.Count} 个开关，请设置每个开关的数据源";
+            } catch (Exception ex) {
+                StatusMessage = $"加载失败: {ex.Message}";
+            } finally {
+                IsLoadingSwitches = false;
             }
         }
 
@@ -226,13 +238,13 @@ namespace ModerBox.ViewModels {
             try {
                 SwitchOperationReportService.ReportData? reportData = null;
                 await Task.Run(() => {
-                    List<SwitchDataSourceConfig>? configs = null;
-                    if (UseCustomConfig && DataSourceConfigs.Count > 0) {
-                        configs = DataSourceConfigs
-                            .Where(c => !string.IsNullOrWhiteSpace(c.SwitchNamePattern))
-                            .Select(c => c.ToConfig())
-                            .ToList();
-                    }
+                    var configs = SwitchDataSources
+                        .Select(s => new SwitchDataSourceConfig {
+                            SwitchNamePattern = s.SwitchName,
+                            IsPrefixMatch = false,
+                            CloseDataSource = s.CloseDataSource
+                        })
+                        .ToList();
 
                     reportData = SwitchOperationReportService.QueryReport(
                         DbDirectory, startDateTime, endDateTime, configs);
