@@ -85,6 +85,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
                                 var fileName = $"{spec.Time:yyyy-MM-dd_HH-mm-ss-fff}.png";
                                 imagePath = Path.Combine(folder, fileName);
                                 await File.WriteAllBytesAsync(imagePath, spec.SignalPicture);
+
+                                // 导出剔除无关通道后的波形文件（cfg + dat）
+                                var matchedFilter = parser.ACFilterData.FirstOrDefault(f => f.Name == spec.Name);
+                                if (matchedFilter is not null) {
+                                    var comtradeBasePath = Path.Combine(folder, Path.GetFileNameWithoutExtension(fileName));
+                                    await ComtradeExportExtension.ExportFilteredComtradeAsync(info, matchedFilter, comtradeBasePath);
+                                }
                             }
 
                             await store.EnqueueResultWithProcessedAsync(spec, cfgPath: info.FileName, status: ProcessedComtradeFileStatus.Processed, imagePath: imagePath);
