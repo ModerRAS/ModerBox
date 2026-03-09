@@ -10,6 +10,9 @@ public class PathPlanner
     private readonly Dictionary<string, RoutePoint> _pointsById;
     private readonly Dictionary<string, List<RoutePoint>> _passPairs;
     private readonly ObservationGraph? _obsGraph;
+    
+    /// <summary>垂足与电缆沟端点的最小距离阈值（像素）。低于此值视为重合，不生成垂足点。</summary>
+    private const double MinFootPointDistance = 5.0;
 
     public PathPlanner(IEnumerable<RoutePoint> points)
     {
@@ -354,7 +357,7 @@ public class PathPlanner
         
         // 判断垂足是否与观测点重合（距离极近则无需额外点）
         RoutePoint? footPoint = null;
-        if (entryPoint.DistanceTo(onTrench) > 5.0)
+        if (entryPoint.DistanceTo(onTrench) > MinFootPointDistance)
         {
             // 检查垂足是否与某个已有观测点重合
             var matchingObs = observations.FirstOrDefault(obs =>
@@ -394,7 +397,7 @@ public class PathPlanner
         {
             RoutePoint? footPoint = null;
             double footDist = entryPoint.DistanceTo(endpoint);
-            if (footDist > 5.0)
+            if (footDist > MinFootPointDistance)
             {
                 var matchingObs = observations.FirstOrDefault(obs =>
                     Math.Abs(obs.X - entryPoint.X) <= 5 && Math.Abs(obs.Y - entryPoint.Y) <= 5);
@@ -440,6 +443,7 @@ public class PathPlanner
                 if (srcOnTrench.Id != dstOnTrench.Id)
                 {
                     var (pathIds, pathDist) = _obsGraph.FindShortestPath(srcOnTrench.Id, dstOnTrench.Id);
+                    // 不可达的端点组合跳过（所有组合均不可达时回退到直连）
                     if (double.IsPositiveInfinity(pathDist)) continue;
                     foreach (var pid in pathIds.Skip(1))
                         segment.Add(_pointsById[pid]);
