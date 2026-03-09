@@ -154,7 +154,6 @@ namespace ModerBox.ViewModels {
                 };
 
                 await Parallel.ForEachAsync(cfgFiles, parallelOptions, async (cfgPath, ct) => {
-                    bool isMatch = false;
                     try {
                         // Read Header Only
                         var info = await ModerBox.Comtrade.Comtrade.ReadComtradeCFG(cfgPath);
@@ -169,7 +168,6 @@ namespace ModerBox.ViewModels {
                                 }
 
                                 if (switchChanged) {
-                                    isMatch = true;
                                     Interlocked.Increment(ref matches);
                                     
                                     // Copy Logic

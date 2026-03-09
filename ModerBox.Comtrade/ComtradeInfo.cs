@@ -156,7 +156,7 @@ namespace ModerBox.Comtrade {
         public DateTime dt0;
 
         /// <summary>数据文件类型原始字符串 (向后兼容)</summary>
-        public string ASCII;
+        public string ASCII = "";
 
         /// <summary>数据文件类型 - IEC 60255-24:2013 第 7.4.9 节</summary>
         public DataFileType FileType = DataFileType.ASCII;
@@ -165,11 +165,11 @@ namespace ModerBox.Comtrade {
 
         public List<DigitalInfo> DData = new List<DigitalInfo>();
 
-        public double[] Samps;
+        public double[] Samps = Array.Empty<double>();
 
-        public int[] EndSamps;
+        public int[] EndSamps = Array.Empty<int>();
 
-        public double[] TimeMs;
+        public double[] TimeMs = Array.Empty<double>();
 
         #region IEC 60255-24:2013 第 7.4.10 节 - 时间戳乘法因子
         /// <summary>

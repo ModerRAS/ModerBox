@@ -22,7 +22,7 @@ namespace ModerBox.ViewModels {
                 await Util.UpdateMyApp((s) => {
                     Log = s;
                 });
-            } catch (Exception ex) {
+            } catch {
                 Log = "检查失败";
             }
         }
@@ -32,7 +32,7 @@ namespace ModerBox.ViewModels {
                 await Util.UpdateMyAppBackRoute((s) => {
                     Log = s;
                 });
-            } catch (Exception ex) {
+            } catch {
                 Log = "检查失败";
             }
             

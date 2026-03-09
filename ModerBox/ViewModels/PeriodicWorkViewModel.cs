@@ -20,7 +20,7 @@ using System.Threading.Tasks;
 namespace ModerBox.ViewModels {
     public class PeriodicWorkViewModel : ViewModelBase {
         public List<string> Works { get; set; } = new List<string>();
-        public string SelectedWork { get; set; }
+        public string SelectedWork { get; set; } = "";
         public ReactiveCommand<Unit, Unit> SelectSource { get; }
         public ReactiveCommand<Unit, Unit> SelectTarget { get; }
         public ReactiveCommand<Unit, Unit> RunCalculate { get; }
@@ -35,13 +35,13 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _progressMax, value);
         }
 
-        private string _sourceFolder;
+        private string _sourceFolder = "";
         public string SourceFolder {
             get => _sourceFolder;
             set => this.RaiseAndSetIfChanged(ref _sourceFolder, value);
         }
 
-        private string _targetFile;
+        private string _targetFile = "";
         public string TargetFile {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
