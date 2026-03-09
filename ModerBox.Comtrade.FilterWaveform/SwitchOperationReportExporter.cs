@@ -95,7 +95,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     int baseCol = 3 + i * 5;
                     if (i < row.Operations.Count) {
                         var op = row.Operations[i];
-                        worksheet.Cell(currentRow, baseCol).Value = op.Time.ToString("yyyy-M-d h:mm tt");
+                        worksheet.Cell(currentRow, baseCol).Value = op.Time;
                         worksheet.Cell(currentRow, baseCol + 1).Value = op.PhaseATimeMs;
                         worksheet.Cell(currentRow, baseCol + 2).Value = op.PhaseBTimeMs;
                         worksheet.Cell(currentRow, baseCol + 3).Value = op.PhaseCTimeMs;
