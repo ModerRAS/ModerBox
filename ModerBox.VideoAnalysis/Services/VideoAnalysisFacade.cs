@@ -137,7 +137,7 @@ public class VideoAnalysisFacade
         IProgress<AnalysisProgress>? progress = null,
         CancellationToken ct = default)
     {
-        var videoExtensions = new[] { ".mp4", ".avi", ".mkv", ".mov", ".wmv" };
+        var videoExtensions = new[] { ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".webm", ".flv", ".mpg", ".mpeg", ".m4v", ".3gp", ".ts", ".mts", ".m2ts" };
         var videoFiles = Directory.GetFiles(folderPath)
             .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
             .OrderBy(f => f)
