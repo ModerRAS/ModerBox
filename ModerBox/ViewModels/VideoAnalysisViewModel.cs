@@ -413,7 +413,24 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _logText, value);
         }
 
-        // 超时设置
+        private int _sttTimeoutSeconds = 60;
+        public int SttTimeoutSeconds {
+            get => _sttTimeoutSeconds;
+            set {
+                this.RaiseAndSetIfChanged(ref _sttTimeoutSeconds, value);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private int _summaryTimeoutSeconds = 60;
+        public int SummaryTimeoutSeconds {
+            get => _summaryTimeoutSeconds;
+            set {
+                this.RaiseAndSetIfChanged(ref _summaryTimeoutSeconds, value);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
         private bool _cleanupTempFiles = true;
         public bool CleanupTempFiles {
             get => _cleanupTempFiles;
@@ -471,6 +488,7 @@ namespace ModerBox.ViewModels {
             Progress = 0;
             ProgressMessage = "准备中...";
             ResultText = "";
+            LogText = "";
 
             _cts = new CancellationTokenSource();
             var progressReporter = new Progress<AnalysisProgress>(p => {
@@ -481,9 +499,10 @@ namespace ModerBox.ViewModels {
             try {
                 var settings = BuildSettings();
                 var facade = new VideoAnalysisFacade();
+                Action<string>? logCallback = msg => LogText += $"{DateTime.Now:HH:mm:ss} {msg}\n";
 
                 if (IsSingleMode) {
-                    var result = await facade.AnalyzeAsync(VideoPath, settings, progressReporter, null, _cts.Token);
+                    var result = await facade.AnalyzeAsync(VideoPath, settings, progressReporter, logCallback, _cts.Token);
                     if (result.IsSuccess) {
                         ResultText = result.Summary ?? "分析完成，但未生成文案。";
                         if (!string.IsNullOrWhiteSpace(SingleOutputPath) && result.Summary != null) {
@@ -496,7 +515,7 @@ namespace ModerBox.ViewModels {
                     var results = await facade.AnalyzeFolderAsync(
                         SourceFolder, OutputFolder, settings,
                         FileNameTemplate, SkipProcessed, ContinueOnError,
-                        progressReporter, null, _cts.Token);
+                        progressReporter, logCallback, _cts.Token);
 
                     var success = results.Count(r => r.IsSuccess);
                     var failed = results.Count(r => !r.IsSuccess);
@@ -527,9 +546,12 @@ namespace ModerBox.ViewModels {
 
             try {
                 var service = new ModelInfoService();
-                var models = await service.GetModelsAsync(SttApiEndpoint, SttApiKey);
-                foreach (var model in models) {
-                    SttModelList.Add(model);
+                var groups = await service.GetModelsByCapabilityAsync(SttApiEndpoint, SttApiKey);
+                foreach (var group in groups) {
+                    SttModelList.Add($"--- {group.Capability} ---");
+                    foreach (var model in group.Models) {
+                        SttModelList.Add(model);
+                    }
                 }
                 if (SttModelList.Count == 0) {
                     SttModelsError = "未获取到模型列表";
@@ -553,9 +575,12 @@ namespace ModerBox.ViewModels {
 
             try {
                 var service = new ModelInfoService();
-                var models = await service.GetModelsAsync(VisionApiEndpoint, VisionApiKey);
-                foreach (var model in models) {
-                    VisionModelList.Add(model);
+                var groups = await service.GetModelsByCapabilityAsync(VisionApiEndpoint, VisionApiKey);
+                foreach (var group in groups) {
+                    VisionModelList.Add($"--- {group.Capability} ---");
+                    foreach (var model in group.Models) {
+                        VisionModelList.Add(model);
+                    }
                 }
                 if (VisionModelList.Count == 0) {
                     VisionModelsError = "未获取到模型列表";
@@ -579,9 +604,12 @@ namespace ModerBox.ViewModels {
 
             try {
                 var service = new ModelInfoService();
-                var models = await service.GetModelsAsync(SummaryApiEndpoint, SummaryApiKey);
-                foreach (var model in models) {
-                    SummaryModelList.Add(model);
+                var groups = await service.GetModelsByCapabilityAsync(SummaryApiEndpoint, SummaryApiKey);
+                foreach (var group in groups) {
+                    SummaryModelList.Add($"--- {group.Capability} ---");
+                    foreach (var model in group.Models) {
+                        SummaryModelList.Add(model);
+                    }
                 }
                 if (SummaryModelList.Count == 0) {
                     SummaryModelsError = "未获取到模型列表";
@@ -685,7 +713,8 @@ namespace ModerBox.ViewModels {
                     ApiEndpoint = SttApiEndpoint,
                     ApiKey = SttApiKey,
                     Model = SttModel,
-                    Language = SttLanguage
+                    Language = SttLanguage,
+                    TimeoutSeconds = SttTimeoutSeconds
                 },
                 VisionAnalysis = new VisionAnalysisSettings {
                     Enabled = VisionEnabled,
@@ -707,7 +736,8 @@ namespace ModerBox.ViewModels {
                     Style = Style,
                     IncludeTimestamps = IncludeTimestamps,
                     IncludeVisualDescriptions = IncludeVisualDescriptions,
-                    Temperature = SummaryTemperature
+                    Temperature = SummaryTemperature,
+                    TimeoutSeconds = SummaryTimeoutSeconds
                 },
                 CleanupTempFiles = CleanupTempFiles
             };
@@ -732,6 +762,7 @@ namespace ModerBox.ViewModels {
                 _sttApiKey = s.SttApiKey ?? _sttApiKey;
                 _sttModel = s.SttModel ?? _sttModel;
                 _sttLanguage = s.SttLanguage ?? _sttLanguage;
+                _sttTimeoutSeconds = s.SttTimeoutSeconds;
 
                 _visionEnabled = s.VisionEnabled;
                 _visionApiEndpoint = s.VisionApiEndpoint ?? _visionApiEndpoint;
@@ -752,6 +783,7 @@ namespace ModerBox.ViewModels {
                 _includeTimestamps = s.IncludeTimestamps;
                 _includeVisualDescriptions = s.IncludeVisualDescriptions;
                 _summaryTemperature = s.SummaryTemperature;
+                _summaryTimeoutSeconds = s.SummaryTimeoutSeconds;
 
                 _cleanupTempFiles = s.CleanupTempFiles;
 
@@ -781,6 +813,7 @@ namespace ModerBox.ViewModels {
                     SttApiKey = SttApiKey,
                     SttModel = SttModel,
                     SttLanguage = SttLanguage,
+                    SttTimeoutSeconds = SttTimeoutSeconds,
 
                     VisionEnabled = VisionEnabled,
                     VisionApiEndpoint = VisionApiEndpoint,
@@ -801,6 +834,7 @@ namespace ModerBox.ViewModels {
                     IncludeTimestamps = IncludeTimestamps,
                     IncludeVisualDescriptions = IncludeVisualDescriptions,
                     SummaryTemperature = SummaryTemperature,
+                    SummaryTimeoutSeconds = SummaryTimeoutSeconds,
 
                     CleanupTempFiles = CleanupTempFiles,
 
@@ -827,6 +861,7 @@ namespace ModerBox.ViewModels {
             public string? SttApiKey { get; set; }
             public string? SttModel { get; set; }
             public string? SttLanguage { get; set; }
+            public int SttTimeoutSeconds { get; set; } = 60;
 
             public bool VisionEnabled { get; set; } = true;
             public string? VisionApiEndpoint { get; set; }
@@ -847,6 +882,7 @@ namespace ModerBox.ViewModels {
             public bool IncludeTimestamps { get; set; } = true;
             public bool IncludeVisualDescriptions { get; set; } = true;
             public double SummaryTemperature { get; set; } = 0.5;
+            public int SummaryTimeoutSeconds { get; set; } = 60;
 
             public bool CleanupTempFiles { get; set; } = true;
 
