@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.CableRouting", "Mo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.CableRouting.Test", "ModerBox.CableRouting.Test\ModerBox.CableRouting.Test.csproj", "{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.VideoAnalysis", "ModerBox.VideoAnalysis\ModerBox.VideoAnalysis.csproj", "{D9D9845C-F270-40FF-9646-8B16BD5B06B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -341,6 +343,18 @@ Global
 		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x64.Build.0 = Release|Any CPU
 		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x86.ActiveCfg = Release|Any CPU
 		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x86.Build.0 = Release|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Debug|x64.Build.0 = Debug|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Debug|x86.Build.0 = Debug|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Release|x64.ActiveCfg = Release|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Release|x64.Build.0 = Release|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Release|x86.ActiveCfg = Release|Any CPU
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -365,6 +379,7 @@ Global
 		{DBC38788-6085-4C47-B4AD-E8D60BD35A17} = {92F4DB5D-497A-4FA4-B33A-419C98188C95}
 		{E1234567-89AB-CDEF-0123-456789ABCDEF} = {02FE16EF-AE33-453B-A66C-CEF86BF2A2C4}
 		{F1234567-89AB-CDEF-0123-456789ABCDEF} = {02FE16EF-AE33-453B-A66C-CEF86BF2A2C4}
+		{D9D9845C-F270-40FF-9646-8B16BD5B06B2} = {02FE16EF-AE33-453B-A66C-CEF86BF2A2C4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F5B80292-9FE3-4A16-B7D0-72C03CDD050D}

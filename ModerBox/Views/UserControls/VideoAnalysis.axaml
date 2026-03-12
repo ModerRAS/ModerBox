@@ -1,0 +1,178 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="800"
+             x:Class="ModerBox.Views.UserControls.VideoAnalysis"
+             x:DataType="vm:VideoAnalysisViewModel">
+
+  <Design.DataContext>
+    <vm:VideoAnalysisViewModel/>
+  </Design.DataContext>
+
+  <ScrollViewer>
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+
+      <!-- 标题 -->
+      <TextBlock Grid.Row="0"
+                 Text="视频分析"
+                 FontSize="24"
+                 FontWeight="Bold"
+                 Margin="0,0,0,4"/>
+      <TextBlock Grid.Row="0"
+                 Text="提取视频语音、分析画面内容，自动生成视频文案"
+                 FontSize="12"
+                 Foreground="Gray"
+                 Margin="0,34,0,10"/>
+
+      <!-- 输入模式 + 配置 -->
+      <StackPanel Grid.Row="1" Spacing="12" Margin="0,0,0,12">
+
+        <!-- 输入模式选择 -->
+        <StackPanel Orientation="Horizontal" Spacing="20">
+          <RadioButton Content="单个视频" IsChecked="{Binding IsSingleMode}" GroupName="InputMode"/>
+          <RadioButton Content="文件夹批量处理" IsChecked="{Binding IsBatchMode}" GroupName="InputMode"/>
+        </StackPanel>
+
+        <!-- 单个视频 -->
+        <Border IsVisible="{Binding IsSingleMode}" BorderThickness="1" CornerRadius="8" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="单个视频" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <TextBlock Grid.Column="0" Text="选择视频:" VerticalAlignment="Center" Width="80"/>
+              <TextBox Grid.Column="1" Text="{Binding VideoPath}" IsReadOnly="True" Margin="8,0"/>
+              <Button Grid.Column="2" Content="浏览..." Command="{Binding SelectVideoCommand}" Padding="12,6"/>
+            </Grid>
+            <TextBlock Text="{Binding VideoInfo}"
+                       FontSize="12"
+                       Foreground="Gray"
+                       IsVisible="{Binding VideoInfo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- 批量模式 -->
+        <Border IsVisible="{Binding IsBatchMode}" BorderThickness="1" CornerRadius="8" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="文件夹批量处理" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="输入文件夹:" VerticalAlignment="Center" Width="100" Margin="0,4"/>
+              <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InputFolder}" IsReadOnly="True" Margin="8,4"/>
+              <Button Grid.Row="0" Grid.Column="2" Content="浏览..." Command="{Binding SelectInputFolderCommand}" Padding="12,6" Margin="0,4"/>
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录:" VerticalAlignment="Center" Width="100" Margin="0,4"/>
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OutputFolder}" IsReadOnly="True" Margin="8,4"/>
+              <Button Grid.Row="1" Grid.Column="2" Content="浏览..." Command="{Binding SelectOutputFolderCommand}" Padding="12,6" Margin="0,4"/>
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="文件名模板:" VerticalAlignment="Center" Width="100" Margin="0,4"/>
+              <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FileNameTemplate}" Margin="8,4"
+                       Watermark="{}{filename}_文案"/>
+              <Button Grid.Row="2" Grid.Column="2" Content="扫描文件" Command="{Binding ScanFolderCommand}" Padding="12,6" Margin="0,4"/>
+
+              <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,4"/>
+              <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="20" Margin="8,4">
+                <CheckBox IsChecked="{Binding SkipProcessed}" Content="跳过已处理文件"/>
+                <CheckBox IsChecked="{Binding ContinueOnFailure}" Content="失败时继续处理"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- Batch stats -->
+            <StackPanel IsVisible="{Binding BatchTotal, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        Orientation="Horizontal" Spacing="16">
+              <TextBlock Text="{Binding BatchTotal, StringFormat='文件数: {0}'}"/>
+              <TextBlock Text="{Binding BatchCompleted, StringFormat='已完成: {0}'}"/>
+              <TextBlock Text="{Binding BatchFailed, StringFormat='失败: {0}'}"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- 分析选项 -->
+        <Border BorderThickness="1" CornerRadius="8" Padding="12">
+          <StackPanel Spacing="6">
+            <TextBlock Text="分析选项" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Spacing="20">
+              <CheckBox IsChecked="{Binding EnableSpeechToText}" Content="启用语音转写"/>
+              <CheckBox IsChecked="{Binding EnableVisionAnalysis}" Content="启用视觉分析"/>
+              <CheckBox IsChecked="{Binding EnableSummary}" Content="启用文案整理"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- 操作按钮 -->
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="0,0,0,12">
+        <Button Content="开始分析"
+                Command="{Binding StartAnalysisCommand}"
+                IsEnabled="{Binding CanStart}"
+                Padding="24,10"/>
+        <Button Content="取消"
+                Command="{Binding CancelCommand}"
+                IsEnabled="{Binding IsProcessing}"
+                Padding="16,10"/>
+      </StackPanel>
+
+      <!-- 进度 -->
+      <Border Grid.Row="3" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+        <StackPanel Spacing="6">
+          <TextBlock Text="进度" FontWeight="SemiBold"/>
+          <ProgressBar Value="{Binding OverallProgress}" Minimum="0" Maximum="100" Height="20"/>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding CurrentItem}" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- 结果预览 (单文件模式) -->
+      <Border Grid.Row="4"
+              IsVisible="{Binding IsSingleMode}"
+              BorderThickness="1" CornerRadius="8" Padding="12"
+              Margin="0,0,0,12">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Grid.Row="0" Text="结果预览" FontWeight="SemiBold" Margin="0,0,0,8"/>
+          <TextBox Grid.Row="1"
+                   Text="{Binding ResultText}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   MinHeight="200"/>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="复制"
+                    Command="{Binding CopyResultCommand}"
+                    IsEnabled="{Binding HasResult}"
+                    Padding="16,6"/>
+            <Button Content="保存为..."
+                    Command="{Binding SaveResultCommand}"
+                    IsEnabled="{Binding HasResult}"
+                    Padding="16,6"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- 批量处理列表 -->
+      <Border Grid.Row="4"
+              IsVisible="{Binding IsBatchMode}"
+              BorderThickness="1" CornerRadius="8" Padding="12"
+              Margin="0,0,0,12">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0" Text="文件列表" FontWeight="SemiBold" Margin="0,0,0,8"/>
+          <DataGrid Grid.Row="1"
+                    ItemsSource="{Binding BatchFiles}"
+                    AutoGenerateColumns="False"
+                    CanUserResizeColumns="True"
+                    GridLinesVisibility="All"
+                    MinHeight="200">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="文件名" Binding="{Binding FileName}" Width="200"/>
+              <DataGridTextColumn Header="路径" Binding="{Binding FilePath}" Width="300"/>
+              <DataGridTextColumn Header="状态" Binding="{Binding Status}" Width="80"/>
+              <DataGridTextColumn Header="输出文件" Binding="{Binding OutputFilePath}" Width="200"/>
+              <DataGridTextColumn Header="错误信息" Binding="{Binding ErrorMessage}" Width="200"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Grid>
+      </Border>
+
+    </Grid>
+  </ScrollViewer>
+</UserControl>
