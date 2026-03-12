@@ -92,7 +92,9 @@ namespace ModerBox.VideoAnalysis {
                 return result;
             } finally {
                 if (settings.Advanced.CleanupTempFiles && Directory.Exists(workDir)) {
-                    try { Directory.Delete(workDir, true); } catch { }
+                    try { Directory.Delete(workDir, true); } catch {
+                        // Cleanup failures (e.g., locked files) are non-critical; silently ignored
+                    }
                 }
             }
         }

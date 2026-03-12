@@ -109,11 +109,4 @@ namespace ModerBox.VideoAnalysis.Services {
             return string.Empty;
         }
     }
-
-    internal static class HttpRequestMessageExtensions {
-        public static HttpRequestMessage WithTimeout(this HttpRequestMessage request, TimeSpan timeout) {
-            request.Options.Set(new HttpRequestOptionsKey<TimeSpan>("RequestTimeout"), timeout);
-            return request;
-        }
-    }
 }

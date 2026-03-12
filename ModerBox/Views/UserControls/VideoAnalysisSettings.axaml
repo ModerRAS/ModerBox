@@ -116,7 +116,7 @@
 
                     <CheckBox IsChecked="{Binding SummaryEnabled}" Content="启用文案整理"/>
 
-                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding SummaryEnabled}">
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding SummaryEnabled}">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="API 端点:" VerticalAlignment="Center"/>
                         <TextBox Grid.Row="0" Grid.Column="1"
                                  Watermark="https://api.openai.com/v1/responses"
@@ -160,8 +160,7 @@
                             <ComboBoxItem>academic</ComboBoxItem>
                         </ComboBox>
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Row="6" Grid.Column="1" Spacing="5" Margin="0,0,0,8">
+                        <StackPanel Grid.Row="6" Grid.Column="1" Spacing="5" Margin="0,0,0,8" Grid.ColumnSpan="2">
                             <CheckBox IsChecked="{Binding SummaryIncludeTimestamps}" Content="包含时间戳"/>
                             <CheckBox IsChecked="{Binding SummaryIncludeVisualDescriptions}" Content="包含画面描述"/>
                         </StackPanel>

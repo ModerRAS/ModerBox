@@ -56,7 +56,7 @@ namespace ModerBox.VideoAnalysis {
             var duration = mediaInfo.Duration.TotalSeconds;
 
             List<double> timestamps = settings.FrameExtractMode switch {
-                "keyframe" => await ExtractKeyFrameTimestampsAsync(videoPath, duration, settings.MaxFrames, ct),
+                "keyframe" => await GenerateUniformTimestampsAsync(videoPath, duration, settings.MaxFrames, ct),
                 _ => GenerateIntervalTimestamps(duration, settings.FrameInterval, settings.MaxFrames)
             };
 
@@ -99,7 +99,7 @@ namespace ModerBox.VideoAnalysis {
             return timestamps;
         }
 
-        private static Task<List<double>> ExtractKeyFrameTimestampsAsync(
+        private static Task<List<double>> GenerateUniformTimestampsAsync(
             string videoPath,
             double duration,
             int maxFrames,

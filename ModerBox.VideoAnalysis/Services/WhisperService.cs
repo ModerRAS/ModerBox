@@ -12,8 +12,11 @@ namespace ModerBox.VideoAnalysis.Services {
             AudioData audio,
             SpeechToTextSettings options,
             CancellationToken ct = default) {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
+
             using var content = new MultipartFormDataContent();
-            var fileBytes = await File.ReadAllBytesAsync(audio.FilePath, ct);
+            var fileBytes = await File.ReadAllBytesAsync(audio.FilePath, cts.Token);
             var fileContent = new ByteArrayContent(fileBytes);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             content.Add(fileContent, "file", Path.GetFileName(audio.FilePath));
@@ -27,10 +30,10 @@ namespace ModerBox.VideoAnalysis.Services {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
             request.Content = content;
 
-            using var response = await _httpClient.SendAsync(request, ct);
+            using var response = await _httpClient.SendAsync(request, cts.Token);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
             return ParseTranscriptResponse(json, options.ResponseFormat);
         }
 

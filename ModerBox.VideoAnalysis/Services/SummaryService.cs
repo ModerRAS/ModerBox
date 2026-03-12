@@ -14,6 +14,9 @@ namespace ModerBox.VideoAnalysis.Services {
             List<FrameDescription> frames,
             SummarySettings options,
             CancellationToken ct = default) {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
+
             var promptContent = BuildPrompt(transcript, frames, options);
 
             var requestBody = new {
@@ -32,10 +35,10 @@ namespace ModerBox.VideoAnalysis.Services {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using var response = await _httpClient.SendAsync(request, ct);
+            using var response = await _httpClient.SendAsync(request, cts.Token);
             response.EnsureSuccessStatusCode();
 
-            var responseJson = await response.Content.ReadAsStringAsync(ct);
+            var responseJson = await response.Content.ReadAsStringAsync(cts.Token);
             return ParseResponseText(responseJson);
         }
 

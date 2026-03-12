@@ -33,6 +33,7 @@ namespace ModerBox.VideoAnalysis {
                 var wrapper = JsonSerializer.Deserialize<SettingsWrapper>(json, JsonOptions);
                 return wrapper?.VideoAnalysis ?? new VideoAnalysisSettings();
             } catch {
+                // On deserialization failure (e.g., corrupted or incompatible file), return defaults
                 return new VideoAnalysisSettings();
             }
         }
