@@ -5,6 +5,10 @@ using System.Reactive;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using ReactiveUI;
 using ModerBox.VideoAnalysis.Models;
 using ModerBox.VideoAnalysis.Services;
@@ -337,6 +341,9 @@ namespace ModerBox.ViewModels {
         // 命令
         public ReactiveCommand<Unit, Unit> StartAnalysis { get; }
         public ReactiveCommand<Unit, Unit> CancelAnalysis { get; }
+        public ReactiveCommand<Unit, Unit> BrowseVideoPath { get; }
+        public ReactiveCommand<Unit, Unit> BrowseSourceFolder { get; }
+        public ReactiveCommand<Unit, Unit> BrowseOutputFolder { get; }
 
         private CancellationTokenSource? _cts;
 
@@ -352,6 +359,10 @@ namespace ModerBox.ViewModels {
             CancelAnalysis = ReactiveCommand.Create(() => {
                 _cts?.Cancel();
             }, canCancel);
+
+            BrowseVideoPath = ReactiveCommand.CreateFromTask(BrowseVideoPathAsync);
+            BrowseSourceFolder = ReactiveCommand.CreateFromTask(BrowseSourceFolderAsync);
+            BrowseOutputFolder = ReactiveCommand.CreateFromTask(BrowseOutputFolderAsync);
 
             LoadSettings();
         }
@@ -398,6 +409,64 @@ namespace ModerBox.ViewModels {
                 _cts?.Dispose();
                 _cts = null;
             }
+        }
+
+        private async Task BrowseVideoPathAsync() {
+            try {
+                var file = await DoOpenFilePickerAsync();
+                if (file != null) {
+                    VideoPath = file.TryGetLocalPath() ?? file.Path.ToString();
+                }
+            } catch (NullReferenceException) { }
+        }
+
+        private async Task BrowseSourceFolderAsync() {
+            try {
+                var folder = await DoOpenFolderPickerAsync();
+                if (folder != null) {
+                    SourceFolder = folder.TryGetLocalPath() ?? folder.Path.ToString();
+                }
+            } catch (NullReferenceException) { }
+        }
+
+        private async Task BrowseOutputFolderAsync() {
+            try {
+                var folder = await DoOpenFolderPickerAsync();
+                if (folder != null) {
+                    OutputFolder = folder.TryGetLocalPath() ?? folder.Path.ToString();
+                }
+            } catch (NullReferenceException) { }
+        }
+
+        private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+                desktop.MainWindow?.StorageProvider is not { } provider)
+                throw new NullReferenceException("Missing StorageProvider instance.");
+
+            var folders = await provider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
+                Title = "选择文件夹",
+                AllowMultiple = false
+            });
+
+            return folders?.Count >= 1 ? folders[0] : null;
+        }
+
+        private async Task<IStorageFile?> DoOpenFilePickerAsync() {
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+                desktop.MainWindow?.StorageProvider is not { } provider)
+                throw new NullReferenceException("Missing StorageProvider instance.");
+
+            var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions {
+                Title = "选择视频文件",
+                AllowMultiple = false,
+                FileTypeFilter = new[] {
+                    new FilePickerFileType("视频文件") {
+                        Patterns = new[] { "*.mp4", "*.avi", "*.mkv", "*.mov", "*.wmv" }
+                    }
+                }
+            });
+
+            return files?.Count >= 1 ? files[0] : null;
         }
 
         private VideoAnalysisSettings BuildSettings() {

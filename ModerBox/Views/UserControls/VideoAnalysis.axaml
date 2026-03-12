@@ -27,7 +27,7 @@
                     <TextBlock Text="选择视频文件" FontWeight="SemiBold"/>
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBox Grid.Column="0" Text="{Binding VideoPath}" Watermark="选择视频文件路径..." Margin="0 0 8 0"/>
-                        <Button Grid.Column="1" Content="浏览..." />
+                        <Button Grid.Column="1" Content="浏览..." Command="{Binding BrowseVideoPath}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -39,12 +39,12 @@
                     <TextBlock Text="源文件夹"/>
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBox Grid.Column="0" Text="{Binding SourceFolder}" Watermark="选择包含视频文件的文件夹..." Margin="0 0 8 0"/>
-                        <Button Grid.Column="1" Content="浏览..." />
+                        <Button Grid.Column="1" Content="浏览..." Command="{Binding BrowseSourceFolder}"/>
                     </Grid>
                     <TextBlock Text="输出目录"/>
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBox Grid.Column="0" Text="{Binding OutputFolder}" Watermark="选择输出文件夹..." Margin="0 0 8 0"/>
-                        <Button Grid.Column="1" Content="浏览..." />
+                        <Button Grid.Column="1" Content="浏览..." Command="{Binding BrowseOutputFolder}"/>
                     </Grid>
                     <TextBlock Text="文件名模板"/>
                     <TextBox Text="{Binding FileNameTemplate}" Watermark="{}{filename}_文案"/>
@@ -108,21 +108,9 @@
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="输出格式" Margin="0 0 8 0"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="详细程度" Margin="0 0 8 0"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="风格"/>
-                        <ComboBox Grid.Row="1" Grid.Column="0" SelectedItem="{Binding OutputFormat}" Margin="0 0 8 0" HorizontalAlignment="Stretch">
-                            <ComboBoxItem Content="markdown" IsSelected="True"/>
-                            <ComboBoxItem Content="text"/>
-                            <ComboBoxItem Content="json"/>
-                        </ComboBox>
-                        <ComboBox Grid.Row="1" Grid.Column="1" SelectedItem="{Binding DetailLevel}" Margin="0 0 8 0" HorizontalAlignment="Stretch">
-                            <ComboBoxItem Content="brief"/>
-                            <ComboBoxItem Content="normal" IsSelected="True"/>
-                            <ComboBoxItem Content="detailed"/>
-                        </ComboBox>
-                        <ComboBox Grid.Row="1" Grid.Column="2" SelectedItem="{Binding Style}" HorizontalAlignment="Stretch">
-                            <ComboBoxItem Content="professional" IsSelected="True"/>
-                            <ComboBoxItem Content="casual"/>
-                            <ComboBoxItem Content="academic"/>
-                        </ComboBox>
+                        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding OutputFormat}" Watermark="markdown" Margin="0 0 8 0"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DetailLevel}" Watermark="normal" Margin="0 0 8 0"/>
+                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Style}" Watermark="professional"/>
                     </Grid>
                     <CheckBox IsChecked="{Binding IncludeTimestamps}" Content="包含时间戳" IsEnabled="{Binding SummaryEnabled}"/>
                     <CheckBox IsChecked="{Binding IncludeVisualDescriptions}" Content="包含画面描述" IsEnabled="{Binding SummaryEnabled}"/>
