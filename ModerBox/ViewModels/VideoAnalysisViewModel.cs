@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reactive;
@@ -248,7 +249,7 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private string _outputFormat = "markdown";
+        private string _outputFormat = "Markdown";
         public string OutputFormat {
             get => _outputFormat;
             set {
@@ -257,7 +258,9 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private string _detailLevel = "normal";
+        public List<string> OutputFormatOptions { get; } = new() { "Markdown", "纯文本", "JSON" };
+
+        private string _detailLevel = "普通";
         public string DetailLevel {
             get => _detailLevel;
             set {
@@ -266,7 +269,9 @@ namespace ModerBox.ViewModels {
             }
         }
 
-        private string _style = "professional";
+        public List<string> DetailLevelOptions { get; } = new() { "简洁", "普通", "详细" };
+
+        private string _style = "专业";
         public string Style {
             get => _style;
             set {
@@ -274,6 +279,8 @@ namespace ModerBox.ViewModels {
                 if (_settingsLoaded) SaveSettings();
             }
         }
+
+        public List<string> StyleOptions { get; } = new() { "专业", "轻松", "学术" };
 
         private bool _includeTimestamps = true;
         public bool IncludeTimestamps {
