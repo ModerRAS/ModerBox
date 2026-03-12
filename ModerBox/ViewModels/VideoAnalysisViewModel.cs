@@ -47,6 +47,16 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        // 单视频输出路径
+        private string _singleOutputPath = "";
+        public string SingleOutputPath {
+            get => _singleOutputPath;
+            set {
+                this.RaiseAndSetIfChanged(ref _singleOutputPath, value);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
         // 批量处理文件夹
         private string _sourceFolder = "";
         public string SourceFolder {
@@ -349,6 +359,7 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> StartAnalysis { get; }
         public ReactiveCommand<Unit, Unit> CancelAnalysis { get; }
         public ReactiveCommand<Unit, Unit> BrowseVideoPath { get; }
+        public ReactiveCommand<Unit, Unit> BrowseSingleOutputPath { get; }
         public ReactiveCommand<Unit, Unit> BrowseSourceFolder { get; }
         public ReactiveCommand<Unit, Unit> BrowseOutputFolder { get; }
 
@@ -368,6 +379,7 @@ namespace ModerBox.ViewModels {
             }, canCancel);
 
             BrowseVideoPath = ReactiveCommand.CreateFromTask(BrowseVideoPathAsync);
+            BrowseSingleOutputPath = ReactiveCommand.CreateFromTask(BrowseSingleOutputPathAsync);
             BrowseSourceFolder = ReactiveCommand.CreateFromTask(BrowseSourceFolderAsync);
             BrowseOutputFolder = ReactiveCommand.CreateFromTask(BrowseOutputFolderAsync);
 
@@ -392,9 +404,14 @@ namespace ModerBox.ViewModels {
 
                 if (IsSingleMode) {
                     var result = await facade.AnalyzeAsync(VideoPath, settings, progressReporter, _cts.Token);
-                    ResultText = result.IsSuccess
-                        ? result.Summary ?? "分析完成，但未生成文案。"
-                        : $"分析失败: {result.ErrorMessage}";
+                    if (result.IsSuccess) {
+                        ResultText = result.Summary ?? "分析完成，但未生成文案。";
+                        if (!string.IsNullOrWhiteSpace(SingleOutputPath) && result.Summary != null) {
+                            await File.WriteAllTextAsync(SingleOutputPath, ResultText, _cts.Token);
+                        }
+                    } else {
+                        ResultText = $"分析失败: {result.ErrorMessage}";
+                    }
                 } else {
                     var results = await facade.AnalyzeFolderAsync(
                         SourceFolder, OutputFolder, settings,
@@ -423,6 +440,15 @@ namespace ModerBox.ViewModels {
                 var file = await DoOpenFilePickerAsync();
                 if (file != null) {
                     VideoPath = file.TryGetLocalPath() ?? file.Path.ToString();
+                }
+            } catch (NullReferenceException) { }
+        }
+
+        private async Task BrowseSingleOutputPathAsync() {
+            try {
+                var file = await DoSaveFilePickerAsync();
+                if (file != null) {
+                    SingleOutputPath = file.TryGetLocalPath() ?? file.Path.ToString();
                 }
             } catch (NullReferenceException) { }
         }
@@ -474,6 +500,24 @@ namespace ModerBox.ViewModels {
             });
 
             return files?.Count >= 1 ? files[0] : null;
+        }
+
+        private async Task<IStorageFile?> DoSaveFilePickerAsync() {
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+                desktop.MainWindow?.StorageProvider is not { } provider)
+                throw new NullReferenceException("Missing StorageProvider instance.");
+
+            var file = await provider.SaveFilePickerAsync(new FilePickerSaveOptions {
+                Title = "保存分析结果",
+                SuggestedFileName = "视频文案",
+                FileTypeChoices = new[] {
+                    new FilePickerFileType("Markdown") { Patterns = new[] { "*.md" } },
+                    new FilePickerFileType("文本文件") { Patterns = new[] { "*.txt" } },
+                    new FilePickerFileType("JSON") { Patterns = new[] { "*.json" } }
+                }
+            });
+
+            return file;
         }
 
         private VideoAnalysisSettings BuildSettings() {
@@ -554,6 +598,7 @@ namespace ModerBox.ViewModels {
                 _cleanupTempFiles = s.CleanupTempFiles;
 
                 _videoPath = s.VideoPath ?? _videoPath;
+                _singleOutputPath = s.SingleOutputPath ?? _singleOutputPath;
                 _sourceFolder = s.SourceFolder ?? _sourceFolder;
                 _outputFolder = s.OutputFolder ?? _outputFolder;
                 _fileNameTemplate = s.FileNameTemplate ?? _fileNameTemplate;
@@ -602,6 +647,7 @@ namespace ModerBox.ViewModels {
                     CleanupTempFiles = CleanupTempFiles,
 
                     VideoPath = VideoPath,
+                    SingleOutputPath = SingleOutputPath,
                     SourceFolder = SourceFolder,
                     OutputFolder = OutputFolder,
                     FileNameTemplate = FileNameTemplate,
@@ -647,6 +693,7 @@ namespace ModerBox.ViewModels {
             public bool CleanupTempFiles { get; set; } = true;
 
             public string? VideoPath { get; set; }
+            public string? SingleOutputPath { get; set; }
             public string? SourceFolder { get; set; }
             public string? OutputFolder { get; set; }
             public string? FileNameTemplate { get; set; }
