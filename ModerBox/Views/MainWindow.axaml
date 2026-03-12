@@ -43,6 +43,9 @@
         <DataTemplate DataType="{x:Type vm:SwitchOperationReportViewModel}">
             <views:SwitchOperationReport/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:VideoAnalysisViewModel}">
+            <views:VideoAnalysis/>
+        </DataTemplate>
     </Window.DataTemplates>
 
     <Design.DataContext>
