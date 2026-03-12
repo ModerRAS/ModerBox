@@ -39,11 +39,23 @@ public class VideoAnalysisFacade
         {
             // 阶段 0: 初始化
             ReportProgress(progress, AnalysisStage.Initializing, 0, "正在初始化...");
-            var videoInfo = await _processor.GetVideoInfoAsync(videoPath, ct);
-            result.VideoInfo = videoInfo;
 
-            var tempDir = Path.Combine(Path.GetTempPath(), "ModerBox", "VideoAnalysis", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
+            // 创建工作目录
+            var workingDir = Path.Combine(Path.GetTempPath(), "ModerBox", "VideoAnalysis", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(workingDir);
+
+            string localVideoPath = videoPath;
+            bool isNetworkPath = videoPath.StartsWith("\\\\") || videoPath.StartsWith("//");
+
+            if (isNetworkPath)
+            {
+                ReportProgress(progress, AnalysisStage.Initializing, 5, "正在复制网络文件到本地...");
+                localVideoPath = Path.Combine(workingDir, Path.GetFileName(videoPath));
+                File.Copy(videoPath, localVideoPath, true);
+            }
+
+            var videoInfo = await _processor.GetVideoInfoAsync(localVideoPath, ct);
+            result.VideoInfo = videoInfo;
 
             try
             {
@@ -55,12 +67,12 @@ public class VideoAnalysisFacade
 
                 if (settings.SpeechToText.Enabled)
                 {
-                    audioTask = ExtractAudioAsync(videoPath, tempDir, ct);
+                    audioTask = ExtractAudioAsync(localVideoPath, workingDir, ct);
                 }
 
                 if (settings.VisionAnalysis.Enabled)
                 {
-                    framesTask = ExtractFramesAsync(videoPath, tempDir, settings.VisionAnalysis, progress, ct);
+                    framesTask = ExtractFramesAsync(localVideoPath, workingDir, settings.VisionAnalysis, progress, ct);
                 }
 
                 await Task.WhenAll(audioTask, framesTask);
@@ -101,10 +113,10 @@ public class VideoAnalysisFacade
             }
             finally
             {
-                if (settings.CleanupTempFiles && Directory.Exists(tempDir))
+                if (settings.CleanupTempFiles && Directory.Exists(workingDir))
                 {
-                    try { Directory.Delete(tempDir, recursive: true); }
-                    catch { /* 忽略清理错误 */ }
+                    try { Directory.Delete(workingDir, recursive: true); }
+                    catch { }
                 }
             }
         }
