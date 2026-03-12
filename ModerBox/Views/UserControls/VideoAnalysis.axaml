@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="1200"
+             x:DataType="vm:VideoAnalysisViewModel"
+             x:Class="ModerBox.Views.UserControls.VideoAnalysis">
+
+    <Design.DataContext>
+        <vm:VideoAnalysisViewModel/>
+    </Design.DataContext>
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="12">
+
+            <!-- 输入模式选择 -->
+            <TextBlock Text="输入模式" FontWeight="Bold" FontSize="16"/>
+            <StackPanel Orientation="Horizontal" Spacing="20">
+                <RadioButton Content="单个视频" IsChecked="{Binding IsSingleMode}" GroupName="InputMode"/>
+                <RadioButton Content="文件夹批量处理" IsChecked="{Binding IsBatchMode}" GroupName="InputMode"/>
+            </StackPanel>
+
+            <!-- 单视频输入 -->
+            <Border IsVisible="{Binding IsSingleMode}" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="选择视频文件" FontWeight="SemiBold"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Grid.Column="0" Text="{Binding VideoPath}" Watermark="选择视频文件路径..." Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Content="浏览..." Command="{Binding BrowseVideoPath}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 批量处理输入 -->
+            <Border IsVisible="{Binding IsBatchMode}" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="文件夹批量处理" FontWeight="SemiBold"/>
+                    <TextBlock Text="源文件夹"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Grid.Column="0" Text="{Binding SourceFolder}" Watermark="选择包含视频文件的文件夹..." Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Content="浏览..." Command="{Binding BrowseSourceFolder}"/>
+                    </Grid>
+                    <TextBlock Text="输出目录"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Grid.Column="0" Text="{Binding OutputFolder}" Watermark="选择输出文件夹..." Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Content="浏览..." Command="{Binding BrowseOutputFolder}"/>
+                    </Grid>
+                    <TextBlock Text="文件名模板"/>
+                    <TextBox Text="{Binding FileNameTemplate}" Watermark="{}{filename}_文案"/>
+                    <CheckBox IsChecked="{Binding SkipProcessed}" Content="跳过已处理的文件"/>
+                    <CheckBox IsChecked="{Binding ContinueOnError}" Content="失败时继续处理下一个"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 语音转写设置 -->
+            <TextBlock Text="语音转写 (Speech-to-Text)" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <CheckBox IsChecked="{Binding SttEnabled}" Content="启用语音转写"/>
+                    <TextBlock Text="API 端点"/>
+                    <TextBox Text="{Binding SttApiEndpoint}" Watermark="https://api.openai.com/v1/audio/transcriptions" IsEnabled="{Binding SttEnabled}"/>
+                    <TextBlock Text="API Key"/>
+                    <TextBox Text="{Binding SttApiKey}" PasswordChar="*" Watermark="输入 API Key..." IsEnabled="{Binding SttEnabled}"/>
+                    <TextBlock Text="模型"/>
+                    <TextBox Text="{Binding SttModel}" Watermark="whisper-1" IsEnabled="{Binding SttEnabled}"/>
+                    <TextBlock Text="语言"/>
+                    <TextBox Text="{Binding SttLanguage}" Watermark="zh (留空自动检测)" IsEnabled="{Binding SttEnabled}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 视觉分析设置 -->
+            <TextBlock Text="视觉分析 (Vision Analysis)" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <CheckBox IsChecked="{Binding VisionEnabled}" Content="启用视觉分析"/>
+                    <TextBlock Text="API 端点"/>
+                    <TextBox Text="{Binding VisionApiEndpoint}" Watermark="https://api.openai.com/v1/responses" IsEnabled="{Binding VisionEnabled}"/>
+                    <TextBlock Text="API Key"/>
+                    <TextBox Text="{Binding VisionApiKey}" PasswordChar="*" Watermark="输入 API Key..." IsEnabled="{Binding VisionEnabled}"/>
+                    <TextBlock Text="模型"/>
+                    <TextBox Text="{Binding VisionModel}" Watermark="gpt-4o" IsEnabled="{Binding VisionEnabled}"/>
+                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" IsEnabled="{Binding VisionEnabled}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="帧提取间隔 (秒)" Margin="0 0 8 0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="最大帧数" Margin="0 0 8 0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="并发数"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding FrameInterval}" Minimum="1" Maximum="60" Increment="1" Margin="0 0 8 0"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding MaxFrames}" Minimum="1" Maximum="200" Increment="5" Margin="0 0 8 0"/>
+                        <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding MaxConcurrency}" Minimum="1" Maximum="10" Increment="1"/>
+                    </Grid>
+                    <TextBlock Text="温度"/>
+                    <NumericUpDown Value="{Binding VisionTemperature}" Minimum="0" Maximum="2" Increment="0.1" IsEnabled="{Binding VisionEnabled}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 文案整理设置 -->
+            <TextBlock Text="文案整理 (Summary)" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <CheckBox IsChecked="{Binding SummaryEnabled}" Content="启用文案整理"/>
+                    <TextBlock Text="API 端点"/>
+                    <TextBox Text="{Binding SummaryApiEndpoint}" Watermark="https://api.openai.com/v1/responses" IsEnabled="{Binding SummaryEnabled}"/>
+                    <TextBlock Text="API Key"/>
+                    <TextBox Text="{Binding SummaryApiKey}" PasswordChar="*" Watermark="输入 API Key..." IsEnabled="{Binding SummaryEnabled}"/>
+                    <TextBlock Text="模型"/>
+                    <TextBox Text="{Binding SummaryModel}" Watermark="gpt-4o-mini" IsEnabled="{Binding SummaryEnabled}"/>
+                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" IsEnabled="{Binding SummaryEnabled}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="输出格式" Margin="0 0 8 0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="详细程度" Margin="0 0 8 0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="风格"/>
+                        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding OutputFormat}" Watermark="markdown" Margin="0 0 8 0"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DetailLevel}" Watermark="normal" Margin="0 0 8 0"/>
+                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Style}" Watermark="professional"/>
+                    </Grid>
+                    <CheckBox IsChecked="{Binding IncludeTimestamps}" Content="包含时间戳" IsEnabled="{Binding SummaryEnabled}"/>
+                    <CheckBox IsChecked="{Binding IncludeVisualDescriptions}" Content="包含画面描述" IsEnabled="{Binding SummaryEnabled}"/>
+                    <TextBlock Text="温度"/>
+                    <NumericUpDown Value="{Binding SummaryTemperature}" Minimum="0" Maximum="2" Increment="0.1" IsEnabled="{Binding SummaryEnabled}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 高级设置 -->
+            <TextBlock Text="高级设置" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <CheckBox IsChecked="{Binding CleanupTempFiles}" Content="处理完成后删除临时文件"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 操作按钮 -->
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0 12 0 0" HorizontalAlignment="Center">
+                <Button Content="开始分析" Command="{Binding StartAnalysis}" FontSize="16" Padding="24 8"/>
+                <Button Content="取消" Command="{Binding CancelAnalysis}" FontSize="16" Padding="24 8"/>
+            </StackPanel>
+
+            <!-- 进度 -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsRunning}">
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="20" ShowProgressText="True"/>
+                <TextBlock Text="{Binding ProgressMessage}" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- 结果预览 -->
+            <TextBlock Text="结果预览" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
+            <TextBox Text="{Binding ResultText}" IsReadOnly="True" AcceptsReturn="True"
+                     TextWrapping="Wrap" MinHeight="200" MaxHeight="400"
+                     Watermark="分析结果将显示在这里..."/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -55,6 +55,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.CableRouting", "Mo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.CableRouting.Test", "ModerBox.CableRouting.Test\ModerBox.CableRouting.Test.csproj", "{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.VideoAnalysis", "ModerBox.VideoAnalysis\ModerBox.VideoAnalysis.csproj", "{66E419C9-3175-4EDA-A21C-063D47EFE2BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModerBox.VideoAnalysis.Test", "ModerBox.VideoAnalysis.Test\ModerBox.VideoAnalysis.Test.csproj", "{37D201B4-3B52-43BB-A238-932BA64A0225}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -341,6 +345,30 @@ Global
 		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x64.Build.0 = Release|Any CPU
 		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x86.ActiveCfg = Release|Any CPU
 		{DE174755-69C1-4DC9-B4E6-1E0B15C9A934}.Release|x86.Build.0 = Release|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Debug|x64.Build.0 = Debug|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Debug|x86.Build.0 = Debug|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Release|x64.ActiveCfg = Release|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Release|x64.Build.0 = Release|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Release|x86.ActiveCfg = Release|Any CPU
+		{66E419C9-3175-4EDA-A21C-063D47EFE2BB}.Release|x86.Build.0 = Release|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Debug|x64.Build.0 = Debug|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Debug|x86.Build.0 = Debug|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Release|x64.ActiveCfg = Release|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Release|x64.Build.0 = Release|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Release|x86.ActiveCfg = Release|Any CPU
+		{37D201B4-3B52-43BB-A238-932BA64A0225}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
