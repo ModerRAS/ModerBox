@@ -1,0 +1,203 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="900"
+             x:Class="ModerBox.Views.UserControls.VideoAnalysisSettings"
+             x:DataType="vm:VideoAnalysisSettingsViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="15" MaxWidth="800" HorizontalAlignment="Left">
+
+            <TextBlock Text="视频分析设置"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10"/>
+
+            <!-- 语音转写 (Speech-to-Text) -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="语音转写 (Speech-to-Text)" FontWeight="Bold" FontSize="16"/>
+
+                    <CheckBox IsChecked="{Binding SttEnabled}" Content="启用语音转写"/>
+
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" IsEnabled="{Binding SttEnabled}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="API 端点:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Watermark="https://api.openai.com/v1/audio/transcriptions"
+                                 Text="{Binding SttApiEndpoint}" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="API Key:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1"
+                                 Watermark="API Key"
+                                 Text="{Binding SttApiKey}"
+                                 PasswordChar="*" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="模型:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 Watermark="whisper-1"
+                                 Text="{Binding SttModel}" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="语言:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="3" Grid.Column="1"
+                                 Watermark="zh (留空自动检测)"
+                                 Text="{Binding SttLanguage}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 视觉分析 (Vision Analysis) -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="视觉分析 (Vision Analysis)" FontWeight="Bold" FontSize="16"/>
+
+                    <CheckBox IsChecked="{Binding VisionEnabled}" Content="启用视觉分析"/>
+
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding VisionEnabled}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="API 端点:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Watermark="https://api.openai.com/v1/responses"
+                                 Text="{Binding VisionApiEndpoint}" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="API Key:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1"
+                                 Watermark="API Key"
+                                 Text="{Binding VisionApiKey}"
+                                 PasswordChar="*" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="模型:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 Watermark="gpt-4o"
+                                 Text="{Binding VisionModel}" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="帧提取模式:" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                  SelectedItem="{Binding VisionFrameExtractMode}"
+                                  Margin="0,0,0,8">
+                            <ComboBoxItem Content="按时间间隔" Tag="interval"/>
+                            <ComboBoxItem Content="均匀采样" Tag="keyframe"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="间隔(秒):" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="4" Grid.Column="1"
+                                       Value="{Binding VisionFrameInterval}"
+                                       Minimum="1" Maximum="600" Increment="1"
+                                       FormatString="F0" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="最大帧数:" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="5" Grid.Column="1"
+                                       Value="{Binding VisionMaxFrames}"
+                                       Minimum="1" Maximum="500" Increment="1"
+                                       FormatString="F0" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="并发数:" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="6" Grid.Column="1"
+                                       Value="{Binding VisionMaxConcurrency}"
+                                       Minimum="1" Maximum="20" Increment="1"
+                                       FormatString="F0" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="超时(秒):" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="7" Grid.Column="1"
+                                       Value="{Binding VisionTimeoutSeconds}"
+                                       Minimum="10" Maximum="600" Increment="10"
+                                       FormatString="F0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 文案整理 (Summary) -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="文案整理 (Summary)" FontWeight="Bold" FontSize="16"/>
+
+                    <CheckBox IsChecked="{Binding SummaryEnabled}" Content="启用文案整理"/>
+
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding SummaryEnabled}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="API 端点:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Watermark="https://api.openai.com/v1/responses"
+                                 Text="{Binding SummaryApiEndpoint}" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="API Key:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1"
+                                 Watermark="API Key"
+                                 Text="{Binding SummaryApiKey}"
+                                 PasswordChar="*" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="模型:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 Watermark="gpt-4o-mini"
+                                 Text="{Binding SummaryModel}" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="输出格式:" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                  SelectedItem="{Binding SummaryOutputFormat}"
+                                  Margin="0,0,0,8">
+                            <ComboBoxItem>markdown</ComboBoxItem>
+                            <ComboBoxItem>text</ComboBoxItem>
+                            <ComboBoxItem>json</ComboBoxItem>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="详细程度:" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1"
+                                  SelectedItem="{Binding SummaryDetailLevel}"
+                                  Margin="0,0,0,8">
+                            <ComboBoxItem>normal</ComboBoxItem>
+                            <ComboBoxItem>brief</ComboBoxItem>
+                            <ComboBoxItem>detailed</ComboBoxItem>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="语言风格:" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="5" Grid.Column="1"
+                                  SelectedItem="{Binding SummaryStyle}"
+                                  Margin="0,0,0,8">
+                            <ComboBoxItem>professional</ComboBoxItem>
+                            <ComboBoxItem>casual</ComboBoxItem>
+                            <ComboBoxItem>academic</ComboBoxItem>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="6" Grid.Column="1" Spacing="5" Margin="0,0,0,8">
+                            <CheckBox IsChecked="{Binding SummaryIncludeTimestamps}" Content="包含时间戳"/>
+                            <CheckBox IsChecked="{Binding SummaryIncludeVisualDescriptions}" Content="包含画面描述"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 高级设置 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="高级设置" FontWeight="Bold" FontSize="16"/>
+
+                    <Grid ColumnDefinitions="120,*,Auto" RowDefinitions="Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="临时目录:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Watermark="留空使用系统临时目录"
+                                 Text="{Binding TempDirectory}" Margin="0,0,8,0"/>
+                        <Button Grid.Row="0" Grid.Column="2"
+                                Command="{Binding SelectTempDirectoryCommand}"
+                                Content="浏览..."/>
+                    </Grid>
+
+                    <CheckBox IsChecked="{Binding CleanupTempFiles}" Content="处理完成后删除临时文件"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Save / Status -->
+            <StackPanel Spacing="10">
+                <Button Command="{Binding SaveSettingsCommand}"
+                        Content="保存设置"
+                        HorizontalAlignment="Right"/>
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource SystemAccentColor}"/>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

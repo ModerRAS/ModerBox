@@ -1,0 +1,203 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:ModerBox.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="900"
+             x:Class="ModerBox.Views.UserControls.VideoAnalysis"
+             x:DataType="vm:VideoAnalysisViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="15" MaxWidth="800" HorizontalAlignment="Left">
+
+            <TextBlock Text="视频分析"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10"/>
+
+            <!-- 输入模式 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="输入模式" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal" Spacing="20">
+                        <RadioButton IsChecked="{Binding IsSingleMode}" Content="单个视频"/>
+                        <RadioButton IsChecked="{Binding IsFolderMode}" Content="文件夹批量处理"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 单个视频输入 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15"
+                    IsVisible="{Binding IsSingleMode}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="视频文件" FontWeight="Bold"/>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Grid.Column="0"
+                                 Watermark="视频文件路径"
+                                 Text="{Binding VideoFilePath}"
+                                 IsReadOnly="True"
+                                 Margin="0,0,8,0"/>
+                        <Button Grid.Column="1"
+                                Command="{Binding SelectVideoCommand}"
+                                Content="浏览..."
+                                IsEnabled="{Binding !IsRunning}"/>
+                    </Grid>
+
+                    <!-- 视频信息 -->
+                    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                            BorderThickness="1" CornerRadius="4" Padding="10"
+                            IsVisible="{Binding VideoInfo, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="20">
+                            <TextBlock>
+                                <Run Text="时长: "/>
+                                <Run Text="{Binding VideoInfo.FormattedDuration}"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="分辨率: "/>
+                                <Run Text="{Binding VideoInfo.Resolution}"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="帧率: "/>
+                                <Run Text="{Binding VideoInfo.FrameRate, StringFormat={}{0:F1} FPS}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- 文件夹批量输入 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15"
+                    IsVisible="{Binding IsFolderMode}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="批量处理设置" FontWeight="Bold"/>
+
+                    <Grid ColumnDefinitions="100,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="输入文件夹:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Watermark="包含视频文件的文件夹"
+                                 Text="{Binding InputFolder}"
+                                 IsReadOnly="True"
+                                 Margin="0,0,8,8"/>
+                        <Button Grid.Row="0" Grid.Column="2"
+                                Command="{Binding SelectInputFolderCommand}"
+                                Content="浏览..."
+                                IsEnabled="{Binding !IsRunning}"
+                                Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1"
+                                 Watermark="文案输出目录"
+                                 Text="{Binding OutputFolder}"
+                                 IsReadOnly="True"
+                                 Margin="0,0,8,8"/>
+                        <Button Grid.Row="1" Grid.Column="2"
+                                Command="{Binding SelectOutputFolderCommand}"
+                                Content="浏览..."
+                                IsEnabled="{Binding !IsRunning}"
+                                Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="文件名模板:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 Watermark="{}{filename}_文案"
+                                 Text="{Binding OutputTemplate}"
+                                 Margin="0,0,8,0"/>
+                    </Grid>
+
+                    <StackPanel Spacing="5">
+                        <CheckBox IsChecked="{Binding SkipProcessed}" Content="跳过已处理的文件"/>
+                        <CheckBox IsChecked="{Binding ContinueOnError}" Content="失败时继续处理下一个"/>
+                    </StackPanel>
+
+                    <!-- 批量统计 -->
+                    <StackPanel Orientation="Horizontal" Spacing="20">
+                        <TextBlock>
+                            <Run Text="文件总数: "/>
+                            <Run Text="{Binding BatchTotal}"/>
+                        </TextBlock>
+                        <TextBlock>
+                            <Run Text="已处理: "/>
+                            <Run Text="{Binding BatchProcessed}"/>
+                        </TextBlock>
+                        <TextBlock>
+                            <Run Text="失败: "/>
+                            <Run Text="{Binding BatchFailed}"/>
+                        </TextBlock>
+                        <TextBlock>
+                            <Run Text="剩余: "/>
+                            <Run Text="{Binding BatchRemaining}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 分析选项 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="分析选项" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal" Spacing="30">
+                        <CheckBox IsChecked="{Binding RunStt}" Content="启用语音转写" IsEnabled="{Binding !IsRunning}"/>
+                        <CheckBox IsChecked="{Binding RunVision}" Content="启用视觉分析" IsEnabled="{Binding !IsRunning}"/>
+                        <CheckBox IsChecked="{Binding RunSummary}" Content="启用文案整理" IsEnabled="{Binding !IsRunning}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 操作按钮 -->
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Command="{Binding RunCommand}"
+                        Content="开始分析"
+                        IsEnabled="{Binding !IsRunning}"/>
+                <Button Command="{Binding CancelCommand}"
+                        Content="取消"
+                        IsEnabled="{Binding IsRunning}"/>
+            </StackPanel>
+
+            <!-- 进度 -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="处理进度" FontWeight="Bold"/>
+                    <ProgressBar Value="{Binding Progress}"
+                                 Maximum="100"
+                                 Height="20"
+                                 ShowProgressText="True"/>
+                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding CurrentItem}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding CurrentItem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 结果预览 (仅单个模式) -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="15"
+                    IsVisible="{Binding IsSingleMode}">
+                <StackPanel Spacing="10">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="结果预览" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Button Command="{Binding CopyResultCommand}"
+                                Content="复制"
+                                IsEnabled="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <Button Command="{Binding SaveResultCommand}"
+                                Content="保存为..."
+                                IsEnabled="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+                    <TextBox Text="{Binding Result}"
+                             IsReadOnly="True"
+                             TextWrapping="Wrap"
+                             MinHeight="200"
+                             MaxHeight="400"
+                             AcceptsReturn="True"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             Watermark="分析完成后将在此显示文案..."/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

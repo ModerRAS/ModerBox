@@ -20,7 +20,9 @@ namespace ModerBox {
             { typeof(QuestionBankConversionViewModel), () => new QuestionBankConversion() },
             { typeof(ComtradeExportViewModel), () => new ComtradeExport() },
             { typeof(SwitchOperationReportViewModel), () => new SwitchOperationReport() },
-            { typeof(CableRoutingViewModel), () => new Views.UserControls.CableRouting() }
+            { typeof(CableRoutingViewModel), () => new Views.UserControls.CableRouting() },
+            { typeof(VideoAnalysisViewModel), () => new Views.UserControls.VideoAnalysis() },
+            { typeof(VideoAnalysisSettingsViewModel), () => new Views.UserControls.VideoAnalysisSettings() }
         };
 
         public Control? Build(object? data) {
