@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reactive;
@@ -149,6 +150,26 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        private bool _sttUseCustomModel;
+        public bool SttUseCustomModel {
+            get => _sttUseCustomModel;
+            set => this.RaiseAndSetIfChanged(ref _sttUseCustomModel, value);
+        }
+
+        public ObservableCollection<string> SttModelList { get; } = [];
+
+        private bool _sttModelsLoading;
+        public bool SttModelsLoading {
+            get => _sttModelsLoading;
+            set => this.RaiseAndSetIfChanged(ref _sttModelsLoading, value);
+        }
+
+        private string _sttModelsError = "";
+        public string SttModelsError {
+            get => _sttModelsError;
+            set => this.RaiseAndSetIfChanged(ref _sttModelsError, value);
+        }
+
         // 视觉分析设置
         private bool _visionEnabled = true;
         public bool VisionEnabled {
@@ -220,6 +241,26 @@ namespace ModerBox.ViewModels {
                 this.RaiseAndSetIfChanged(ref _visionTemperature, value);
                 if (_settingsLoaded) SaveSettings();
             }
+        }
+
+        private bool _visionUseCustomModel;
+        public bool VisionUseCustomModel {
+            get => _visionUseCustomModel;
+            set => this.RaiseAndSetIfChanged(ref _visionUseCustomModel, value);
+        }
+
+        public ObservableCollection<string> VisionModelList { get; } = [];
+
+        private bool _visionModelsLoading;
+        public bool VisionModelsLoading {
+            get => _visionModelsLoading;
+            set => this.RaiseAndSetIfChanged(ref _visionModelsLoading, value);
+        }
+
+        private string _visionModelsError = "";
+        public string VisionModelsError {
+            get => _visionModelsError;
+            set => this.RaiseAndSetIfChanged(ref _visionModelsError, value);
         }
 
         // 文案整理设置
@@ -319,6 +360,26 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        private bool _summaryUseCustomModel;
+        public bool SummaryUseCustomModel {
+            get => _summaryUseCustomModel;
+            set => this.RaiseAndSetIfChanged(ref _summaryUseCustomModel, value);
+        }
+
+        public ObservableCollection<string> SummaryModelList { get; } = [];
+
+        private bool _summaryModelsLoading;
+        public bool SummaryModelsLoading {
+            get => _summaryModelsLoading;
+            set => this.RaiseAndSetIfChanged(ref _summaryModelsLoading, value);
+        }
+
+        private string _summaryModelsError = "";
+        public string SummaryModelsError {
+            get => _summaryModelsError;
+            set => this.RaiseAndSetIfChanged(ref _summaryModelsError, value);
+        }
+
         // 进度
         private int _progress;
         public int Progress {
@@ -345,7 +406,14 @@ namespace ModerBox.ViewModels {
             set => this.RaiseAndSetIfChanged(ref _resultText, value);
         }
 
-        // 高级设置
+        // 日志
+        private string _logText = "";
+        public string LogText {
+            get => _logText;
+            set => this.RaiseAndSetIfChanged(ref _logText, value);
+        }
+
+        // 超时设置
         private bool _cleanupTempFiles = true;
         public bool CleanupTempFiles {
             get => _cleanupTempFiles;
@@ -362,6 +430,9 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> BrowseSingleOutputPath { get; }
         public ReactiveCommand<Unit, Unit> BrowseSourceFolder { get; }
         public ReactiveCommand<Unit, Unit> BrowseOutputFolder { get; }
+        public ReactiveCommand<Unit, Unit> FetchSttModels { get; }
+        public ReactiveCommand<Unit, Unit> FetchVisionModels { get; }
+        public ReactiveCommand<Unit, Unit> FetchSummaryModels { get; }
 
         private CancellationTokenSource? _cts;
 
@@ -383,6 +454,15 @@ namespace ModerBox.ViewModels {
             BrowseSourceFolder = ReactiveCommand.CreateFromTask(BrowseSourceFolderAsync);
             BrowseOutputFolder = ReactiveCommand.CreateFromTask(BrowseOutputFolderAsync);
 
+            var canFetchStt = this.WhenAnyValue(x => x.SttEnabled, x => x.SttModelsLoading, (enabled, loading) => enabled && !loading);
+            FetchSttModels = ReactiveCommand.CreateFromTask(FetchSttModelsAsync, canFetchStt);
+
+            var canFetchVision = this.WhenAnyValue(x => x.VisionEnabled, x => x.VisionModelsLoading, (enabled, loading) => enabled && !loading);
+            FetchVisionModels = ReactiveCommand.CreateFromTask(FetchVisionModelsAsync, canFetchVision);
+
+            var canFetchSummary = this.WhenAnyValue(x => x.SummaryEnabled, x => x.SummaryModelsLoading, (enabled, loading) => enabled && !loading);
+            FetchSummaryModels = ReactiveCommand.CreateFromTask(FetchSummaryModelsAsync, canFetchSummary);
+
             LoadSettings();
         }
 
@@ -403,7 +483,7 @@ namespace ModerBox.ViewModels {
                 var facade = new VideoAnalysisFacade();
 
                 if (IsSingleMode) {
-                    var result = await facade.AnalyzeAsync(VideoPath, settings, progressReporter, _cts.Token);
+                    var result = await facade.AnalyzeAsync(VideoPath, settings, progressReporter, null, _cts.Token);
                     if (result.IsSuccess) {
                         ResultText = result.Summary ?? "分析完成，但未生成文案。";
                         if (!string.IsNullOrWhiteSpace(SingleOutputPath) && result.Summary != null) {
@@ -416,7 +496,7 @@ namespace ModerBox.ViewModels {
                     var results = await facade.AnalyzeFolderAsync(
                         SourceFolder, OutputFolder, settings,
                         FileNameTemplate, SkipProcessed, ContinueOnError,
-                        progressReporter, _cts.Token);
+                        progressReporter, null, _cts.Token);
 
                     var success = results.Count(r => r.IsSuccess);
                     var failed = results.Count(r => !r.IsSuccess);
@@ -432,6 +512,84 @@ namespace ModerBox.ViewModels {
                 IsRunning = false;
                 _cts?.Dispose();
                 _cts = null;
+            }
+        }
+
+        private async Task FetchSttModelsAsync() {
+            if (string.IsNullOrWhiteSpace(SttApiEndpoint) || string.IsNullOrWhiteSpace(SttApiKey)) {
+                SttModelsError = "请输入 API 地址和 Key";
+                return;
+            }
+
+            SttModelsLoading = true;
+            SttModelsError = "";
+            SttModelList.Clear();
+
+            try {
+                var service = new ModelInfoService();
+                var models = await service.GetModelsAsync(SttApiEndpoint, SttApiKey);
+                foreach (var model in models) {
+                    SttModelList.Add(model);
+                }
+                if (SttModelList.Count == 0) {
+                    SttModelsError = "未获取到模型列表";
+                }
+            } catch (Exception ex) {
+                SttModelsError = $"获取失败: {ex.Message}";
+            } finally {
+                SttModelsLoading = false;
+            }
+        }
+
+        private async Task FetchVisionModelsAsync() {
+            if (string.IsNullOrWhiteSpace(VisionApiEndpoint) || string.IsNullOrWhiteSpace(VisionApiKey)) {
+                VisionModelsError = "请输入 API 地址和 Key";
+                return;
+            }
+
+            VisionModelsLoading = true;
+            VisionModelsError = "";
+            VisionModelList.Clear();
+
+            try {
+                var service = new ModelInfoService();
+                var models = await service.GetModelsAsync(VisionApiEndpoint, VisionApiKey);
+                foreach (var model in models) {
+                    VisionModelList.Add(model);
+                }
+                if (VisionModelList.Count == 0) {
+                    VisionModelsError = "未获取到模型列表";
+                }
+            } catch (Exception ex) {
+                VisionModelsError = $"获取失败: {ex.Message}";
+            } finally {
+                VisionModelsLoading = false;
+            }
+        }
+
+        private async Task FetchSummaryModelsAsync() {
+            if (string.IsNullOrWhiteSpace(SummaryApiEndpoint) || string.IsNullOrWhiteSpace(SummaryApiKey)) {
+                SummaryModelsError = "请输入 API 地址和 Key";
+                return;
+            }
+
+            SummaryModelsLoading = true;
+            SummaryModelsError = "";
+            SummaryModelList.Clear();
+
+            try {
+                var service = new ModelInfoService();
+                var models = await service.GetModelsAsync(SummaryApiEndpoint, SummaryApiKey);
+                foreach (var model in models) {
+                    SummaryModelList.Add(model);
+                }
+                if (SummaryModelList.Count == 0) {
+                    SummaryModelsError = "未获取到模型列表";
+                }
+            } catch (Exception ex) {
+                SummaryModelsError = $"获取失败: {ex.Message}";
+            } finally {
+                SummaryModelsLoading = false;
             }
         }
 

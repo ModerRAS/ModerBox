@@ -68,7 +68,15 @@
                     <TextBlock Text="API Key"/>
                     <TextBox Text="{Binding SttApiKey}" PasswordChar="*" Watermark="输入 API Key..." IsEnabled="{Binding SttEnabled}"/>
                     <TextBlock Text="模型"/>
-                    <TextBox Text="{Binding SttModel}" Watermark="whisper-1" IsEnabled="{Binding SttEnabled}"/>
+                    <CheckBox IsChecked="{Binding SttUseCustomModel}" Content="手动输入模型名称" IsEnabled="{Binding SttEnabled}"/>
+                    <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding SttEnabled}">
+                        <StackPanel Grid.Column="0" IsVisible="{Binding !SttUseCustomModel}">
+                            <ComboBox ItemsSource="{Binding SttModelList}" SelectedItem="{Binding SttModel}" MinWidth="200"/>
+                            <TextBlock Text="{Binding SttModelsError}" Foreground="Red" FontSize="12" IsVisible="{Binding SttModelsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                        <TextBox Grid.Column="0" Text="{Binding SttModel}" Watermark="whisper-1" IsVisible="{Binding SttUseCustomModel}" Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Content="获取模型" Command="{Binding FetchSttModels}" IsVisible="{Binding !SttUseCustomModel}" IsEnabled="{Binding !SttModelsLoading}"/>
+                    </Grid>
                     <TextBlock Text="语言"/>
                     <TextBox Text="{Binding SttLanguage}" Watermark="zh (留空自动检测)" IsEnabled="{Binding SttEnabled}"/>
                 </StackPanel>
@@ -84,7 +92,15 @@
                     <TextBlock Text="API Key"/>
                     <TextBox Text="{Binding VisionApiKey}" PasswordChar="*" Watermark="输入 API Key..." IsEnabled="{Binding VisionEnabled}"/>
                     <TextBlock Text="模型"/>
-                    <TextBox Text="{Binding VisionModel}" Watermark="gpt-4o" IsEnabled="{Binding VisionEnabled}"/>
+                    <CheckBox IsChecked="{Binding VisionUseCustomModel}" Content="手动输入模型名称" IsEnabled="{Binding VisionEnabled}"/>
+                    <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding VisionEnabled}">
+                        <StackPanel Grid.Column="0" IsVisible="{Binding !VisionUseCustomModel}">
+                            <ComboBox ItemsSource="{Binding VisionModelList}" SelectedItem="{Binding VisionModel}" MinWidth="200"/>
+                            <TextBlock Text="{Binding VisionModelsError}" Foreground="Red" FontSize="12" IsVisible="{Binding VisionModelsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                        <TextBox Grid.Column="0" Text="{Binding VisionModel}" Watermark="gpt-4o" IsVisible="{Binding VisionUseCustomModel}" Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Content="获取模型" Command="{Binding FetchVisionModels}" IsVisible="{Binding !VisionUseCustomModel}" IsEnabled="{Binding !VisionModelsLoading}"/>
+                    </Grid>
                     <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" IsEnabled="{Binding VisionEnabled}">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="帧提取间隔 (秒)" Margin="0 0 8 0"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="最大帧数" Margin="0 0 8 0"/>
@@ -108,7 +124,15 @@
                     <TextBlock Text="API Key"/>
                     <TextBox Text="{Binding SummaryApiKey}" PasswordChar="*" Watermark="输入 API Key..." IsEnabled="{Binding SummaryEnabled}"/>
                     <TextBlock Text="模型"/>
-                    <TextBox Text="{Binding SummaryModel}" Watermark="gpt-4o-mini" IsEnabled="{Binding SummaryEnabled}"/>
+                    <CheckBox IsChecked="{Binding SummaryUseCustomModel}" Content="手动输入模型名称" IsEnabled="{Binding SummaryEnabled}"/>
+                    <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding SummaryEnabled}">
+                        <StackPanel Grid.Column="0" IsVisible="{Binding !SummaryUseCustomModel}">
+                            <ComboBox ItemsSource="{Binding SummaryModelList}" SelectedItem="{Binding SummaryModel}" MinWidth="200"/>
+                            <TextBlock Text="{Binding SummaryModelsError}" Foreground="Red" FontSize="12" IsVisible="{Binding SummaryModelsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                        <TextBox Grid.Column="0" Text="{Binding SummaryModel}" Watermark="gpt-4o-mini" IsVisible="{Binding SummaryUseCustomModel}" Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Content="获取模型" Command="{Binding FetchSummaryModels}" IsVisible="{Binding !SummaryUseCustomModel}" IsEnabled="{Binding !SummaryModelsLoading}"/>
+                    </Grid>
                     <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" IsEnabled="{Binding SummaryEnabled}">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="输出格式" Margin="0 0 8 0"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="详细程度" Margin="0 0 8 0"/>
