@@ -461,7 +461,7 @@ namespace ModerBox.ViewModels {
                 AllowMultiple = false,
                 FileTypeFilter = new[] {
                     new FilePickerFileType("视频文件") {
-                        Patterns = new[] { "*.mp4", "*.avi", "*.mkv", "*.mov", "*.wmv" }
+                        Patterns = new[] { "*.mp4", "*.avi", "*.mkv", "*.mov", "*.wmv", "*.webm", "*.flv", "*.mpg", "*.mpeg", "*.m4v", "*.3gp", "*.ts", "*.mts", "*.m2ts" }
                     }
                 }
             });
