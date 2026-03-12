@@ -25,26 +25,40 @@ public class SummaryService : ISummaryService
     {
         var prompt = BuildPrompt(transcript, frames, options);
 
-        var requestBody = new
+        var useChatFormat = !options.ApiEndpoint.Contains("/responses");
+        object requestBody;
+
+        if (useChatFormat)
         {
-            model = options.Model,
-            input = new object[]
+            requestBody = new
             {
-                new
+                model = options.Model,
+                messages = new object[]
                 {
-                    role = "user",
-                    content = new object[]
+                    new { role = "user", content = prompt }
+                },
+                temperature = options.Temperature
+            };
+        }
+        else
+        {
+            requestBody = new
+            {
+                model = options.Model,
+                input = new object[]
+                {
+                    new
                     {
-                        new
+                        role = "user",
+                        content = new object[]
                         {
-                            type = "input_text",
-                            text = prompt
+                            new { type = "input_text", text = prompt }
                         }
                     }
-                }
-            },
-            temperature = options.Temperature
-        };
+                },
+                temperature = options.Temperature
+            };
+        }
 
         var json = JsonSerializer.Serialize(requestBody);
         using var request = new HttpRequestMessage(HttpMethod.Post, options.ApiEndpoint);

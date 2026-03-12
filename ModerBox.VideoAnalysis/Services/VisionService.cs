@@ -25,31 +25,68 @@ public class VisionService : IVisionAnalysisService
     {
         var base64 = image.Base64Data ?? Convert.ToBase64String(await File.ReadAllBytesAsync(image.FilePath, ct));
 
-        var requestBody = new
+        // 根据 API 端点自动选择使用 Response API 还是 Chat Completions 格式
+        var useChatFormat = !options.ApiEndpoint.Contains("/responses");
+        object requestBody;
+
+        if (useChatFormat)
         {
-            model = options.Model,
-            input = new object[]
+            // SiliconFlow 等兼容 OpenAI Chat Completions API
+            requestBody = new
             {
-                new
+                model = options.Model,
+                messages = new object[]
                 {
-                    role = "user",
-                    content = new object[]
+                    new
                     {
-                        new
+                        role = "user",
+                        content = new object[]
                         {
-                            type = "input_image",
-                            image_url = $"data:image/jpeg;base64,{base64}"
-                        },
-                        new
-                        {
-                            type = "input_text",
-                            text = "请详细描述这个视频帧的画面内容，包括场景、人物、动作、文字等关键信息。"
+                            new
+                            {
+                                type = "image_url",
+                                image_url = new { url = $"data:image/jpeg;base64,{base64}" }
+                            },
+                            new
+                            {
+                                type = "text",
+                                text = "请详细描述这个视频帧的画面内容，包括场景、人物、动作、文字等关键信息。"
+                            }
                         }
                     }
-                }
-            },
-            temperature = options.Temperature
-        };
+                },
+                temperature = options.Temperature
+            };
+        }
+        else
+        {
+            // OpenAI Response API 格式
+            requestBody = new
+            {
+                model = options.Model,
+                input = new object[]
+                {
+                    new
+                    {
+                        role = "user",
+                        content = new object[]
+                        {
+                            new
+                            {
+                                type = "input_image",
+                                image_url = $"data:image/jpeg;base64,{base64}"
+                            },
+                            new
+                            {
+                                type = "input_text",
+                                text = "请详细描述这个视频帧的画面内容，包括场景、人物、动作、文字等关键信息。"
+                            }
+                        }
+                    }
+                },
+                temperature = options.Temperature
+            };
+        }
 
         var json = JsonSerializer.Serialize(requestBody);
         using var request = new HttpRequestMessage(HttpMethod.Post, options.ApiEndpoint);
