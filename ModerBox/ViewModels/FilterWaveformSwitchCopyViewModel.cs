@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -126,6 +126,12 @@ namespace ModerBox.ViewModels {
             return folders?.FirstOrDefault()?.TryGetLocalPath();
         }
 
+        /// <summary>
+        /// Scans the source folder for COMTRADE CFG files, filters them by the configured date range and optional channel-change criteria, copies matching CFG/DAT file pairs into the target folder while reporting progress, and updates the view model's status and running state.
+        /// </summary>
+        /// <remarks>
+        /// The operation runs until all files are processed or cancellation is requested via the view model's cancellation token source. Progress and status text are updated on the UI-facing properties; counters for scanned, matched, and copied files are maintained internally.
+        /// </remarks>
         private async Task RunAsync() {
             if (!ValidateInputs(out var startDateTime, out var endDateTime, out var regex)) return;
 

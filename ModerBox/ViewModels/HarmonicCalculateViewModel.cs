@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
@@ -72,6 +72,10 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        /// <summary>
+        /// Performs harmonic analysis on configuration files in <see cref="SourceFolder"/>, writes the combined results to <see cref="TargetFile"/>, updates <see cref="Progress"/> and <see cref="ProgressMax"/>, and opens the target file in the system explorer.
+        /// </summary>
+        /// <returns>A Task that completes when the calculation, file writing, and explorer-open operations have finished.</returns>
         private async Task RunCalculateTask() {
             Progress = 0;
             await Task.Run(() => {
