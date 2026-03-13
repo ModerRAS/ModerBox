@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -96,10 +97,30 @@ public class VisionService : IVisionAnalysisService
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
 
-        var response = await _httpClient.SendAsync(request, cts.Token);
-        response.EnsureSuccessStatusCode();
+        int maxRetries = 3;
+        int[] delays = { 1000, 2000, 4000 }; // milliseconds
 
-        var responseJson = await response.Content.ReadAsStringAsync(cts.Token);
+        string responseJson = "";
+        for (int retry = 0; retry < maxRetries; retry++)
+        {
+            try
+            {
+                var response = await _httpClient.SendAsync(request, cts.Token);
+                response.EnsureSuccessStatusCode();
+
+                responseJson = await response.Content.ReadAsStringAsync(cts.Token);
+                break; // success - exit retry loop
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.InternalServerError)
+            {
+                Console.WriteLine($"[VisionService] HTTP 500 error, retry {retry + 1}/{maxRetries}");
+                if (retry == maxRetries - 1)
+                {
+                    throw; // last retry - throw
+                }
+                await Task.Delay(delays[retry], cts.Token);
+            }
+        }
         var description = ExtractResponseText(responseJson);
 
         return new FrameDescription

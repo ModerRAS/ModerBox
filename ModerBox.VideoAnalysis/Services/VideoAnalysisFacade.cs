@@ -31,6 +31,7 @@ public class VideoAnalysisFacade
         string videoPath,
         VideoAnalysisSettings settings,
         IProgress<AnalysisProgress>? progress = null,
+        Action<string>? LogCallback = null,
         CancellationToken ct = default)
     {
         var result = new VideoAnalysisResult();
@@ -86,6 +87,10 @@ public class VideoAnalysisFacade
                     ReportProgress(progress, AnalysisStage.Transcribing, 30, "正在转写语音...");
                     transcript = await _speechService.TranscribeAsync(audio, settings.SpeechToText, ct);
                     result.Transcript = transcript;
+                    if (transcript?.Text != null)
+                    {
+                        LogCallback?.Invoke($"[语音转写] {transcript.Text.Substring(0, Math.Min(200, transcript.Text.Length))}...");
+                    }
                 }
 
                 // 阶段 3: 视觉分析
@@ -96,6 +101,10 @@ public class VideoAnalysisFacade
                     frameDescriptions = await _visionService.AnalyzeFramesAsync(
                         frames, settings.VisionAnalysis, progress, ct);
                     result.FrameDescriptions = frameDescriptions;
+                    foreach (var frame in frameDescriptions)
+                    {
+                        LogCallback?.Invoke($"[画面分析] 帧 {frame.Timestamp:F1}s: {frame.Description.Substring(0, Math.Min(100, frame.Description.Length))}...");
+                    }
                 }
 
                 // 阶段 4: 文案整理
@@ -105,6 +114,10 @@ public class VideoAnalysisFacade
                     var summary = await _summaryService.SummarizeAsync(
                         transcript, frameDescriptions, settings.Summary, ct);
                     result.Summary = summary;
+                    if (!string.IsNullOrEmpty(summary))
+                    {
+                        LogCallback?.Invoke($"[文案整理] {summary.Substring(0, Math.Min(200, summary.Length))}...");
+                    }
                 }
 
                 // 阶段 5: 完成
@@ -147,6 +160,7 @@ public class VideoAnalysisFacade
         bool skipProcessed = true,
         bool continueOnError = true,
         IProgress<AnalysisProgress>? progress = null,
+        Action<string>? LogCallback = null,
         CancellationToken ct = default)
     {
         var videoExtensions = new[] { ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".webm", ".flv", ".mpg", ".mpeg", ".m4v", ".3gp", ".ts", ".mts", ".m2ts" };
@@ -183,7 +197,7 @@ public class VideoAnalysisFacade
 
             try
             {
-                var result = await AnalyzeAsync(videoFile, settings, progress, ct);
+                var result = await AnalyzeAsync(videoFile, settings, progress, LogCallback, ct);
                 results.Add(result);
 
                 if (result.IsSuccess && !string.IsNullOrEmpty(result.Summary))

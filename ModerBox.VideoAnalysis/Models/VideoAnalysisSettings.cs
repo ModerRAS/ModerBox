@@ -37,6 +37,7 @@ public class SpeechToTextSettings
     public string Model { get; set; } = "whisper-1";
     public string Language { get; set; } = "zh";
     public string ResponseFormat { get; set; } = "json";
+    public int TimeoutSeconds { get; set; } = 60;
 }
 
 /// <summary>
@@ -71,4 +72,5 @@ public class SummarySettings
     public bool IncludeVisualDescriptions { get; set; } = true;
     public string DetailLevel { get; set; } = "normal";
     public string Style { get; set; } = "professional";
+    public int TimeoutSeconds { get; set; } = 60;
 }
