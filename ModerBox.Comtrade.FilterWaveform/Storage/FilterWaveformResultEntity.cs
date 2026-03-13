@@ -22,6 +22,10 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
         public double PhaseBClosingResistorDurationMs { get; set; }
         public double PhaseCClosingResistorDurationMs { get; set; }
 
+        public bool PhaseAHasArcReignition { get; set; }
+        public bool PhaseBHasArcReignition { get; set; }
+        public bool PhaseCHasArcReignition { get; set; }
+
         public string? ImagePath { get; set; }
         public string? SourceCfgPath { get; set; }
     }

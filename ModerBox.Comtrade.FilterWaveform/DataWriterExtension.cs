@@ -34,6 +34,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     "B相合闸电阻投入时间/ms",
                     "C相合闸电阻投入时间/ms",
                     "波形有无异常",
+                    "A相息弧重燃",
+                    "B相息弧重燃",
+                    "C相息弧重燃",
                 }
             };
             total.AddRange(data
@@ -54,6 +57,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                     d.SwitchType == SwitchType.Close && d.PhaseBClosingResistorDurationMs > 0 ? d.PhaseBClosingResistorDurationMs.ToString("F2") : "",
                     d.SwitchType == SwitchType.Close && d.PhaseCClosingResistorDurationMs > 0 ? d.PhaseCClosingResistorDurationMs.ToString("F2") : "",
                     d.WorkType == WorkType.Ok ? "无" : "有",
+                    d.PhaseAHasArcReignition ? "有" : "无",
+                    d.PhaseBHasArcReignition ? "有" : "无",
+                    d.PhaseCHasArcReignition ? "有" : "无",
                 };
                 }));
             dataWriter.WriteDoubleList(total, SheetName);
@@ -79,6 +85,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 "B相合闸电阻投入时间/ms",
                 "C相合闸电阻投入时间/ms",
                 "波形有无异常",
+                "A相息弧重燃",
+                "B相息弧重燃",
+                "C相息弧重燃",
             };
 
             for (var x = 0; x < headers.Length; x++) {
@@ -103,6 +112,9 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 worksheet.Cell(rowIndex, 12).Value = r.SwitchType == SwitchType.Close && r.PhaseCClosingResistorDurationMs > 0 ? r.PhaseCClosingResistorDurationMs.ToString("F2") : "";
 
                 worksheet.Cell(rowIndex, 13).Value = r.WorkType == WorkType.Ok ? "无" : "有";
+                worksheet.Cell(rowIndex, 14).Value = r.PhaseAHasArcReignition ? "有" : "无";
+                worksheet.Cell(rowIndex, 15).Value = r.PhaseBHasArcReignition ? "有" : "无";
+                worksheet.Cell(rowIndex, 16).Value = r.PhaseCHasArcReignition ? "有" : "无";
                 rowIndex++;
             }
         }
