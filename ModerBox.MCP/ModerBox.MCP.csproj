@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ModerBox.MCP</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModerBox.Common\ModerBox.Common.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.FilterWaveform\ModerBox.Comtrade.FilterWaveform.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.Harmonic\ModerBox.Comtrade.Harmonic.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.PeriodicWork\ModerBox.Comtrade.PeriodicWork.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.CurrentDifferenceAnalysis\ModerBox.Comtrade.CurrentDifferenceAnalysis.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.Analysis.CurrentDifference\ModerBox.Comtrade.Analysis.CurrentDifference.csproj" />
+    <ProjectReference Include="..\ModerBox.QuestionBank\ModerBox.QuestionBank.csproj" />
+    <ProjectReference Include="..\ModerBox.Comtrade.Export\ModerBox.Comtrade.Export.csproj" />
+    <ProjectReference Include="..\ModerBox.CableRouting\ModerBox.CableRouting.csproj" />
+    <ProjectReference Include="..\ModerBox.VideoAnalysis\ModerBox.VideoAnalysis.csproj" />
+  </ItemGroup>
+
+</Project>
