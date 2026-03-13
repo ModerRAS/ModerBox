@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -42,11 +43,35 @@ public class WhisperService : ISpeechToTextService
 
         request.Content = content;
 
-        var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        var result = JsonSerializer.Deserialize<WhisperResponse>(json, new JsonSerializerOptions
+        int maxRetries = 3;
+        int[] delays = { 1000, 2000, 4000 }; // milliseconds
+
+        var responseJson = "";
+        for (int retry = 0; retry < maxRetries; retry++)
+        {
+            try
+            {
+                var response = await _httpClient.SendAsync(request, cts.Token);
+                response.EnsureSuccessStatusCode();
+
+                responseJson = await response.Content.ReadAsStringAsync(cts.Token);
+                break; // success - exit retry loop
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.InternalServerError)
+            {
+                Console.WriteLine($"[WhisperService] HTTP 500 error, retry {retry + 1}/{maxRetries}");
+                if (retry == maxRetries - 1)
+                {
+                    throw; // last retry - throw
+                }
+                await Task.Delay(delays[retry], cts.Token);
+            }
+        }
+
+        var result = JsonSerializer.Deserialize<WhisperResponse>(responseJson, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });

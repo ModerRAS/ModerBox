@@ -168,6 +168,12 @@
                 <TextBlock Text="{Binding ProgressMessage}" HorizontalAlignment="Center"/>
             </StackPanel>
 
+            <!-- 日志面板 -->
+            <TextBlock Text="实时日志" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
+            <TextBox Text="{Binding LogText}" IsReadOnly="True" AcceptsReturn="True"
+                     TextWrapping="Wrap" MinHeight="150" MaxHeight="300"
+                     Watermark="分析过程中的日志将显示在这里..."/>
+
             <!-- 结果预览 -->
             <TextBlock Text="结果预览" FontWeight="Bold" FontSize="16" Margin="0 8 0 0"/>
             <TextBox Text="{Binding ResultText}" IsReadOnly="True" AcceptsReturn="True"

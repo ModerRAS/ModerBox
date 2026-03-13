@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Text;
 using System.Text.Json;
 using ModerBox.VideoAnalysis.Models;
@@ -65,10 +67,29 @@ public class SummaryService : ISummaryService
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
         request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
 
-        var responseJson = await response.Content.ReadAsStringAsync(ct);
+        int maxRetries = 3;
+        int[] delays = { 1000, 2000, 4000 };
+        HttpResponseMessage? response = null;
+
+        for (int retry = 0; retry < maxRetries; retry++)
+        {
+            try
+            {
+                response = await _httpClient.SendAsync(request, cts.Token);
+                response.EnsureSuccessStatusCode();
+                break;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.InternalServerError)
+            {
+                if (retry == maxRetries - 1) throw;
+                await Task.Delay(delays[retry]);
+            }
+        }
+
+        var responseJson = await response.Content.ReadAsStringAsync(cts.Token);
         return VisionService.ExtractResponseText(responseJson);
     }
 
