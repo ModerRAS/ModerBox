@@ -60,3 +60,7 @@ ModerBox/
 | ViewModelBase | ReactiveUI base with RaiseAndSetIfChanged |
 | MainWindowViewModel | Manages Pages, navigation |
 | ViewLocator | Resolves View from ViewModel name |
+
+## SEE ALSO
+- Root AGENTS.md for CLI commands
+- ModerBox.Cli/AGENTS.md for CLI details

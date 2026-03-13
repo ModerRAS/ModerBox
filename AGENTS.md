@@ -100,6 +100,30 @@ dotnet build ModerBox.MCP/ModerBox.MCP.csproj -c Release
 ## ANTI-PATTERNS (THIS PROJECT)
 - NONE FOUND - Clean codebase, no TODO/FIXME/HACK comments
 
+## PROJECT STRUCTURE (Full)
+```
+ModerBox.sln           # 30 projects
+├── ModerBox/          # Main Avalonia UI app (MVVM + ReactiveUI)
+│   ├── ViewModels/    # 13 feature ViewModels
+│   └── Views/         # UserControls
+├── ModerBox.MCP/      # MCP Server (Model Context Protocol)
+├── ModerBox.Cli/      # Command-line interface
+│   └── Commands/      # 5 CLI commands
+├── ModerBox.Common/   # Utilities (DynamicTable, DataWriter, FileHelper)
+├── ModerBox.Comtrade/ # COMTRADE file parsing core
+├── ModerBox.Comtrade.Harmonic/       # Harmonic analysis
+├── ModerBox.Comtrade.FilterWaveform/  # AC filter waveform detection
+├── ModerBox.Comtrade.CurrentDifferenceAnalysis/ # Current difference
+├── ModerBox.Comtrade.Analysis.CurrentDifference/ # Current difference (new)
+├── ModerBox.Comtrade.PeriodicWork/   # Periodic work
+├── ModerBox.Comtrade.Export/         # Channel export
+├── ModerBox.CableRouting/            # Cable routing
+├── ModerBox.QuestionBank/             # Question bank converter
+├── ModerBox.VideoAnalysis/           # Video analysis
+├── ModerBox.UIAutomation.*/           # Android UI automation
+└── *.Test/                           # Unit tests (MSTest)
+```
+
 ## COMMANDS
 ```bash
 # Build
