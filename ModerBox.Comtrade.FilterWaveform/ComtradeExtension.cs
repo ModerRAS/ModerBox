@@ -722,5 +722,71 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 PhaseCConfidence = resultC?.Confidence ?? 0
             };
         }
+
+        public static ArcReignitionResult DetectArcReignition(this ComtradeInfo comtradeInfo, string channelName) {
+            var analogInfo = comtradeInfo.AData.GetACFilterAnalog(channelName);
+            if (analogInfo is null || analogInfo.Data.Length == 0) {
+                return new ArcReignitionResult { HasReignition = false };
+            }
+
+            var waveform = analogInfo.Data;
+            var stopIndex = analogInfo.DetectCurrentStopIndex();
+
+            if (stopIndex <= 0) {
+                return new ArcReignitionResult { HasReignition = false };
+            }
+
+            const int windowSize = 100;
+            const int tailWindow = 100;
+            if (tailWindow >= waveform.Length) {
+                return new ArcReignitionResult { HasReignition = false };
+            }
+
+            var tail = new ReadOnlySpan<double>(waveform, waveform.Length - tailWindow, tailWindow);
+            double noiseRms = CalculateRms(tail);
+
+            double reignitionThreshold = Math.Max(noiseRms * 10, Jitter * 3);
+
+            int searchStart = stopIndex + windowSize * 2;
+            if (searchStart >= waveform.Length) {
+                return new ArcReignitionResult { HasReignition = false };
+            }
+
+            var result = new ArcReignitionResult {
+                FirstReignitionIndex = -1,
+                ReignitionCount = 0,
+                MaxReignitionAmplitude = 0
+            };
+
+            bool wasAbove = false;
+            int reignitionStart = -1;
+
+            for (int i = searchStart; i < waveform.Length; i++) {
+                double absValue = Math.Abs(waveform[i]);
+                bool isAbove = absValue > reignitionThreshold;
+
+                if (isAbove) {
+                    if (result.FirstReignitionIndex < 0) {
+                        result.FirstReignitionIndex = i;
+                    }
+                    if (absValue > result.MaxReignitionAmplitude) {
+                        result.MaxReignitionAmplitude = absValue;
+                    }
+                }
+
+                if (isAbove && !wasAbove) {
+                    result.ReignitionCount++;
+                    reignitionStart = i;
+                }
+
+                wasAbove = isAbove;
+            }
+
+            if (result.ReignitionCount > 0 && result.FirstReignitionIndex > 0) {
+                result.HasReignition = true;
+            }
+
+            return result;
+        }
     }
 }

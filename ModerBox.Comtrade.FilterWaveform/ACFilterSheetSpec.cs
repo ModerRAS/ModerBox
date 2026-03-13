@@ -68,6 +68,12 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// 获取或设置C相合闸电阻投入时间长度（单位：毫秒）。
         /// </summary>
         public double PhaseCClosingResistorDurationMs { get; set; }
+
+        public bool PhaseAHasArcReignition { get; set; }
+
+        public bool PhaseBHasArcReignition { get; set; }
+
+        public bool PhaseCHasArcReignition { get; set; }
     }
     /// <summary>
     /// 定义开关操作的类型。

@@ -400,11 +400,24 @@ namespace ModerBox.Comtrade.FilterWaveform {
                             () => PhaseBSwitchOpen = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseBSwitchOpen).GetChangePointCount(),
                             () => PhaseCSwitchOpen = comtradeInfo.DData.GetACFilterDigital(obj.b.PhaseCSwitchOpen).GetChangePointCount()
                             );
+
+                        if (retData.SwitchType == SwitchType.Open) {
+                            var arcReignitionA = comtradeInfo.DetectArcReignition(obj.b.PhaseACurrentWave);
+                            var arcReignitionB = comtradeInfo.DetectArcReignition(obj.b.PhaseBCurrentWave);
+                            var arcReignitionC = comtradeInfo.DetectArcReignition(obj.b.PhaseCCurrentWave);
+                            retData.PhaseAHasArcReignition = arcReignitionA.HasReignition;
+                            retData.PhaseBHasArcReignition = arcReignitionB.HasReignition;
+                            retData.PhaseCHasArcReignition = arcReignitionC.HasReignition;
+                        }
+
                         if (PhaseASwitchClose > 1 || PhaseBSwitchClose > 1 || PhaseCSwitchClose > 1 ||
                             PhaseASwitchOpen > 1 || PhaseBSwitchOpen > 1 || PhaseCSwitchOpen > 1 ||
                             retData.PhaseATimeInterval <= 0 ||
                             retData.PhaseBTimeInterval <= 0 ||
-                            retData.PhaseCTimeInterval <= 0) {
+                            retData.PhaseCTimeInterval <= 0 ||
+                            retData.PhaseAHasArcReignition ||
+                            retData.PhaseBHasArcReignition ||
+                            retData.PhaseCHasArcReignition) {
                             retData.WorkType = WorkType.Error;
                         } else {
                             retData.WorkType = WorkType.Ok;
