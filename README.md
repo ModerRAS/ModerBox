@@ -52,11 +52,43 @@
 
 ## 🚀 如何开始
 
+### GUI 版本
+
 使用 ModerBox 非常简单：
 
 1.  前往本仓库的 **[Releases 页面](https://github.com/ModerRAS/ModerBox/releases)**。
 2.  下载最新版本的软件包（例如 `ModerBox-win-x64.zip`）。
 3.  解压后，直接运行 `ModerBox.exe` 即可启动！
+
+### CLI 版本
+
+ModerBox 同时提供命令行版本，适合自动化脚本和服务器环境：
+
+```bash
+# 进入 CLI 项目目录
+cd ModerBox.Cli
+
+# 构建项目
+dotnet build
+
+# 运行交互模式
+dotnet run
+
+# 或使用命令行模式
+dotnet run -- harmonic --source "C:\data" --target "C:\result.xlsx"
+```
+
+#### CLI 命令列表
+
+| 命令 | 功能 | 用法示例 |
+|------|------|----------|
+| `harmonic` / `h` | 批量谐波分析 | `ModerBox.Cli h --source "C:\data" --target "result.xlsx"` |
+| `filter` / `f` | 滤波器分合闸波形检测 | `ModerBox.Cli f --source "C:\waveforms" --target "output.xlsx"` |
+| `current-diff` / `cd` | 接地极电流差值分析 | `ModerBox.Cli cd --source "C:\data" --target "result.csv"` |
+| `question-bank` / `qb` | 题库格式转换 | `ModerBox.Cli qb --source "input.txt" --target "output.xlsx"` |
+| `cable` / `c` | 电缆走向绘制 | `ModerBox.Cli c --config "config.json"` |
+
+更多用法请参阅 `ModerBox.Cli/README.md`
 
 ## 🛠️ 技术栈
 
