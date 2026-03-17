@@ -26,7 +26,8 @@ namespace ModerBox.ViewModels {
                 new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" },
                 new ComtradeExportViewModel { Title = "波形通道导出", Icon = "Save" },
                 new CableRoutingViewModel { Title = "电缆走向绘制", Icon = "Ruler" },
-                new VideoAnalysisViewModel { Title = "视频分析", Icon = "Play" }
+                new VideoAnalysisViewModel { Title = "视频分析", Icon = "Play" },
+                new ContributionCalculationViewModel { Title = "工作票贡献度计算", Icon = "Calculate" }
             };
             _currentPage = Pages.First();
         }

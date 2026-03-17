@@ -55,6 +55,7 @@ class Program
                         "3. 接地极电流差值分析",
                         "4. 题库转换",
                         "5. 电缆走向绘制",
+                        "6. 工作票贡献度计算",
                         "0. 退出"
                     }));
 
@@ -65,6 +66,7 @@ class Program
                 "3. 接地极电流差值分析" => await CurrentDifferenceCommand.RunAsync(),
                 "4. 题库转换" => await QuestionBankCommand.RunAsync(),
                 "5. 电缆走向绘制" => await CableRoutingCommand.RunAsync(),
+                "6. 工作票贡献度计算" => await ContributionCommand.RunAsync(),
                 "0. 退出" => 0,
                 _ => 0
             };
@@ -102,6 +104,7 @@ class Program
             "current-diff" or "cd" => await CurrentDifferenceCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
             "question-bank" or "qb" => await QuestionBankCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
             "cable" or "c" => await CableRoutingCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
+            "contribution" or "ctb" => await ContributionCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
             "help" or "?" => ShowHelp(),
             _ => ShowHelp()
         };
@@ -118,11 +121,13 @@ class Program
               current-diff, cd  接地极电流差值分析
               question-bank, qb 题库转换
               cable, c          电缆走向绘制
+              contribution, ctb 工作票贡献度计算
               help, ?           显示帮助信息
 
             示例:
               ModerBox.Cli harmonic --source "C:\data" --target "C:\result.xlsx"
               ModerBox.Cli filter "C:\waveforms" "C:\output.xlsx"
+              ModerBox.Cli contribution --source "C:\data.csv" --target "C:\result.xlsx"
               ModerBox.Cli
             """;
         AnsiConsole.MarkupLine(help);
