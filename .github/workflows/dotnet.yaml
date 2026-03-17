@@ -50,10 +50,27 @@ jobs:
             artifact: publish-normal
             output: publish-normal
             publishArgs: "-c Release -o publish-normal -r win-x64"
+            project: ModerBox/ModerBox.csproj
           - name: native-aot
             artifact: publish-native-aot
             output: publish-native-aot
             publishArgs: "-c Release -o publish-native-aot -r win-x64 -p:PublishAot=true -p:StripSymbols=true"
+            project: ModerBox/ModerBox.csproj
+          - name: mcp
+            artifact: publish-mcp
+            output: publish-mcp
+            publishArgs: "-c Release -o publish-mcp -r win-x64 --self-contained true"
+            project: ModerBox.MCP/ModerBox.MCP.csproj
+          - name: cli-normal
+            artifact: publish-cli-normal
+            output: publish-cli-normal
+            publishArgs: "-c Release -o publish-cli-normal -r win-x64 --self-contained true -p:PublishSingleFile=true"
+            project: ModerBox.Cli/ModerBox.Cli.csproj
+          - name: cli-native-aot
+            artifact: publish-cli-native-aot
+            output: publish-cli-native-aot
+            publishArgs: "-c Release -o publish-cli-native-aot -r win-x64 -p:PublishAot=true -p:StripSymbols=true"
+            project: ModerBox.Cli/ModerBox.Cli.csproj
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -68,7 +85,7 @@ jobs:
     - name: Publish Application (${{ matrix.name }})
       shell: pwsh
       run: |
-        dotnet publish ModerBox/ModerBox.csproj ${{ matrix.publishArgs }}
+        dotnet publish ${{ matrix.project }} ${{ matrix.publishArgs }}
     - name: Upload Publish Artifact (${{ matrix.name }})
       uses: actions/upload-artifact@v4
       with:
@@ -94,6 +111,16 @@ jobs:
       with:
         name: publish-normal
         path: publish-normal
+    - name: Download MCP Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: publish-mcp
+        path: publish-mcp
+    - name: Download CLI Normal Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: publish-cli-normal
+        path: publish-cli-normal
     - name: Install vpk
       run: dotnet tool install -g vpk
       shell: pwsh
@@ -364,6 +391,26 @@ jobs:
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nightly-win-x64 --releaseName "ModerBox $Version (nightly)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
         vpk upload s3 --channel nightly-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
 
+        # Upload MCP server as separate release asset
+        $McpZipPath = "publish-mcp.zip"
+        Compress-Archive -Path "publish-mcp/*" -DestinationPath $McpZipPath -Force
+        $McpAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.MCP.zip" } | Select-Object -ExpandProperty browser_download_url
+        if ($McpAssetUrl) {
+          Invoke-RestMethod -Method Delete -Uri "$McpAssetUrl" -Headers $headers
+        }
+        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.MCP.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($McpZipPath))
+        Remove-Item $McpZipPath -Force
+
+        # Upload CLI as separate release asset (nightly)
+        $CliZipPath = "publish-cli-normal.zip"
+        Compress-Archive -Path "publish-cli-normal/*" -DestinationPath $CliZipPath -Force
+        $CliAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.Cli.zip" } | Select-Object -ExpandProperty browser_download_url
+        if ($CliAssetUrl) {
+          Invoke-RestMethod -Method Delete -Uri "$CliAssetUrl" -Headers $headers
+        }
+        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.Cli.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($CliZipPath))
+        Remove-Item $CliZipPath -Force
+
   release-nativeaot:
     permissions: write-all
     runs-on: windows-latest
@@ -383,6 +430,16 @@ jobs:
       with:
         name: publish-native-aot
         path: publish-native-aot
+    - name: Download MCP Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: publish-mcp
+        path: publish-mcp
+    - name: Download CLI Native AOT Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: publish-cli-native-aot
+        path: publish-cli-native-aot
     - name: Install vpk
       run: dotnet tool install -g vpk
       shell: pwsh
@@ -652,3 +709,23 @@ jobs:
         vpk pack -u ModerBox --channel nativeaot-win-x64 -v $Version -p publish-native-aot
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nativeaot-win-x64 --releaseName "ModerBox $Version (nativeaot)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
         vpk upload s3 --channel nativeaot-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
+
+        # Upload MCP server as separate release asset
+        $McpZipPath = "publish-mcp.zip"
+        Compress-Archive -Path "publish-mcp/*" -DestinationPath $McpZipPath -Force
+        $McpAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.MCP.zip" } | Select-Object -ExpandProperty browser_download_url
+        if ($McpAssetUrl) {
+          Invoke-RestMethod -Method Delete -Uri "$McpAssetUrl" -Headers $headers
+        }
+        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.MCP.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($McpZipPath))
+        Remove-Item $McpZipPath -Force
+
+        # Upload CLI Native AOT as separate release asset
+        $CliZipPath = "publish-cli-native-aot.zip"
+        Compress-Archive -Path "publish-cli-native-aot/*" -DestinationPath $CliZipPath -Force
+        $CliAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.Cli.NativeAot.zip" } | Select-Object -ExpandProperty browser_download_url
+        if ($CliAssetUrl) {
+          Invoke-RestMethod -Method Delete -Uri "$CliAssetUrl" -Headers $headers
+        }
+        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.Cli.NativeAot.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($CliZipPath))
+        Remove-Item $CliZipPath -Force
