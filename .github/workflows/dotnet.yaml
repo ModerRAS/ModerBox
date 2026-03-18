@@ -122,37 +122,28 @@ jobs:
         name: publish-cli-normal
         path: publish-cli-normal
     - name: Install vpk
-      run: dotnet tool install -g vpk
+      run: dotnet tool update -g vpk --add-source https://api.nuget.org/v3/index.json
       shell: pwsh
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        aws-region: auto
     - name: Clean Old Releases from R2 (nightly)
       env:
-        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         R2_BUCKET: ${{ secrets.R2_BUCKET }}
         S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
       shell: pwsh
       run: |
-        # 安装AWS CLI工具（用于访问R2）
-        if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
-          Write-Host "Installing AWS CLI..."
-          Invoke-WebRequest -Uri "https://awscli.amazonaws.com/AWSCLIV2.msi" -OutFile "AWSCLIV2.msi"
-          Start-Process msiexec.exe -Wait -ArgumentList '/i AWSCLIV2.msi /quiet'
-          $env:PATH = "$env:PATH;C:\Program Files\Amazon\AWSCLIV2"
-        }
-
-        # 配置AWS CLI访问R2
-        aws configure set aws_access_key_id $env:R2_ACCESS_KEY_ID --profile r2
-        aws configure set aws_secret_access_key $env:R2_SECRET_ACCESS_KEY --profile r2
-        aws configure set region auto --profile r2
-
         Write-Host "开始清理R2存储桶中 nightly-win-x64 频道的旧文件..."
 
         # 获取所有文件列表
-        $allFiles = aws s3api list-objects-v2 --bucket $env:R2_BUCKET --endpoint-url $env:S3_ENDPOINT --profile r2 --query 'Contents[].{Key:Key,LastModified:LastModified}' --output json | ConvertFrom-Json
+        $allFiles = aws s3api list-objects-v2 --bucket $env:R2_BUCKET --endpoint-url $env:S3_ENDPOINT --query 'Contents[].{Key:Key,LastModified:LastModified}' --output json | ConvertFrom-Json
 
         if (-not $allFiles) {
           Write-Host "未找到任何文件，跳过清理步骤"
-          return
+          exit 0
         }
 
         # 分类文件
@@ -192,7 +183,7 @@ jobs:
         function Remove-S3File {
           param($key)
           try {
-            aws s3api delete-object --bucket $env:R2_BUCKET --key $key --endpoint-url $env:S3_ENDPOINT --profile r2
+            aws s3api delete-object --bucket $env:R2_BUCKET --key $key --endpoint-url $env:S3_ENDPOINT
             Write-Host "已删除: $key"
             return $true
           }
@@ -258,7 +249,7 @@ jobs:
             # 下载现有的releases文件
             $releasesFile = "releases.nightly-win-x64.json"
             $tempReleasesFile = "temp-releases.json"
-            aws s3api get-object --bucket $env:R2_BUCKET --key $releasesFile --endpoint-url $env:S3_ENDPOINT --profile r2 $tempReleasesFile
+            aws s3api get-object --bucket $env:R2_BUCKET --key $releasesFile --endpoint-url $env:S3_ENDPOINT $tempReleasesFile
             
             if (Test-Path $tempReleasesFile) {
               # 解析JSON
@@ -275,7 +266,7 @@ jobs:
               
               # 重新上传更新后的文件
               $releasesData | ConvertTo-Json -Compress | Out-File -FilePath $tempReleasesFile -Encoding UTF8
-              aws s3api put-object --bucket $env:R2_BUCKET --key $releasesFile --body $tempReleasesFile --endpoint-url $env:S3_ENDPOINT --profile r2
+              aws s3api put-object --bucket $env:R2_BUCKET --key $releasesFile --body $tempReleasesFile --endpoint-url $env:S3_ENDPOINT
               
               Write-Host "已更新 releases.nightly-win-x64.json 文件"
             }
@@ -387,9 +378,9 @@ jobs:
         }
 
         vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nightly-win-x64
-        vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish-normal
-        vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nightly-win-x64 --releaseName "ModerBox $Version (nightly)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
-        vpk upload s3 --channel nightly-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
+        vpk pack -u ModerBox --channel nightly-win-x64 -v $Version -p publish-normal -e ModerBox.exe
+        vpk upload github -o publish-normal --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nightly-win-x64 --releaseName "ModerBox $Version (nightly)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
+        vpk upload s3 -o publish-normal --channel nightly-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
 
         # Upload MCP server as separate release asset
         $McpZipPath = "publish-mcp.zip"
@@ -441,37 +432,29 @@ jobs:
         name: publish-cli-native-aot
         path: publish-cli-native-aot
     - name: Install vpk
-      run: dotnet tool install -g vpk
+      run: dotnet tool update -g vpk --add-source https://api.nuget.org/v3/index.json
       shell: pwsh
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        aws-region: auto
     - name: Clean Old Releases from R2 (nativeaot)
       env:
-        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         R2_BUCKET: ${{ secrets.R2_BUCKET }}
         S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
       shell: pwsh
       run: |
-        # 安装AWS CLI工具（用于访问R2）
-        if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
-          Write-Host "Installing AWS CLI..."
-          Invoke-WebRequest -Uri "https://awscli.amazonaws.com/AWSCLIV2.msi" -OutFile "AWSCLIV2.msi"
-          Start-Process msiexec.exe -Wait -ArgumentList '/i AWSCLIV2.msi /quiet'
-          $env:PATH = "$env:PATH;C:\Program Files\Amazon\AWSCLIV2"
-        }
-
-        # 配置AWS CLI访问R2
-        aws configure set aws_access_key_id $env:R2_ACCESS_KEY_ID --profile r2
-        aws configure set aws_secret_access_key $env:R2_SECRET_ACCESS_KEY --profile r2
-        aws configure set region auto --profile r2
-
+        # AWS CLI should already be available via aws-actions/configure-aws-credentials
         Write-Host "开始清理R2存储桶中 nativeaot-win-x64 频道的旧文件..."
 
         # 获取所有文件列表
-        $allFiles = aws s3api list-objects-v2 --bucket $env:R2_BUCKET --endpoint-url $env:S3_ENDPOINT --profile r2 --query 'Contents[].{Key:Key,LastModified:LastModified}' --output json | ConvertFrom-Json
+        $allFiles = aws s3api list-objects-v2 --bucket $env:R2_BUCKET --endpoint-url $env:S3_ENDPOINT --query 'Contents[].{Key:Key,LastModified:LastModified}' --output json | ConvertFrom-Json
 
         if (-not $allFiles) {
           Write-Host "未找到任何文件，跳过清理步骤"
-          return
+          exit 0
         }
 
         # 分类文件
@@ -511,7 +494,7 @@ jobs:
         function Remove-S3File {
           param($key)
           try {
-            aws s3api delete-object --bucket $env:R2_BUCKET --key $key --endpoint-url $env:S3_ENDPOINT --profile r2
+            aws s3api delete-object --bucket $env:R2_BUCKET --key $key --endpoint-url $env:S3_ENDPOINT
             Write-Host "已删除: $key"
             return $true
           }
@@ -577,7 +560,7 @@ jobs:
             # 下载现有的releases文件
             $releasesFile = "releases.nativeaot-win-x64.json"
             $tempReleasesFile = "temp-releases.json"
-            aws s3api get-object --bucket $env:R2_BUCKET --key $releasesFile --endpoint-url $env:S3_ENDPOINT --profile r2 $tempReleasesFile
+            aws s3api get-object --bucket $env:R2_BUCKET --key $releasesFile --endpoint-url $env:S3_ENDPOINT $tempReleasesFile
             
             if (Test-Path $tempReleasesFile) {
               # 解析JSON
@@ -594,7 +577,7 @@ jobs:
               
               # 重新上传更新后的文件
               $releasesData | ConvertTo-Json -Compress | Out-File -FilePath $tempReleasesFile -Encoding UTF8
-              aws s3api put-object --bucket $env:R2_BUCKET --key $releasesFile --body $tempReleasesFile --endpoint-url $env:S3_ENDPOINT --profile r2
+              aws s3api put-object --bucket $env:R2_BUCKET --key $releasesFile --body $tempReleasesFile --endpoint-url $env:S3_ENDPOINT
               
               Write-Host "已更新 releases.nativeaot-win-x64.json 文件"
             }
@@ -706,9 +689,9 @@ jobs:
         }
 
         vpk download github --repoUrl https://github.com/ModerRAS/ModerBox --channel nativeaot-win-x64
-        vpk pack -u ModerBox --channel nativeaot-win-x64 -v $Version -p publish-native-aot
-        vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nativeaot-win-x64 --releaseName "ModerBox $Version (nativeaot)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
-        vpk upload s3 --channel nativeaot-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
+        vpk pack -u ModerBox --channel nativeaot-win-x64 -v $Version -p publish-native-aot -e ModerBox.exe
+        vpk upload github -o publish-native-aot --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nativeaot-win-x64 --releaseName "ModerBox $Version (nativeaot)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
+        vpk upload s3 -o publish-native-aot --channel nativeaot-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
 
         # Upload MCP server as separate release asset
         $McpZipPath = "publish-mcp.zip"
