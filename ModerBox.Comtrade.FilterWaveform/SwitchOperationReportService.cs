@@ -119,6 +119,29 @@ namespace ModerBox.Comtrade.FilterWaveform {
         }
 
         /// <summary>
+        /// 从单个 SQLite 数据库中获取所有开关名称列表。
+        /// </summary>
+        /// <param name="dbPath">SQLite 数据库文件路径。</param>
+        /// <returns>开关名称列表（按字母顺序排列）。</returns>
+        public static List<string> GetAllSwitchNamesFromSingleDb(string dbPath) {
+            if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath)) {
+                return new List<string>();
+            }
+
+            try {
+                using var db = FilterWaveformResultDbContext.Create(dbPath);
+                return db.Results
+                    .AsNoTracking()
+                    .Select(r => r.Name)
+                    .Distinct()
+                    .OrderBy(n => n)
+                    .ToList();
+            } catch {
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
         /// 从指定目录下的所有 SQLite 数据库中查询指定时间段的分合闸数据，
         /// 按开关分组并取最后七次操作（过滤掉三相时间都为0的误识别记录）。
         /// </summary>
@@ -189,14 +212,33 @@ namespace ModerBox.Comtrade.FilterWaveform {
                 .ThenBy(g => g.Key.SwitchType);
 
             foreach (var group in grouped) {
-                // 取最后七次操作（按时间降序取7条，再正序排列），过滤掉三相时间都为0的误识别记录
+                // 取最后七次操作（按时间降序取7条，再正序排列），过滤掉所有候选数据源都为空的误识别记录
                 var last7 = group
-                    .Where(r => !(r.PhaseATimeInterval == 0 && r.PhaseBTimeInterval == 0 && r.PhaseCTimeInterval == 0))
-                    .OrderByDescending(r => r.Time)
+                    .Select(r => {
+                        var (phaseA, phaseB, phaseC) = GetOperationValues(r, group.Key.SwitchType, group.Key.Name, dataSourceConfigs);
+                        return new {
+                            Result = r,
+                            PhaseA = phaseA,
+                            PhaseB = phaseB,
+                            PhaseC = phaseC
+                        };
+                    })
+                    .Where(r => HasOperationData(r.Result))
+                    .OrderByDescending(r => r.Result.Time)
                     .Take(7)
-                    .OrderBy(r => r.Time)
-                    .Select(r => MapToOperationEntry(r, group.Key.SwitchType, group.Key.Name, dataSourceConfigs))
+                    .OrderBy(r => r.Result.Time)
+                    .Select(r => new OperationEntry {
+                        Time = r.Result.Time,
+                        PhaseATimeMs = r.PhaseA,
+                        PhaseBTimeMs = r.PhaseB,
+                        PhaseCTimeMs = r.PhaseC,
+                        HasAnomaly = r.Result.WorkType != WorkType.Ok
+                    })
                     .ToList();
+
+                if (last7.Count == 0) {
+                    continue;
+                }
 
                 var row = new SwitchOperationRow {
                     SwitchName = group.Key.Name,
@@ -211,6 +253,29 @@ namespace ModerBox.Comtrade.FilterWaveform {
             }
 
             return report;
+        }
+
+        private static bool AreAllPhasesZero(double phaseA, double phaseB, double phaseC) {
+            return phaseA == 0 && phaseB == 0 && phaseC == 0;
+        }
+
+        private static bool HasOperationData(FilterWaveformResultEntity result) {
+            if (!AreAllPhasesZero(result.PhaseATimeInterval, result.PhaseBTimeInterval, result.PhaseCTimeInterval)) {
+                return true;
+            }
+
+            if (result.SwitchType != SwitchType.Close) {
+                return false;
+            }
+
+            return !AreAllPhasesZero(
+                       result.PhaseAVoltageZeroCrossingDiff,
+                       result.PhaseBVoltageZeroCrossingDiff,
+                       result.PhaseCVoltageZeroCrossingDiff) ||
+                   !AreAllPhasesZero(
+                       result.PhaseAClosingResistorDurationMs,
+                       result.PhaseBClosingResistorDurationMs,
+                       result.PhaseCClosingResistorDurationMs);
         }
 
         private static CloseDataSourceType GetCloseDataSourceType(string switchName, List<SwitchDataSourceConfig>? configs) {
@@ -238,43 +303,36 @@ namespace ModerBox.Comtrade.FilterWaveform {
             return CloseDataSourceType.TimeInterval;
         }
 
-        private static OperationEntry MapToOperationEntry(FilterWaveformResultEntity r, SwitchType switchType, string name,
+        private static (double PhaseA, double PhaseB, double PhaseC) GetOperationValues(
+            FilterWaveformResultEntity r,
+            SwitchType switchType,
+            string name,
             List<SwitchDataSourceConfig>? dataSourceConfigs) {
-            double phaseA, phaseB, phaseC;
-
             if (switchType == SwitchType.Close) {
                 var dataSourceType = GetCloseDataSourceType(name, dataSourceConfigs);
                 switch (dataSourceType) {
                     case CloseDataSourceType.VoltageZeroCrossing:
-                        phaseA = r.PhaseAVoltageZeroCrossingDiff;
-                        phaseB = r.PhaseBVoltageZeroCrossingDiff;
-                        phaseC = r.PhaseCVoltageZeroCrossingDiff;
-                        break;
+                        return (
+                            r.PhaseAVoltageZeroCrossingDiff,
+                            r.PhaseBVoltageZeroCrossingDiff,
+                            r.PhaseCVoltageZeroCrossingDiff);
                     case CloseDataSourceType.ClosingResistor:
-                        phaseA = r.PhaseAClosingResistorDurationMs;
-                        phaseB = r.PhaseBClosingResistorDurationMs;
-                        phaseC = r.PhaseCClosingResistorDurationMs;
-                        break;
+                        return (
+                            r.PhaseAClosingResistorDurationMs,
+                            r.PhaseBClosingResistorDurationMs,
+                            r.PhaseCClosingResistorDurationMs);
                     default:
-                        phaseA = r.PhaseATimeInterval;
-                        phaseB = r.PhaseBTimeInterval;
-                        phaseC = r.PhaseCTimeInterval;
-                        break;
+                        return (
+                            r.PhaseATimeInterval,
+                            r.PhaseBTimeInterval,
+                            r.PhaseCTimeInterval);
                 }
             } else {
-                // 分闸：使用时间间隔
-                phaseA = r.PhaseATimeInterval;
-                phaseB = r.PhaseBTimeInterval;
-                phaseC = r.PhaseCTimeInterval;
+                return (
+                    r.PhaseATimeInterval,
+                    r.PhaseBTimeInterval,
+                    r.PhaseCTimeInterval);
             }
-
-            return new OperationEntry {
-                Time = r.Time,
-                PhaseATimeMs = phaseA,
-                PhaseBTimeMs = phaseB,
-                PhaseCTimeMs = phaseC,
-                HasAnomaly = r.WorkType != WorkType.Ok
-            };
         }
     }
 }

@@ -62,9 +62,11 @@ namespace ModerBox.ViewModels {
     /// 分合闸操作报表导出的ViewModel，负责处理UI交互和导出逻辑。
     /// </summary>
     public class SwitchOperationReportViewModel : ViewModelBase {
-        private string _dbDirectory = string.Empty;
+        private const string DefaultFilterWaveformSqliteFileName = "滤波器分合闸波形检查.sqlite";
+
+        private string _dbFile = string.Empty;
         private string _targetFile = string.Empty;
-        private string _statusMessage = "请选择数据库目录";
+        private string _statusMessage = "请选择 SQLite 数据库文件";
         private bool _isRunning;
         private bool _isLoadingSwitches;
         private bool _hasLoadedSwitches;
@@ -74,7 +76,7 @@ namespace ModerBox.ViewModels {
         private DateTimeOffset? _endDate = DateTimeOffset.Now;
         private TimeSpan? _endTime = new TimeSpan(23, 59, 59);
 
-        public ReactiveCommand<Unit, Unit> SelectDbDirectory { get; }
+        public ReactiveCommand<Unit, Unit> SelectDbFile { get; }
         public ReactiveCommand<Unit, Unit> SelectTargetFile { get; }
         public ReactiveCommand<Unit, Unit> RunExport { get; }
         public ReactiveCommand<Unit, Unit> LoadSwitches { get; }
@@ -85,7 +87,7 @@ namespace ModerBox.ViewModels {
         public Array CloseDataSourceTypes => Enum.GetValues(typeof(CloseDataSourceType));
 
         public SwitchOperationReportViewModel() {
-            SelectDbDirectory = ReactiveCommand.CreateFromTask(SelectDbDirectoryAsync);
+            SelectDbFile = ReactiveCommand.CreateFromTask(SelectDbFileAsync);
             SelectTargetFile = ReactiveCommand.CreateFromTask(SelectTargetFileAsync);
             LoadSwitches = ReactiveCommand.CreateFromTask(LoadSwitchesAsync);
             ApplyDefaultMapping = ReactiveCommand.Create(ApplyDefaultMappingAction);
@@ -110,11 +112,11 @@ namespace ModerBox.ViewModels {
         #region Properties
 
         /// <summary>
-        /// SQLite数据库目录路径。
+        /// SQLite数据库文件路径。
         /// </summary>
-        public string DbDirectory {
-            get => _dbDirectory;
-            set => this.RaiseAndSetIfChanged(ref _dbDirectory, value);
+        public string DbFile {
+            get => _dbFile;
+            set => this.RaiseAndSetIfChanged(ref _dbFile, value);
         }
 
         /// <summary>
@@ -192,21 +194,29 @@ namespace ModerBox.ViewModels {
         #endregion
 
         /// <summary>
-        /// 打开目录选择对话框，选择数据库目录并自动加载开关列表。
+        /// 打开文件选择对话框，选择 SQLite 数据库文件并自动加载开关列表。
         /// </summary>
-        private async Task SelectDbDirectoryAsync() {
+        private async Task SelectDbFileAsync() {
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
                 desktop.MainWindow?.StorageProvider is not { } provider)
                 return;
 
-            var folders = await provider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
-                Title = "选择数据库目录",
-                AllowMultiple = false
+            var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions {
+                Title = "选择 SQLite 数据库文件",
+                AllowMultiple = false,
+                FileTypeFilter = new[] {
+                    new FilePickerFileType("滤波器分合闸 SQLite 数据库") {
+                        Patterns = new[] { DefaultFilterWaveformSqliteFileName, "*.sqlite" }
+                    },
+                    new FilePickerFileType("所有文件") {
+                        Patterns = new[] { "*.*" }
+                    }
+                }
             });
 
-            var folder = folders?.FirstOrDefault();
-            if (folder != null) {
-                DbDirectory = folder.TryGetLocalPath() ?? folder.Path.ToString();
+            var file = files?.FirstOrDefault();
+            if (file != null) {
+                DbFile = file.TryGetLocalPath() ?? file.Path.ToString();
                 HasLoadedSwitches = false;
                 SwitchDataSources.Clear();
                 await LoadSwitchesAsync();
@@ -233,11 +243,11 @@ namespace ModerBox.ViewModels {
         }
 
         /// <summary>
-        /// 从数据库目录加载所有开关列表，并根据开关名称自动设置默认数据源。
+        /// 从 SQLite 数据库文件加载所有开关列表，并根据开关名称自动设置默认数据源。
         /// </summary>
         private async Task LoadSwitchesAsync() {
-            if (string.IsNullOrWhiteSpace(DbDirectory) || !Directory.Exists(DbDirectory)) {
-                StatusMessage = "请选择有效的数据库目录";
+            if (string.IsNullOrWhiteSpace(DbFile) || !File.Exists(DbFile)) {
+                StatusMessage = "请选择有效的 SQLite 数据库文件";
                 return;
             }
 
@@ -245,8 +255,8 @@ namespace ModerBox.ViewModels {
             StatusMessage = "正在加载开关列表...";
 
             try {
-                var switchNames = await Task.Run(() => 
-                    SwitchOperationReportService.GetAllSwitchNames(DbDirectory));
+                var switchNames = await Task.Run(() =>
+                    SwitchOperationReportService.GetAllSwitchNamesFromSingleDb(DbFile));
 
                 SwitchDataSources.Clear();
                 foreach (var name in switchNames) {
@@ -262,7 +272,9 @@ namespace ModerBox.ViewModels {
                 }
 
                 HasLoadedSwitches = true;
-                StatusMessage = $"已加载 {switchNames.Count} 个开关，请设置每个开关的数据源";
+                StatusMessage = switchNames.Count > 0
+                    ? $"已加载 {switchNames.Count} 个开关，请设置每个开关的数据源"
+                    : "当前 SQLite 数据库中未找到开关记录，请确认选择的是“滤波器分合闸波形检查”同名 .sqlite 文件";
             } catch (Exception ex) {
                 StatusMessage = $"加载失败: {ex.Message}";
             } finally {
@@ -274,8 +286,8 @@ namespace ModerBox.ViewModels {
         /// 执行导出报表操作，包括数据查询和Excel文件生成。
         /// </summary>
         private async Task RunExportAsync() {
-            if (string.IsNullOrWhiteSpace(DbDirectory) || !Directory.Exists(DbDirectory)) {
-                StatusMessage = "请选择有效的数据库目录";
+            if (string.IsNullOrWhiteSpace(DbFile) || !File.Exists(DbFile)) {
+                StatusMessage = "请选择有效的 SQLite 数据库文件";
                 return;
             }
             if (string.IsNullOrWhiteSpace(TargetFile)) {
@@ -309,8 +321,8 @@ namespace ModerBox.ViewModels {
                         })
                         .ToList();
 
-                    reportData = SwitchOperationReportService.QueryReport(
-                        DbDirectory, startDateTime, endDateTime, configs);
+                    reportData = SwitchOperationReportService.QueryReportFromSingleDb(
+                        DbFile, startDateTime, endDateTime, configs);
 
                     var writer = new DataWriter();
                     writer.WriteSwitchOperationReport(reportData, "分合闸操作报表");
@@ -319,7 +331,9 @@ namespace ModerBox.ViewModels {
 
                 var openCount = reportData?.OpenRows.Count ?? 0;
                 var closeCount = reportData?.CloseRows.Count ?? 0;
-                StatusMessage = $"导出完成！分闸开关 {openCount} 个，合闸开关 {closeCount} 个";
+                StatusMessage = openCount == 0 && closeCount == 0
+                    ? "导出完成，但当前时间范围内没有匹配记录，请检查时间范围和 SQLite 数据库文件是否正确"
+                    : $"导出完成！分闸开关 {openCount} 个，合闸开关 {closeCount} 个";
                 TargetFile.OpenFileWithExplorer();
             } catch (Exception ex) {
                 StatusMessage = $"导出失败: {ex.Message}";
