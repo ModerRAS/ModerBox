@@ -94,7 +94,7 @@ public class VideoAnalysisHttpServiceTests
         """));
         var service = new VisionService(new HttpClient(handler));
         var progressUpdates = new ConcurrentQueue<AnalysisProgress>();
-        var progress = new Progress<AnalysisProgress>(p => progressUpdates.Enqueue(p));
+        var progress = new CallbackProgress<AnalysisProgress>(p => progressUpdates.Enqueue(p));
 
         var result = await service.AnalyzeFramesAsync(
             [
@@ -111,7 +111,6 @@ public class VideoAnalysisHttpServiceTests
             },
             progress);
 
-        SpinWait.SpinUntil(() => progressUpdates.Any(p => p.StageProgress == 100), TimeSpan.FromSeconds(1));
         CollectionAssert.AreEqual(new List<double> { 1d, 5d, 9d }, result.Select(r => r.Timestamp).ToList());
         Assert.AreEqual(3, handler.RequestBodies.Count);
         Assert.AreEqual(3, progressUpdates.Count);
@@ -265,5 +264,12 @@ public class VideoAnalysisHttpServiceTests
                 : await request.Content.ReadAsStringAsync(cancellationToken));
             return _responder(request);
         }
+    }
+
+    private sealed class CallbackProgress<T>(Action<T> callback) : IProgress<T>
+    {
+        private readonly Action<T> _callback = callback;
+
+        public void Report(T value) => _callback(value);
     }
 }
