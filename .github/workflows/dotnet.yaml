@@ -406,7 +406,8 @@ jobs:
             Invoke-RestMethod -Method Delete -Uri "$repoApi/releases/assets/$($asset.id)" -Headers $headers | Out-Null
           }
 
-          Invoke-RestMethod -Method Post -Uri "$uploadUrl?name=$([uri]::EscapeDataString($AssetName))" -Headers $headers -ContentType $ContentType -InFile $FilePath | Out-Null
+          $assetUploadUri = $uploadUrl + "?name=" + [uri]::EscapeDataString($AssetName)
+          Invoke-RestMethod -Method Post -Uri $assetUploadUri -Headers $headers -ContentType $ContentType -InFile $FilePath | Out-Null
         }
 
         # Upload MCP server as separate release asset
@@ -735,7 +736,8 @@ jobs:
             Invoke-RestMethod -Method Delete -Uri "$repoApi/releases/assets/$($asset.id)" -Headers $headers | Out-Null
           }
 
-          Invoke-RestMethod -Method Post -Uri "$uploadUrl?name=$([uri]::EscapeDataString($AssetName))" -Headers $headers -ContentType $ContentType -InFile $FilePath | Out-Null
+          $assetUploadUri = $uploadUrl + "?name=" + [uri]::EscapeDataString($AssetName)
+          Invoke-RestMethod -Method Post -Uri $assetUploadUri -Headers $headers -ContentType $ContentType -InFile $FilePath | Out-Null
         }
 
         # Upload MCP server as separate release asset
