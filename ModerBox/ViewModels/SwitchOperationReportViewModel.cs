@@ -204,7 +204,7 @@ namespace ModerBox.ViewModels {
             var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions {
                 Title = "选择 SQLite 数据库文件",
                 AllowMultiple = false,
-                FileTypeChoices = new[] {
+                FileTypeFilter = new[] {
                     new FilePickerFileType("滤波器分合闸 SQLite 数据库") {
                         Patterns = new[] { DefaultFilterWaveformSqliteFileName, "*.sqlite" }
                     },
