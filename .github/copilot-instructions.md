@@ -41,6 +41,14 @@ dotnet run --project ModerBox/ModerBox.csproj
 dotnet publish ModerBox/ModerBox.csproj -c Release -r win-x64 -p:PublishAot=true
 ```
 
+## 默认 PR 工作流
+- 除非用户明确要求复用现有分支或继续已有 PR，否则默认先同步最新 `origin/master`，再从更新后的 `master` 新建工作分支。
+- 实现需求时保持改动聚焦，只修改与当前任务直接相关的代码或文档。
+- 完成后默认推送分支并创建或更新 PR。
+- 必须检查 PR 的 CI 状态；如果有失败，需要读取失败 job 日志、修复问题并继续推送更新。
+- 必须检查 PR 对话、review comments 和相关讨论；如果反馈要求代码改动，应直接修改并更新 PR，而不只是文字回复。
+- 如果因权限不足、外部服务异常或需求不明确而受阻，需要明确说明阻塞原因。
+
 ## 代码规范
 
 ### 命名空间
