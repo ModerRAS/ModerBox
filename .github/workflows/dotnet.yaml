@@ -391,24 +391,34 @@ jobs:
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nightly-win-x64 --releaseName "ModerBox $Version (nightly)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
         vpk upload s3 --channel nightly-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
 
+        $release = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers
+        $uploadUrl = ($release.upload_url -replace '\{.*$', '')
+        function Upload-ReleaseAsset {
+          param(
+            [object]$Release,
+            [string]$AssetName,
+            [string]$FilePath,
+            [string]$ContentType
+          )
+
+          $existingAssets = @($Release.assets | Where-Object { $_.name -eq $AssetName })
+          foreach ($asset in $existingAssets) {
+            Invoke-RestMethod -Method Delete -Uri "$repoApi/releases/assets/$($asset.id)" -Headers $headers | Out-Null
+          }
+
+          Invoke-RestMethod -Method Post -Uri "$uploadUrl?name=$([uri]::EscapeDataString($AssetName))" -Headers $headers -ContentType $ContentType -InFile $FilePath | Out-Null
+        }
+
         # Upload MCP server as separate release asset
         $McpZipPath = "publish-mcp.zip"
         Compress-Archive -Path "publish-mcp/*" -DestinationPath $McpZipPath -Force
-        $McpAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.MCP.zip" } | Select-Object -ExpandProperty browser_download_url
-        if ($McpAssetUrl) {
-          Invoke-RestMethod -Method Delete -Uri "$McpAssetUrl" -Headers $headers
-        }
-        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.MCP.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($McpZipPath))
+        Upload-ReleaseAsset -Release $release -AssetName "ModerBox.MCP.zip" -FilePath $McpZipPath -ContentType "application/zip"
         Remove-Item $McpZipPath -Force
 
         # Upload CLI as separate release asset (nightly)
         $CliZipPath = "publish-cli-normal.zip"
         Compress-Archive -Path "publish-cli-normal/*" -DestinationPath $CliZipPath -Force
-        $CliAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.Cli.zip" } | Select-Object -ExpandProperty browser_download_url
-        if ($CliAssetUrl) {
-          Invoke-RestMethod -Method Delete -Uri "$CliAssetUrl" -Headers $headers
-        }
-        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.Cli.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($CliZipPath))
+        Upload-ReleaseAsset -Release $release -AssetName "ModerBox.Cli.zip" -FilePath $CliZipPath -ContentType "application/zip"
         Remove-Item $CliZipPath -Force
 
   release-nativeaot:
@@ -710,22 +720,32 @@ jobs:
         vpk upload github --repoUrl https://github.com/ModerRAS/ModerBox --merge --publish --channel nativeaot-win-x64 --releaseName "ModerBox $Version (nativeaot)" --tag $Tag --targetCommitish $BuildSha --token ${{ secrets.GITHUB_TOKEN }}
         vpk upload s3 --channel nativeaot-win-x64 --bucket $env:R2_BUCKET --endpoint $env:S3_ENDPOINT --keyId $env:R2_ACCESS_KEY_ID --secret $env:R2_SECRET_ACCESS_KEY
 
+        $release = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers
+        $uploadUrl = ($release.upload_url -replace '\{.*$', '')
+        function Upload-ReleaseAsset {
+          param(
+            [object]$Release,
+            [string]$AssetName,
+            [string]$FilePath,
+            [string]$ContentType
+          )
+
+          $existingAssets = @($Release.assets | Where-Object { $_.name -eq $AssetName })
+          foreach ($asset in $existingAssets) {
+            Invoke-RestMethod -Method Delete -Uri "$repoApi/releases/assets/$($asset.id)" -Headers $headers | Out-Null
+          }
+
+          Invoke-RestMethod -Method Post -Uri "$uploadUrl?name=$([uri]::EscapeDataString($AssetName))" -Headers $headers -ContentType $ContentType -InFile $FilePath | Out-Null
+        }
+
         # Upload MCP server as separate release asset
         $McpZipPath = "publish-mcp.zip"
         Compress-Archive -Path "publish-mcp/*" -DestinationPath $McpZipPath -Force
-        $McpAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.MCP.zip" } | Select-Object -ExpandProperty browser_download_url
-        if ($McpAssetUrl) {
-          Invoke-RestMethod -Method Delete -Uri "$McpAssetUrl" -Headers $headers
-        }
-        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.MCP.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($McpZipPath))
+        Upload-ReleaseAsset -Release $release -AssetName "ModerBox.MCP.zip" -FilePath $McpZipPath -ContentType "application/zip"
         Remove-Item $McpZipPath -Force
 
         # Upload CLI Native AOT as separate release asset
         $CliZipPath = "publish-cli-native-aot.zip"
         Compress-Archive -Path "publish-cli-native-aot/*" -DestinationPath $CliZipPath -Force
-        $CliAssetUrl = Invoke-RestMethod -Method Get -Uri "$repoApi/releases/tags/$Tag" -Headers $headers | Select-Object -ExpandProperty assets | Where-Object { $_.name -eq "ModerBox.Cli.NativeAot.zip" } | Select-Object -ExpandProperty browser_download_url
-        if ($CliAssetUrl) {
-          Invoke-RestMethod -Method Delete -Uri "$CliAssetUrl" -Headers $headers
-        }
-        Invoke-RestMethod -Method Post -Uri "$repoApi/releases/tags/$Tag/assets?name=ModerBox.Cli.NativeAot.zip" -Headers $headers -ContentType "application/zip" -Body ([System.IO.File]::ReadAllBytes($CliZipPath))
+        Upload-ReleaseAsset -Release $release -AssetName "ModerBox.Cli.NativeAot.zip" -FilePath $CliZipPath -ContentType "application/zip"
         Remove-Item $CliZipPath -Force
