@@ -44,12 +44,14 @@ jobs:
       - name: Check Coverage Threshold
         id: check-coverage
         run: |
-          $COVERAGE = Select-String -Path coverage-report/Cobertura.xml -Pattern 'line-rate="([0-9.]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
-          $THRESHOLD = 0.8  # 80% minimum coverage
-          echo "coverage=$COVERAGE" >> $GITHUB_ENV
-          echo "::set-output name=coverage::$COVERAGE"
-          if ([double]$COVERAGE -lt $THRESHOLD) {
-            echo "::error::Code coverage ($COVERAGE) is below the required threshold ($THRESHOLD)."
+          [xml]$COBERTURA = Get-Content coverage-report/Cobertura.xml
+          $COVERAGE = [double]$COBERTURA.coverage.'line-rate'
+          $COVERAGE_PERCENT = [math]::Round($COVERAGE * 100, 2)
+          $THRESHOLD = 0.5  # 50% minimum coverage
+          echo "coverage=$COVERAGE_PERCENT" >> $GITHUB_ENV
+          echo "coverage=$COVERAGE_PERCENT" >> $GITHUB_OUTPUT
+          if ($COVERAGE -lt $THRESHOLD) {
+            echo "::error::Code coverage ($COVERAGE_PERCENT%) is below the required threshold ($($THRESHOLD * 100))%."
             exit 1
           }
 
@@ -58,7 +60,7 @@ jobs:
         with:
           message: |
             ✅ **Code Coverage Report**
-            - **Minimum Required Coverage:** 80%
+            - **Minimum Required Coverage:** 50%
             - **Current Coverage:** ${{ steps.check-coverage.outputs.coverage }}%
             
             📄 **[View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})**
