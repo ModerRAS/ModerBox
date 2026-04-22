@@ -166,7 +166,28 @@ namespace ModerBox.Common.Test {
             Assert.IsTrue(result.Contains("file1.cfg"));
         }
 
+        [TestMethod]
+        public void NormalizeUpdateSourceBaseUrl_ShouldKeepExistingHttpsRoot() {
+            var result = Util.NormalizeUpdateSourceBaseUrl("https://velopack.miaostay.com");
+
+            Assert.AreEqual("https://velopack.miaostay.com", result);
+        }
+
+        [TestMethod]
+        public void NormalizeUpdateSourceBaseUrl_ShouldTrimTrailingSlashAndPreservePath() {
+            var result = Util.NormalizeUpdateSourceBaseUrl("https://velopack.miaostay.com/moderbox/");
+
+            Assert.AreEqual("https://velopack.miaostay.com/moderbox", result);
+        }
+
+        [TestMethod]
+        public void NormalizeUpdateSourceBaseUrl_ShouldAddHttpsWhenMissingScheme() {
+            var result = Util.NormalizeUpdateSourceBaseUrl("velopack.miaostay.com");
+
+            Assert.AreEqual("https://velopack.miaostay.com", result);
+        }
+
         // 注意：OpenFileWithExplorer 方法启动外部进程，在单元测试中不容易测试
         // 可以考虑重构该方法以便于测试，或者创建集成测试
     }
-} 
+}
