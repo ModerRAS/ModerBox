@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - master
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   build-and-test:
     runs-on: windows-latest
@@ -48,14 +54,16 @@ jobs:
           $COVERAGE = [double]$COBERTURA.coverage.'line-rate'
           $COVERAGE_PERCENT = [math]::Round($COVERAGE * 100, 2)
           $THRESHOLD = 0.5  # 50% minimum coverage
-          echo "coverage=$COVERAGE_PERCENT" >> $GITHUB_ENV
-          echo "coverage=$COVERAGE_PERCENT" >> $GITHUB_OUTPUT
+          $COVERAGE_OUTPUT = "coverage=$COVERAGE_PERCENT"
+          $COVERAGE_OUTPUT | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $COVERAGE_OUTPUT | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           if ($COVERAGE -lt $THRESHOLD) {
             echo "::error::Code coverage ($COVERAGE_PERCENT%) is below the required threshold ($($THRESHOLD * 100))%."
             exit 1
           }
 
       - name: Comment on Pull Request
+        if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v2
         with:
           message: |
