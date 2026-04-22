@@ -126,8 +126,9 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
                 }
 
                 if (item.Processed is not null) {
-                    // Upsert by CfgPath
-                    var existing = await db.ProcessedFiles.FirstOrDefaultAsync(p => p.CfgPath == item.Processed.CfgPath, _cts.Token);
+                    // Upsert by CfgPath, including entities already tracked in the current batch.
+                    var existing = db.ProcessedFiles.Local.FirstOrDefault(p => p.CfgPath == item.Processed.CfgPath)
+                        ?? await db.ProcessedFiles.FirstOrDefaultAsync(p => p.CfgPath == item.Processed.CfgPath, _cts.Token);
                     if (existing is null) {
                         db.ProcessedFiles.Add(item.Processed);
                     } else {
