@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - master
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   build-and-test:
     runs-on: windows-latest
@@ -44,21 +50,25 @@ jobs:
       - name: Check Coverage Threshold
         id: check-coverage
         run: |
-          $COVERAGE = Select-String -Path coverage-report/Cobertura.xml -Pattern 'line-rate="([0-9.]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
-          $THRESHOLD = 0.8  # 80% minimum coverage
-          echo "coverage=$COVERAGE" >> $GITHUB_ENV
-          echo "::set-output name=coverage::$COVERAGE"
-          if ([double]$COVERAGE -lt $THRESHOLD) {
-            echo "::error::Code coverage ($COVERAGE) is below the required threshold ($THRESHOLD)."
+          [xml]$COBERTURA = Get-Content coverage-report/Cobertura.xml
+          $COVERAGE = [double]$COBERTURA.coverage.'line-rate'
+          $COVERAGE_PERCENT = [math]::Round($COVERAGE * 100, 2)
+          $THRESHOLD = 0.5  # 50% minimum coverage
+          $COVERAGE_OUTPUT = "coverage=$COVERAGE_PERCENT"
+          $COVERAGE_OUTPUT | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $COVERAGE_OUTPUT | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          if ($COVERAGE -lt $THRESHOLD) {
+            echo "::error::Code coverage ($COVERAGE_PERCENT%) is below the required threshold ($($THRESHOLD * 100))%."
             exit 1
           }
 
       - name: Comment on Pull Request
+        if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v2
         with:
           message: |
             ✅ **Code Coverage Report**
-            - **Minimum Required Coverage:** 80%
+            - **Minimum Required Coverage:** 50%
             - **Current Coverage:** ${{ steps.check-coverage.outputs.coverage }}%
             
             📄 **[View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})**

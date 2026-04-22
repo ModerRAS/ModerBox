@@ -290,6 +290,26 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
         }
 
         [TestMethod]
+        public void GetAllSwitchNamesFromSingleDb_ReturnsDistinctSortedNames() {
+            var dbPath = Path.Combine(Path.GetTempPath(), $"test_switch_names_{Guid.NewGuid()}.sqlite");
+            try {
+                using (var db = FilterWaveformResultDbContext.Create(dbPath)) {
+                    db.Database.EnsureCreated();
+                    db.Results.Add(CreateEntity("T621", SwitchType.Open, new DateTime(2026, 1, 26), 1, 1, 1));
+                    db.Results.Add(CreateEntity("T611", SwitchType.Close, new DateTime(2026, 1, 27), 1, 1, 1));
+                    db.Results.Add(CreateEntity("T611", SwitchType.Open, new DateTime(2026, 1, 28), 2, 2, 2));
+                    db.SaveChanges();
+                }
+
+                var result = SwitchOperationReportService.GetAllSwitchNamesFromSingleDb(dbPath);
+
+                CollectionAssert.AreEqual(new List<string> { "T611", "T621" }, result);
+            } finally {
+                if (File.Exists(dbPath)) File.Delete(dbPath);
+            }
+        }
+
+        [TestMethod]
         public void BuildReport_Close5xxxSwitch_UsesVoltageZeroCrossingDiff() {
             var entities = new List<FilterWaveformResultEntity> {
                 new FilterWaveformResultEntity {
@@ -347,6 +367,52 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             Assert.AreEqual(100.0, op.PhaseATimeMs);
             Assert.AreEqual(200.0, op.PhaseBTimeMs);
             Assert.AreEqual(300.0, op.PhaseCTimeMs);
+        }
+
+        [TestMethod]
+        public void BuildReport_CloseSwitchWithAlternateSource_KeepsNonZeroConfiguredValues() {
+            var entities = new List<FilterWaveformResultEntity> {
+                new FilterWaveformResultEntity {
+                    Name = "5641",
+                    Time = new DateTime(2026, 1, 26, 22, 38, 0),
+                    SwitchType = SwitchType.Close,
+                    WorkType = WorkType.Ok,
+                    PhaseATimeInterval = 0,
+                    PhaseBTimeInterval = 0,
+                    PhaseCTimeInterval = 0,
+                    PhaseAVoltageZeroCrossingDiff = 10.1,
+                    PhaseBVoltageZeroCrossingDiff = 20.2,
+                    PhaseCVoltageZeroCrossingDiff = 30.3
+                },
+                new FilterWaveformResultEntity {
+                    Name = "T611",
+                    Time = new DateTime(2026, 1, 27, 10, 0, 0),
+                    SwitchType = SwitchType.Close,
+                    WorkType = WorkType.Ok,
+                    PhaseATimeInterval = 0,
+                    PhaseBTimeInterval = 0,
+                    PhaseCTimeInterval = 0,
+                    PhaseAClosingResistorDurationMs = 100.0,
+                    PhaseBClosingResistorDurationMs = 200.0,
+                    PhaseCClosingResistorDurationMs = 300.0
+                }
+            };
+
+            var result = SwitchOperationReportService.BuildReport(entities);
+
+            Assert.AreEqual(2, result.CloseRows.Count);
+
+            var voltageZeroCrossingRow = result.CloseRows[0];
+            Assert.AreEqual("5641", voltageZeroCrossingRow.SwitchName);
+            Assert.AreEqual(10.1, voltageZeroCrossingRow.Operations[0].PhaseATimeMs);
+            Assert.AreEqual(20.2, voltageZeroCrossingRow.Operations[0].PhaseBTimeMs);
+            Assert.AreEqual(30.3, voltageZeroCrossingRow.Operations[0].PhaseCTimeMs);
+
+            var closingResistorRow = result.CloseRows[1];
+            Assert.AreEqual("T611", closingResistorRow.SwitchName);
+            Assert.AreEqual(100.0, closingResistorRow.Operations[0].PhaseATimeMs);
+            Assert.AreEqual(200.0, closingResistorRow.Operations[0].PhaseBTimeMs);
+            Assert.AreEqual(300.0, closingResistorRow.Operations[0].PhaseCTimeMs);
         }
 
         [TestMethod]
