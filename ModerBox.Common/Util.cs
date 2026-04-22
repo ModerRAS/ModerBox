@@ -34,8 +34,8 @@ namespace ModerBox.Common {
             Logging("检查中");
             var records = DnsHelper.GetTxtRecords("moderbox.miaostay.com");
             if (records.TryGetValue("mirror", out var ServerUrl)) {
-
-                var mgr = new UpdateManager($"{ServerUrl}/moderbox");
+                var sourceUrl = NormalizeUpdateSourceBaseUrl(ServerUrl);
+                var mgr = new UpdateManager(new SimpleWebSource(sourceUrl));
 
                 // check for new version
                 var newVersion = await mgr.CheckForUpdatesAsync();
@@ -56,6 +56,17 @@ namespace ModerBox.Common {
                 Logging("暂无更新");
                 return; // no update available
             }
+        }
+        internal static string NormalizeUpdateSourceBaseUrl(string serverUrl) {
+            ArgumentException.ThrowIfNullOrWhiteSpace(serverUrl);
+
+            var normalized = serverUrl.Trim().TrimEnd('/');
+            if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) {
+                normalized = $"https://{normalized}";
+            }
+
+            return normalized;
         }
         public static List<string> GetAllFiles(this string directory) {
             List<string> files = new List<string>();
