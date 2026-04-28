@@ -1,109 +1,119 @@
-using Spectre.Console;
-using ModerBox.QuestionBank;
-using ModerBox.Common;
+using System.CommandLine;
 using System.IO;
+using ModerBox.Cli.Infrastructure;
+using ModerBox.QuestionBank;
 
 namespace ModerBox.Cli.Commands;
 
 public static class QuestionBankCommand
 {
-    public static async Task<int> RunAsync(string[]? args = null)
+    public static Command Create()
     {
-        args ??= [];
-        string sourceFile = "";
-        string targetFile = "";
-        QuestionBankSourceFormat sourceFormat = QuestionBankSourceFormat.Txt;
-        QuestionBankTargetFormat targetFormat = QuestionBankTargetFormat.Mtb;
-
-        var sourceFormats = FormatOptionsProvider.GetSourceFormatOptions();
-        var targetFormats = FormatOptionsProvider.GetTargetFormatOptions();
-
-        for (int i = 0; i < args.Length; i++)
+        var sourceOption = new Option<string>(
+            name: "--source",
+            description: "源文件路径")
         {
-            switch (args[i].ToLower())
+            IsRequired = true
+        };
+        sourceOption.AddAlias("-s");
+
+        var targetOption = new Option<string>(
+            name: "--target",
+            description: "目标文件路径")
+        {
+            IsRequired = true
+        };
+        targetOption.AddAlias("-t");
+
+        var sourceFormatOption = new Option<QuestionBankSourceFormat>(
+            name: "--source-format",
+            description: "源格式",
+            getDefaultValue: () => QuestionBankSourceFormat.Txt);
+        sourceFormatOption.AddAlias("-sf");
+
+        var targetFormatOption = new Option<QuestionBankTargetFormat>(
+            name: "--target-format",
+            description: "目标格式",
+            getDefaultValue: () => QuestionBankTargetFormat.Mtb);
+        targetFormatOption.AddAlias("-tf");
+
+        var command = new Command("question-bank", "题库转换");
+        command.AddAlias("qb");
+        command.AddOption(sourceOption);
+        command.AddOption(targetOption);
+        command.AddOption(sourceFormatOption);
+        command.AddOption(targetFormatOption);
+
+        command.SetHandler(async (context) =>
+        {
+            var source = context.ParseResult.GetValueForOption(sourceOption)!;
+            var target = context.ParseResult.GetValueForOption(targetOption)!;
+            var sourceFormat = context.ParseResult.GetValueForOption(sourceFormatOption);
+            var targetFormat = context.ParseResult.GetValueForOption(targetFormatOption);
+
+            context.ExitCode = await ExecuteAsync(source, target, sourceFormat, targetFormat);
+        });
+
+        return command;
+    }
+
+    private static async Task<int> ExecuteAsync(
+        string source,
+        string target,
+        QuestionBankSourceFormat sourceFormat,
+        QuestionBankTargetFormat targetFormat)
+    {
+        if (!File.Exists(source))
+        {
+            if (GlobalJsonOption.IsJsonMode)
             {
-                case "--source" or "-s":
-                    if (i + 1 < args.Length) sourceFile = args[++i];
-                    break;
-                case "--target" or "-t":
-                    if (i + 1 < args.Length) targetFile = args[++i];
-                    break;
-                case "--source-format" or "-sf":
-                    if (i + 1 < args.Length && Enum.TryParse<QuestionBankSourceFormat>(args[++i], true, out var sf))
-                        sourceFormat = sf;
-                    break;
-                case "--target-format" or "-tf":
-                    if (i + 1 < args.Length && Enum.TryParse<QuestionBankTargetFormat>(args[++i], true, out var tf))
-                        targetFormat = tf;
-                    break;
+                JsonOutputWriter.Write(new { success = false, error = $"文件不存在: {source}" });
             }
-        }
-
-        if (string.IsNullOrEmpty(sourceFile))
-        {
-            sourceFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请选择题库源文件:"));
-        }
-
-        if (string.IsNullOrEmpty(targetFile))
-        {
-            var defaultTarget = Path.Combine(Path.GetDirectoryName(sourceFile) ?? ".", 
-                Path.GetFileNameWithoutExtension(sourceFile) + "_转换结果.xlsx");
-            targetFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入目标文件路径:")
-                    .DefaultValue(defaultTarget));
-        }
-
-        if (!File.Exists(sourceFile))
-        {
-            AnsiConsole.MarkupLine($"[red]错误: 文件不存在: {sourceFile}[/]");
+            else
+            {
+                StatusWriter.WriteLine($"错误: 文件不存在: {source}");
+            }
             return 1;
         }
 
-        if (sourceFormats.Count > 1)
-        {
-            AnsiConsole.MarkupLine("[cyan]可用源格式:[/]");
-            for (int i = 0; i < sourceFormats.Count; i++)
-            {
-                AnsiConsole.MarkupLine($"  {i + 1}. {sourceFormats[i].Format} - {sourceFormats[i].DisplayName}");
-            }
-        }
-
-        if (targetFormats.Count > 1)
-        {
-            AnsiConsole.MarkupLine("[cyan]可用目标格式:[/]");
-            for (int i = 0; i < targetFormats.Count; i++)
-            {
-                AnsiConsole.MarkupLine($"  {i + 1}. {targetFormats[i].Format} - {targetFormats[i].DisplayName}");
-            }
-        }
-
-        AnsiConsole.MarkupLine($"[cyan]开始题库转换...[/]");
-        AnsiConsole.MarkupLine($"  源文件: {sourceFile}");
-        AnsiConsole.MarkupLine($"  目标文件: {targetFile}");
-        AnsiConsole.MarkupLine($"  源格式: {sourceFormat}");
-        AnsiConsole.MarkupLine($"  目标格式: {targetFormat}");
-
         try
         {
+            StatusWriter.WriteLine("开始题库转换...");
+            StatusWriter.WriteLine($"  源文件: {source}");
+            StatusWriter.WriteLine($"  目标文件: {target}");
+            StatusWriter.WriteLine($"  源格式: {sourceFormat}");
+            StatusWriter.WriteLine($"  目标格式: {targetFormat}");
+
             var service = new QuestionBankConversionService();
+            QuestionBankConversionSummary? summary = null;
 
             await Task.Run(() =>
             {
-                var questions = service.Read(sourceFile, sourceFormat);
-                AnsiConsole.MarkupLine($"[cyan]已读取 {questions.Count} 道题目[/]");
-
-                var title = Path.GetFileNameWithoutExtension(sourceFile);
-                service.Write(questions, targetFile, targetFormat, title);
+                summary = service.Convert(source, target, sourceFormat, targetFormat);
             });
 
-            AnsiConsole.MarkupLine($"[green]✓ 题库转换完成![/]");
-            AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
+            if (GlobalJsonOption.IsJsonMode)
+            {
+                JsonOutputWriter.Write(new { success = true, questionCount = summary!.QuestionCount });
+            }
+            else
+            {
+                StatusWriter.WriteLine($"✓ 题库转换完成!");
+                StatusWriter.WriteLine($"  输出文件: {summary!.TargetPath}");
+            }
+
             return 0;
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
+            if (GlobalJsonOption.IsJsonMode)
+            {
+                JsonOutputWriter.Write(new { success = false, error = ex.Message });
+            }
+            else
+            {
+                StatusWriter.WriteLine($"错误: {ex.Message}");
+            }
             return 1;
         }
     }

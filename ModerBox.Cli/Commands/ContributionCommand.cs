@@ -1,78 +1,84 @@
-using Spectre.Console;
+using System.CommandLine;
+using System.CommandLine.Invocation;
+using ModerBox.Cli.Infrastructure;
 using ModerBox.ContributionCalculation.Services;
-using System.IO;
 
 namespace ModerBox.Cli.Commands;
 
 public static class ContributionCommand
 {
-    public static async Task<int> RunAsync(string[]? args = null)
+    public static Command Create()
     {
-        args ??= [];
-        string sourceFile = "";
-        string targetFile = "";
-
-        for (int i = 0; i < args.Length; i++)
+        var sourceOption = new Option<string>(
+            name: "--source",
+            description: "CSV文件路径（必填，包含计划名称、工作负责人、工作班成员、风险等级、是否停电、开始时间、结束时间列）")
         {
-            switch (args[i].ToLower())
+            IsRequired = true
+        };
+        sourceOption.AddAlias("-s");
+
+        var targetOption = new Option<string>(
+            name: "--target",
+            description: "输出Excel文件路径",
+            getDefaultValue: () => "")
+        {
+            IsRequired = false
+        };
+        targetOption.AddAlias("-t");
+
+        var command = new Command("contribution", "工作票贡献度计算");
+        command.AddAlias("ctb");
+        command.AddOption(sourceOption);
+        command.AddOption(targetOption);
+
+        command.SetHandler(async (InvocationContext context) =>
+        {
+            var source = context.ParseResult.GetValueForOption(sourceOption)!;
+            var target = context.ParseResult.GetValueForOption(targetOption) ?? "";
+
+            if (!File.Exists(source))
             {
-                case "--source" or "-s":
-                    if (i + 1 < args.Length) sourceFile = args[++i];
-                    break;
-                case "--target" or "-t":
-                    if (i + 1 < args.Length) targetFile = args[++i];
-                    break;
+                StatusWriter.WriteLine($"错误: 文件不存在: {source}");
+                if (GlobalJsonOption.IsJsonMode)
+                    JsonOutputWriter.Write(new { success = false, error = "源文件不存在" });
+                context.ExitCode = 1;
+                return;
             }
-        }
 
-        if (string.IsNullOrEmpty(sourceFile))
-        {
-            sourceFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入CSV文件路径:")
-                    .DefaultValue(".")
-                    .Validate(d => !string.IsNullOrWhiteSpace(d)));
-        }
+            if (string.IsNullOrEmpty(target))
+                target = Path.Combine(Path.GetDirectoryName(source) ?? ".", "贡献度统计.xlsx");
 
-        if (string.IsNullOrEmpty(targetFile))
-        {
-            var defaultTarget = Path.Combine(Path.GetDirectoryName(sourceFile) ?? ".", "贡献度统计.xlsx");
-            targetFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入输出Excel文件路径:")
-                    .DefaultValue(defaultTarget)
-                    .Validate(f => !string.IsNullOrWhiteSpace(f)));
-        }
+            StatusWriter.WriteLine("开始计算贡献度...");
+            StatusWriter.WriteLine($"  源文件: {source}");
+            StatusWriter.WriteLine($"  输出文件: {target}");
 
-        if (!File.Exists(sourceFile))
-        {
-            AnsiConsole.MarkupLine($"[red]错误: 文件不存在: {sourceFile}[/]");
-            return 1;
-        }
-
-        AnsiConsole.MarkupLine($"[cyan]开始计算贡献度...[/]");
-        AnsiConsole.MarkupLine($"  源文件: {sourceFile}");
-        AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
-
-        try
-        {
-            await Task.Run(() =>
+            try
             {
-                var tickets = CsvParser.Parse(sourceFile);
-                AnsiConsole.MarkupLine($"[cyan]解析到 {tickets.Count} 条工作票记录[/]");
+                var tickets = await Task.Run(() => CsvParser.Parse(source));
+                StatusWriter.WriteLine($"解析到 {tickets.Count} 条工作票记录");
 
-                var contributions = ContributionCalculator.Calculate(tickets);
-                AnsiConsole.MarkupLine($"[cyan]计算完成，共 {contributions.Count} 人[/]");
+                var contributions = await Task.Run(() => ContributionCalculator.Calculate(tickets));
+                StatusWriter.WriteLine($"计算完成，共 {contributions.Count} 人");
 
-                ExcelExporter.Export(contributions, targetFile);
-            });
+                await Task.Run(() => ExcelExporter.Export(contributions, target));
 
-            AnsiConsole.MarkupLine($"[green]✓ 贡献度计算完成![/]");
-            AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-            return 1;
-        }
+                StatusWriter.WriteLine("✓ 贡献度计算完成!");
+                StatusWriter.WriteLine($"  输出文件: {target}");
+
+                if (GlobalJsonOption.IsJsonMode)
+                    JsonOutputWriter.Write(new { success = true, ticketCount = tickets.Count, contributorCount = contributions.Count });
+
+                context.ExitCode = 0;
+            }
+            catch (Exception ex)
+            {
+                StatusWriter.WriteLine($"错误: {ex.Message}");
+                if (GlobalJsonOption.IsJsonMode)
+                    JsonOutputWriter.Write(new { success = false, error = ex.Message });
+                context.ExitCode = 1;
+            }
+        });
+
+        return command;
     }
 }

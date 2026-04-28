@@ -1,95 +1,133 @@
+using System.CommandLine;
+using System.CommandLine.Invocation;
 using Spectre.Console;
 using ModerBox.Comtrade.FilterWaveform;
-using ModerBox.Common;
-using System.IO;
+using ModerBox.Cli.Infrastructure;
 
 namespace ModerBox.Cli.Commands;
 
 public static class FilterWaveformCommand
 {
-    public static async Task<int> RunAsync(string[]? args = null)
+    public static Command Create()
     {
-        args ??= [];
-        string sourceFolder = "";
-        string targetFile = "";
-        bool useNewAlgorithm = true;
-        int ioWorkerCount = 4;
-        int processWorkerCount = 6;
-
-        for (int i = 0; i < args.Length; i++)
+        var sourceOption = new Option<string>(
+            name: "--source",
+            description: "波形文件目录")
         {
-            switch (args[i].ToLower())
+            IsRequired = true
+        };
+        sourceOption.AddAlias("-s");
+
+        var targetOption = new Option<string>(
+            name: "--target",
+            description: "输出 Excel 文件路径",
+            getDefaultValue: () => "");
+        targetOption.AddAlias("-t");
+
+        var oldAlgorithmOption = new Option<bool>(
+            name: "--old-algorithm",
+            description: "使用旧算法");
+
+        var ioWorkersOption = new Option<int>(
+            name: "--io-workers",
+            description: "IO 工作线程数",
+            getDefaultValue: () => 4);
+
+        var processWorkersOption = new Option<int>(
+            name: "--process-workers",
+            description: "处理工作线程数",
+            getDefaultValue: () => 6);
+
+        var command = new Command("filter", "滤波器分合闸波形检测");
+        command.AddAlias("f");
+        command.AddOption(sourceOption);
+        command.AddOption(targetOption);
+        command.AddOption(oldAlgorithmOption);
+        command.AddOption(ioWorkersOption);
+        command.AddOption(processWorkersOption);
+
+        command.SetHandler(async (InvocationContext context) =>
+        {
+            var source = context.ParseResult.GetValueForOption(sourceOption)!;
+            var target = context.ParseResult.GetValueForOption(targetOption) ?? "";
+            var oldAlgorithm = context.ParseResult.GetValueForOption(oldAlgorithmOption);
+            var useNewAlgorithm = !oldAlgorithm;
+            var ioWorkers = context.ParseResult.GetValueForOption(ioWorkersOption);
+            var processWorkers = context.ParseResult.GetValueForOption(processWorkersOption);
+            var isJson = GlobalJsonOption.IsJsonMode;
+
+            if (string.IsNullOrEmpty(target))
             {
-                case "--source" or "-s":
-                    if (i + 1 < args.Length) sourceFolder = args[++i];
-                    break;
-                case "--target" or "-t":
-                    if (i + 1 < args.Length) targetFile = args[++i];
-                    break;
-                case "--old-algorithm":
-                    useNewAlgorithm = false;
-                    break;
-                case "--io-workers":
-                    if (i + 1 < args.Length) int.TryParse(args[++i], out ioWorkerCount);
-                    break;
-                case "--process-workers":
-                    if (i + 1 < args.Length) int.TryParse(args[++i], out processWorkerCount);
-                    break;
+                target = Path.Combine(source, "滤波器分合闸波形检测.xlsx");
             }
-        }
 
-        if (string.IsNullOrEmpty(sourceFolder))
-        {
-            sourceFolder = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入波形文件目录:")
-                    .DefaultValue(".")
-                    .Validate(d => !string.IsNullOrWhiteSpace(d)));
-        }
+            if (!Directory.Exists(source))
+            {
+                if (isJson)
+                    JsonOutputWriter.Write(new { success = false, error = $"目录不存在: {source}" });
+                else
+                    AnsiConsole.MarkupLine($"[red]错误: 目录不存在: {source}[/]");
+                context.ExitCode = 1;
+                return;
+            }
 
-        if (string.IsNullOrEmpty(targetFile))
-        {
-            var defaultTarget = Path.Combine(sourceFolder, "滤波器分合闸波形检测.xlsx");
-            targetFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入输出Excel文件路径:")
-                    .DefaultValue(defaultTarget)
-                    .Validate(f => !string.IsNullOrWhiteSpace(f)));
-        }
+            if (!isJson)
+            {
+                AnsiConsole.MarkupLine($"[cyan]开始滤波器分合闸波形检测...[/]");
+                AnsiConsole.MarkupLine($"  源目录: {source}");
+                AnsiConsole.MarkupLine($"  输出文件: {target}");
+                AnsiConsole.MarkupLine($"  使用新算法: {(useNewAlgorithm ? "是" : "否")}");
+                AnsiConsole.MarkupLine($"  IO工作线程: {ioWorkers}");
+                AnsiConsole.MarkupLine($"  处理工作线程: {processWorkers}");
+            }
+            else
+            {
+                StatusWriter.WriteLine($"开始滤波器分合闸波形检测... 源目录: {source}");
+            }
 
-        if (!Directory.Exists(sourceFolder))
-        {
-            AnsiConsole.MarkupLine($"[red]错误: 目录不存在: {sourceFolder}[/]");
-            return 1;
-        }
+            var totalFiles = 0;
+            var processedFiles = 0;
 
-        AnsiConsole.MarkupLine($"[cyan]开始滤波器分合闸波形检测...[/]");
-        AnsiConsole.MarkupLine($"  源目录: {sourceFolder}");
-        AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
-        AnsiConsole.MarkupLine($"  使用新算法: {(useNewAlgorithm ? "是" : "否")}");
-        AnsiConsole.MarkupLine($"  IO工作线程: {ioWorkerCount}");
-        AnsiConsole.MarkupLine($"  处理工作线程: {processWorkerCount}");
+            try
+            {
+                await FilterWaveformStreamingFacade.ExecuteToExcelWithSqliteAsync(
+                    source,
+                    target,
+                    useNewAlgorithm,
+                    ioWorkers,
+                    processWorkers,
+                    (processed, total) =>
+                    {
+                        totalFiles = total;
+                        processedFiles = processed;
+                        if (isJson)
+                            StatusWriter.WriteLine($"处理进度: {processed}/{total}");
+                        else
+                        {
+                            var percent = total > 0 ? (int)(processed * 100.0 / total) : 0;
+                            AnsiConsole.MarkupLine($"[cyan]处理进度: {processed}/{total} ({percent}%)[/]");
+                        }
+                    });
 
-        try
-        {
-            await FilterWaveformStreamingFacade.ExecuteToExcelWithSqliteAsync(
-                sourceFolder,
-                targetFile,
-                useNewAlgorithm,
-                ioWorkerCount,
-                processWorkerCount,
-                (processed, total) =>
+                if (isJson)
+                    JsonOutputWriter.Write(new { success = true, totalFiles, processedFiles });
+                else
                 {
-                    var percent = total > 0 ? (int)(processed * 100.0 / total) : 0;
-                    AnsiConsole.MarkupLine($"[cyan]处理进度: {processed}/{total} ({percent}%)[/]");
-                });
+                    AnsiConsole.MarkupLine($"[green]✓ 滤波器分合闸波形检测完成![/]");
+                    AnsiConsole.MarkupLine($"  输出文件: {target}");
+                }
+                context.ExitCode = 0;
+            }
+            catch (Exception ex)
+            {
+                if (isJson)
+                    JsonOutputWriter.Write(new { success = false, error = ex.Message });
+                else
+                    AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
+                context.ExitCode = 1;
+            }
+        });
 
-            AnsiConsole.MarkupLine($"[green]✓ 滤波器分合闸波形检测完成![/]");
-            AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-            return 1;
-        }
+        return command;
     }
 }

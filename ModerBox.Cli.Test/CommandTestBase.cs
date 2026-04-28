@@ -110,7 +110,15 @@ public abstract class CommandTestBase
     {
         Assert.IsFalse(string.IsNullOrWhiteSpace(json), "JSON string cannot be null or empty");
 
-        var exception = Record.Exception(() => JsonDocument.Parse(json));
+        Exception? exception = null;
+        try
+        {
+            JsonDocument.Parse(json);
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+        }
         Assert.IsNull(exception, $"Invalid JSON: {exception?.Message}");
     }
 
