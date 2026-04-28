@@ -1,5 +1,6 @@
 using System.CommandLine;
 using ModerBox.Cli.Infrastructure;
+using ModerBox.Cli.Commands;
 
 namespace ModerBox.Cli;
 
@@ -18,7 +19,7 @@ class Program
             description: "Output as machine-readable JSON");
         rootCommand.AddGlobalOption(jsonOption);
 
-        // Register placeholder subcommands
+        // Register all 12 commands
         RegisterSubcommands(rootCommand);
 
         return await rootCommand.InvokeAsync(args);
@@ -26,40 +27,40 @@ class Program
 
     static void RegisterSubcommands(RootCommand rootCommand)
     {
-        // harmonic (h) - 谐波计算
-        var harmonicCommand = new Command("harmonic", "谐波计算");
-        harmonicCommand.AddAlias("h");
-        harmonicCommand.SetHandler(_ => Task.FromResult(0));
-        rootCommand.Add(harmonicCommand);
+        // 1. HarmonicCommand - harmonic (h) - 谐波计算
+        rootCommand.Add(HarmonicCommand.Create());
 
-        // filter (f) - 滤波器分合闸波形检测
-        var filterCommand = new Command("filter", "滤波器分合闸波形检测");
-        filterCommand.AddAlias("f");
-        filterCommand.SetHandler(_ => Task.FromResult(0));
-        rootCommand.Add(filterCommand);
+        // 2. FilterWaveformCommand - filter (f) - 滤波器分合闸波形检测
+        rootCommand.Add(FilterWaveformCommand.Create());
 
-        // current-diff (cd) - 接地极电流差值分析
-        var currentDiffCommand = new Command("current-diff", "接地极电流差值分析");
-        currentDiffCommand.AddAlias("cd");
-        currentDiffCommand.SetHandler(_ => Task.FromResult(0));
-        rootCommand.Add(currentDiffCommand);
+        // 3. CurrentDifferenceCommand - current-diff (cd) - 接地极电流差值分析
+        rootCommand.Add(CurrentDifferenceCommand.Create());
 
-        // question-bank (qb) - 题库转换
-        var questionBankCommand = new Command("question-bank", "题库转换");
-        questionBankCommand.AddAlias("qb");
-        questionBankCommand.SetHandler(_ => Task.FromResult(0));
-        rootCommand.Add(questionBankCommand);
+        // 4. QuestionBankCommand - question-bank (qb) - 题库转换
+        rootCommand.Add(QuestionBankCommand.Create());
 
-        // cable (c) - 电缆走向绘制
-        var cableCommand = new Command("cable", "电缆走向绘制");
-        cableCommand.AddAlias("c");
-        cableCommand.SetHandler(_ => Task.FromResult(0));
-        rootCommand.Add(cableCommand);
+        // 5. CableRoutingCommand - cable (c) - 电缆走向绘制
+        rootCommand.Add(CableRoutingCommand.Create());
 
-        // contribution (ctb) - 工作票贡献度计算
-        var contributionCommand = new Command("contribution", "工作票贡献度计算");
-        contributionCommand.AddAlias("ctb");
-        contributionCommand.SetHandler(_ => Task.FromResult(0));
-        rootCommand.Add(contributionCommand);
+        // 6. ContributionCommand - contribution (ctb) - 工作票贡献度计算
+        rootCommand.Add(ContributionCommand.Create());
+
+        // 7. FilterCopyCommand - filter-copy (fc) - 分合闸波形筛选复制
+        rootCommand.Add(FilterCopyCommand.Create());
+
+        // 8. SwitchReportCommand - switch-report (sr) - 分合闸操作报表
+        rootCommand.Add(SwitchReportCommand.Create());
+
+        // 9. PeriodicWorkCommand - periodic-work (pw) - 内置录波定期工作
+        rootCommand.Add(PeriodicWorkCommand.Create());
+
+        // 10. ThreePhaseIdeeCommand - threephase-idee (idee, idee-idel subcommands) - 三相IDEE分析
+        rootCommand.Add(ThreePhaseIdeeCommand.Create());
+
+        // 11. ComtradeExportCommand - comtrade-export (list, export subcommands) - COMTRADE通道导出
+        rootCommand.Add(ComtradeExportCommand.Create());
+
+        // 12. VideoCommand - video (analyze, folder subcommands) - 视频分析
+        rootCommand.Add(VideoCommand.Create());
     }
 }

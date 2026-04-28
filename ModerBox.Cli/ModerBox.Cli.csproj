@@ -24,6 +24,7 @@
     <ProjectReference Include="..\ModerBox.CableRouting\ModerBox.CableRouting.csproj" />
     <ProjectReference Include="..\ModerBox.Comtrade\ModerBox.Comtrade.csproj" />
     <ProjectReference Include="..\ModerBox.ContributionCalculation\ModerBox.ContributionCalculation.csproj" />
+    <ProjectReference Include="..\ModerBox.VideoAnalysis\ModerBox.VideoAnalysis.csproj" />
   </ItemGroup>
 
   <ItemGroup>
