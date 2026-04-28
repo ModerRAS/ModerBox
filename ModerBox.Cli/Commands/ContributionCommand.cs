@@ -38,9 +38,10 @@ public static class ContributionCommand
 
             if (!File.Exists(source))
             {
-                StatusWriter.WriteLine($"错误: 文件不存在: {source}");
                 if (GlobalJsonOption.IsJsonMode)
-                    JsonOutputWriter.Write(new { success = false, error = "源文件不存在" });
+                    JsonOutputWriter.Write(new { success = false, error = $"文件不存在: {source}" });
+                else
+                    StatusWriter.WriteLine($"错误: 文件不存在: {source}");
                 context.ExitCode = ExitCodes.Error;
                 return;
             }
@@ -72,9 +73,10 @@ public static class ContributionCommand
             }
             catch (Exception ex)
             {
-                StatusWriter.WriteLine($"错误: {ex.Message}");
                 if (GlobalJsonOption.IsJsonMode)
                     JsonOutputWriter.Write(new { success = false, error = ex.Message });
+                else
+                    StatusWriter.WriteLine($"错误: {ex.Message}");
                 context.ExitCode = ExitCodes.Error;
             }
         });

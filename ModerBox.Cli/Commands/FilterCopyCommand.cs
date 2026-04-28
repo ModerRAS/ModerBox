@@ -162,9 +162,13 @@ public static class FilterCopyCommand
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Skip files that fail to parse
+                        // Log error in non-JSON mode for diagnostics
+                        if (!isJson)
+                        {
+                            AnsiConsole.MarkupLine($"[yellow]处理文件失败: {Path.GetFileName(cfgPath)} - {ex.Message}[/]");
+                        }
                     }
 
                     var processed = Interlocked.Increment(ref processedFiles);

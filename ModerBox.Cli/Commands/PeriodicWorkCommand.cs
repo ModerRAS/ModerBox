@@ -5,7 +5,7 @@ using ClosedXML.Excel;
 using ModerBox.Cli.Infrastructure;
 using ModerBox.Comtrade.PeriodicWork;
 using ModerBox.Comtrade.PeriodicWork.Services;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace ModerBox.Cli.Commands;
 
@@ -85,7 +85,7 @@ public static class PeriodicWorkCommand
         DataSpec? dataSpec;
         try
         {
-            dataSpec = JsonConvert.DeserializeObject<DataSpec>(File.ReadAllText(configPath));
+            dataSpec = JsonSerializer.Deserialize<DataSpec>(File.ReadAllText(configPath));
         }
         catch (Exception ex)
         {
@@ -126,7 +126,7 @@ public static class PeriodicWorkCommand
             {
                 StatusWriter.WriteLine("错误: 源文件夹中未找到COMTRADE文件");
             }
-            return 1;
+            return ExitCodes.Error;
         }
 
         try

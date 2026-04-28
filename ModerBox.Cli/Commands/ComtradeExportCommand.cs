@@ -43,7 +43,7 @@ public static class ComtradeExportCommand
             {
                 if (GlobalJsonOption.IsJsonMode)
                 {
-                    JsonOutputWriter.Write(new { channels = Array.Empty<object>() });
+                    JsonOutputWriter.Write(new { channels = Array.Empty<object>(), error = $"文件不存在: {cfgPath}" });
                 }
                 else
                 {
