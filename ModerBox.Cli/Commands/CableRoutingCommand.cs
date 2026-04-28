@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.IO;
 using ModerBox.CableRouting;
 using ModerBox.Cli.Infrastructure;
@@ -39,8 +40,13 @@ public static class CableRoutingCommand
         command.AddOption(outputOption);
         command.AddOption(sampleOption);
 
-        command.SetHandler(async (FileInfo? configFile, string? baseImage, string? output, bool sample) =>
+        command.SetHandler(async (InvocationContext context) =>
         {
+            var configFile = context.ParseResult.GetValueForOption(configOption);
+            var baseImage = context.ParseResult.GetValueForOption(baseImageOption);
+            var output = context.ParseResult.GetValueForOption(outputOption);
+            var sample = context.ParseResult.GetValueForOption(sampleOption);
+
             // --sample flag: generate sample config and exit regardless of other options
             if (sample)
             {
@@ -55,6 +61,7 @@ public static class CableRoutingCommand
                     StatusWriter.WriteLine($"✓ 已创建示例配置文件: {sampleFile}");
                     StatusWriter.WriteLine("请编辑配置文件中的点位数据后再运行");
                 }
+                context.ExitCode = ExitCodes.Success;
                 return;
             }
 
@@ -71,7 +78,8 @@ public static class CableRoutingCommand
                 {
                     StatusWriter.WriteLine($"错误: 配置文件不存在: {configPath}");
                 }
-                throw new InvalidOperationException($"配置文件不存在: {configPath}");
+                context.ExitCode = ExitCodes.Error;
+                return;
             }
 
             StatusWriter.WriteLine($"开始电缆走向绘制...");
@@ -90,7 +98,8 @@ public static class CableRoutingCommand
                     {
                         StatusWriter.WriteLine("错误: 无法加载配置文件");
                     }
-                    throw new InvalidOperationException("无法加载配置文件");
+                    context.ExitCode = ExitCodes.Error;
+                    return;
                 }
 
                 if (!string.IsNullOrEmpty(baseImage))
@@ -167,6 +176,8 @@ public static class CableRoutingCommand
                 {
                     StatusWriter.WriteLine("✓ 电缆走向绘制完成!");
                 }
+
+                context.ExitCode = ExitCodes.Success;
             }
             catch (Exception ex)
             {
@@ -178,9 +189,9 @@ public static class CableRoutingCommand
                 {
                     StatusWriter.WriteLine($"错误: {ex.Message}");
                 }
-                throw;
+                context.ExitCode = ExitCodes.Error;
             }
-        }, configOption, baseImageOption, outputOption, sampleOption);
+        });
 
         return command;
     }

@@ -73,7 +73,7 @@ public static class QuestionBankCommand
             {
                 StatusWriter.WriteLine($"错误: 文件不存在: {source}");
             }
-            return 1;
+            return ExitCodes.Error;
         }
 
         try
@@ -102,7 +102,7 @@ public static class QuestionBankCommand
                 StatusWriter.WriteLine($"  输出文件: {summary!.TargetPath}");
             }
 
-            return 0;
+            return ExitCodes.Success;
         }
         catch (Exception ex)
         {
@@ -114,7 +114,7 @@ public static class QuestionBankCommand
             {
                 StatusWriter.WriteLine($"错误: {ex.Message}");
             }
-            return 1;
+            return ExitCodes.Error;
         }
     }
 }

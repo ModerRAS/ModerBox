@@ -4,6 +4,19 @@ using System.Text.Json;
 namespace ModerBox.Cli.Infrastructure;
 
 /// <summary>
+/// Standard exit codes for CLI commands.
+/// </summary>
+public static class ExitCodes
+{
+    /// <summary>Operation completed successfully.</summary>
+    public const int Success = 0;
+    /// <summary>Runtime error occurred during execution.</summary>
+    public const int Error = 1;
+    /// <summary>Argument validation error (missing or invalid arguments).</summary>
+    public const int ArgumentError = 2;
+}
+
+/// <summary>
 /// Global option for JSON output mode.
 /// </summary>
 public static class GlobalJsonOption

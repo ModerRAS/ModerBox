@@ -41,7 +41,7 @@ public static class ContributionCommand
                 StatusWriter.WriteLine($"错误: 文件不存在: {source}");
                 if (GlobalJsonOption.IsJsonMode)
                     JsonOutputWriter.Write(new { success = false, error = "源文件不存在" });
-                context.ExitCode = 1;
+                context.ExitCode = ExitCodes.Error;
                 return;
             }
 
@@ -68,14 +68,14 @@ public static class ContributionCommand
                 if (GlobalJsonOption.IsJsonMode)
                     JsonOutputWriter.Write(new { success = true, ticketCount = tickets.Count, contributorCount = contributions.Count });
 
-                context.ExitCode = 0;
+                context.ExitCode = ExitCodes.Success;
             }
             catch (Exception ex)
             {
                 StatusWriter.WriteLine($"错误: {ex.Message}");
                 if (GlobalJsonOption.IsJsonMode)
                     JsonOutputWriter.Write(new { success = false, error = ex.Message });
-                context.ExitCode = 1;
+                context.ExitCode = ExitCodes.Error;
             }
         });
 

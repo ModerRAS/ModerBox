@@ -67,7 +67,7 @@ public static class FilterWaveformCommand
                     JsonOutputWriter.Write(new { success = false, error = $"目录不存在: {source}" });
                 else
                     AnsiConsole.MarkupLine($"[red]错误: 目录不存在: {source}[/]");
-                context.ExitCode = 1;
+                context.ExitCode = ExitCodes.Error;
                 return;
             }
 
@@ -116,7 +116,7 @@ public static class FilterWaveformCommand
                     AnsiConsole.MarkupLine($"[green]✓ 滤波器分合闸波形检测完成![/]");
                     AnsiConsole.MarkupLine($"  输出文件: {target}");
                 }
-                context.ExitCode = 0;
+                context.ExitCode = ExitCodes.Success;
             }
             catch (Exception ex)
             {
@@ -124,7 +124,7 @@ public static class FilterWaveformCommand
                     JsonOutputWriter.Write(new { success = false, error = ex.Message });
                 else
                     AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-                context.ExitCode = 1;
+                context.ExitCode = ExitCodes.Error;
             }
         });
 

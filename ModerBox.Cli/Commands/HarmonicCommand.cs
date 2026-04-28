@@ -61,7 +61,7 @@ public static class HarmonicCommand
                 {
                     AnsiConsole.MarkupLine($"[red]错误: 目录不存在: {source}[/]");
                 }
-                ctx.ExitCode = 1;
+                ctx.ExitCode = ExitCodes.Error;
                 return;
             }
 
@@ -128,7 +128,7 @@ public static class HarmonicCommand
                     AnsiConsole.MarkupLine($"  输出文件: {target}");
                 }
 
-                ctx.ExitCode = 0;
+                ctx.ExitCode = ExitCodes.Success;
             }
             catch (Exception ex)
             {
@@ -140,7 +140,7 @@ public static class HarmonicCommand
                 {
                     AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
                 }
-                ctx.ExitCode = 1;
+                ctx.ExitCode = ExitCodes.Error;
             }
         });
 
