@@ -1,139 +1,198 @@
-using Spectre.Console;
-using ModerBox.CableRouting;
-using ModerBox.Common;
+using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.IO;
+using ModerBox.CableRouting;
+using ModerBox.Cli.Infrastructure;
 
 namespace ModerBox.Cli.Commands;
 
 public static class CableRoutingCommand
 {
-    public static async Task<int> RunAsync(string[]? args = null)
+    public static Command Create()
     {
-        args ??= [];
-        string configFile = "";
-        string baseImage = "";
-        string outputPath = "";
+        var command = new Command("cable", "电缆走向绘制");
+        command.AddAlias("c");
 
-        for (int i = 0; i < args.Length; i++)
+        var configOption = new Option<FileInfo?>(
+            name: "--config",
+            description: "配置文件路径")
         {
-            switch (args[i].ToLower())
-            {
-                case "--config" or "-c":
-                    if (i + 1 < args.Length) configFile = args[++i];
-                    break;
-                case "--base-image" or "-b":
-                    if (i + 1 < args.Length) baseImage = args[++i];
-                    break;
-                case "--output" or "-o":
-                    if (i + 1 < args.Length) outputPath = args[++i];
-                    break;
-                case "--sample":
-                    CreateSampleConfig();
-                    return 0;
-            }
-        }
+            IsRequired = true
+        };
+        configOption.AddAlias("-c");
 
-        if (string.IsNullOrEmpty(configFile))
+        var baseImageOption = new Option<string?>(
+            name: "--base-image",
+            description: "底图路径 (可选)");
+        baseImageOption.AddAlias("-b");
+
+        var outputOption = new Option<string?>(
+            name: "--output",
+            description: "输出路径 (可选)");
+        outputOption.AddAlias("-o");
+
+        var sampleOption = new Option<bool>(
+            name: "--sample",
+            description: "生成示例配置文件");
+
+        command.AddOption(configOption);
+        command.AddOption(baseImageOption);
+        command.AddOption(outputOption);
+        command.AddOption(sampleOption);
+
+        command.SetHandler(async (InvocationContext context) =>
         {
-            configFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入配置文件路径:"));
-        }
+            var configFile = context.ParseResult.GetValueForOption(configOption);
+            var baseImage = context.ParseResult.GetValueForOption(baseImageOption);
+            var output = context.ParseResult.GetValueForOption(outputOption);
+            var sample = context.ParseResult.GetValueForOption(sampleOption);
 
-        if (!File.Exists(configFile))
-        {
-            AnsiConsole.MarkupLine($"[red]错误: 配置文件不存在: {configFile}[/]");
-            return 1;
-        }
-
-        AnsiConsole.MarkupLine($"[cyan]开始电缆走向绘制...[/]");
-        AnsiConsole.MarkupLine($"  配置文件: {configFile}");
-
-        try
-        {
-            var config = CableRoutingService.LoadConfig(configFile);
-            if (config == null)
+            // --sample flag: generate sample config and exit regardless of other options
+            if (sample)
             {
-                AnsiConsole.MarkupLine("[red]错误: 无法加载配置文件[/]");
-                return 1;
-            }
-
-            if (!string.IsNullOrEmpty(baseImage))
-            {
-                config.BaseImagePath = baseImage;
-                AnsiConsole.MarkupLine($"  底图: {baseImage}");
-            }
-
-            if (!string.IsNullOrEmpty(outputPath))
-            {
-                config.OutputPath = outputPath;
-                AnsiConsole.MarkupLine($"  输出: {outputPath}");
-            }
-
-            var configDir = Path.GetDirectoryName(configFile) ?? "";
-            if (!string.IsNullOrEmpty(configDir))
-            {
-                if (!Path.IsPathRooted(config.BaseImagePath))
+                var sampleFile = "cable_routing_config.json";
+                CableRoutingService.CreateSampleConfig(sampleFile);
+                if (GlobalJsonOption.IsJsonMode)
                 {
-                    config.BaseImagePath = Path.Combine(configDir, config.BaseImagePath);
+                    JsonOutputWriter.Write(new { success = true, sampleFile });
+                }
+                else
+                {
+                    StatusWriter.WriteLine($"✓ 已创建示例配置文件: {sampleFile}");
+                    StatusWriter.WriteLine("请编辑配置文件中的点位数据后再运行");
+                }
+                context.ExitCode = ExitCodes.Success;
+                return;
+            }
+
+            // configFile is guaranteed non-null by IsRequired=true
+            var configPath = configFile!.FullName;
+
+            if (!File.Exists(configPath))
+            {
+                if (GlobalJsonOption.IsJsonMode)
+                {
+                    JsonOutputWriter.Write(new { success = false, error = $"配置文件不存在: {configPath}" });
+                }
+                else
+                {
+                    StatusWriter.WriteLine($"错误: 配置文件不存在: {configPath}");
+                }
+                context.ExitCode = ExitCodes.Error;
+                return;
+            }
+
+            StatusWriter.WriteLine($"开始电缆走向绘制...");
+            StatusWriter.WriteLine($"  配置文件: {configPath}");
+
+            try
+            {
+                var config = CableRoutingService.LoadConfig(configPath);
+                if (config == null)
+                {
+                    if (GlobalJsonOption.IsJsonMode)
+                    {
+                        JsonOutputWriter.Write(new { success = false, error = "无法加载配置文件" });
+                    }
+                    else
+                    {
+                        StatusWriter.WriteLine("错误: 无法加载配置文件");
+                    }
+                    context.ExitCode = ExitCodes.Error;
+                    return;
                 }
 
-                foreach (var task in config.GetEffectiveTasks())
+                if (!string.IsNullOrEmpty(baseImage))
                 {
-                    if (!Path.IsPathRooted(task.OutputPath))
+                    config.BaseImagePath = baseImage;
+                    StatusWriter.WriteLine($"  底图: {baseImage}");
+                }
+
+                if (!string.IsNullOrEmpty(output))
+                {
+                    config.OutputPath = output;
+                    StatusWriter.WriteLine($"  输出: {output}");
+                }
+
+                // Resolve relative paths against config directory
+                var configDir = Path.GetDirectoryName(configPath) ?? "";
+                if (!string.IsNullOrEmpty(configDir))
+                {
+                    if (!Path.IsPathRooted(config.BaseImagePath))
                     {
-                        task.OutputPath = Path.Combine(configDir, task.OutputPath);
+                        config.BaseImagePath = Path.Combine(configDir, config.BaseImagePath);
+                    }
+
+                    foreach (var task in config.GetEffectiveTasks())
+                    {
+                        if (!Path.IsPathRooted(task.OutputPath))
+                        {
+                            task.OutputPath = Path.Combine(configDir, task.OutputPath);
+                        }
                     }
                 }
-            }
 
-            AnsiConsole.MarkupLine($"[cyan]点位数量: {config.Points.Count}[/]");
-            AnsiConsole.MarkupLine($"[cyan]任务数量: {config.GetEffectiveTasks().Count}[/]");
+                StatusWriter.WriteLine($"点位数量: {config.Points.Count}");
+                StatusWriter.WriteLine($"任务数量: {config.GetEffectiveTasks().Count}");
 
-            await Task.Run(() =>
-            {
-                var service = new CableRoutingService();
-                var results = service.ExecuteAll(config, msg =>
+                var results = await Task.Run(() =>
                 {
-                    AnsiConsole.MarkupLine($"[cyan]{msg}[/]");
+                    var service = new CableRoutingService();
+                    return service.ExecuteAll(config, msg =>
+                    {
+                        StatusWriter.WriteLine(msg);
+                    });
                 });
 
-                AnsiConsole.MarkupLine("");
-                AnsiConsole.MarkupLine("[cyan]输出汇总[/]");
-
                 var successCount = results.Count(r => r.Success);
-                AnsiConsole.MarkupLine($"  任务总数: {results.Count}  成功: {successCount}");
+                StatusWriter.WriteLine("");
+                StatusWriter.WriteLine("输出汇总");
+                StatusWriter.WriteLine($"  任务总数: {results.Count}  成功: {successCount}");
 
                 foreach (var result in results)
                 {
                     if (result.Success)
                     {
-                        AnsiConsole.MarkupLine($"  [green]✓[/] {result.OutputPath}");
-                        AnsiConsole.MarkupLine($"      路径: {result.GetRouteDescription()}");
-                        AnsiConsole.MarkupLine($"      总长: {result.TotalLength:F2} 像素");
+                        StatusWriter.WriteLine($"  ✓ {result.OutputPath}");
+                        StatusWriter.WriteLine($"      路径: {result.GetRouteDescription()}");
+                        StatusWriter.WriteLine($"      总长: {result.TotalLength:F2} 像素");
                     }
                     else
                     {
-                        AnsiConsole.MarkupLine($"  [red]✗[/] {result.OutputPath}: {result.ErrorMessage}");
+                        StatusWriter.WriteLine($"  ✗ {result.OutputPath}: {result.ErrorMessage}");
                     }
                 }
-            });
 
-            AnsiConsole.MarkupLine($"[green]✓ 电缆走向绘制完成![/]");
+                if (GlobalJsonOption.IsJsonMode)
+                {
+                    JsonOutputWriter.Write(new
+                    {
+                        success = true,
+                        totalTasks = results.Count,
+                        completedTasks = successCount
+                    });
+                }
+                else
+                {
+                    StatusWriter.WriteLine("✓ 电缆走向绘制完成!");
+                }
 
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-            return 1;
-        }
-    }
+                context.ExitCode = ExitCodes.Success;
+            }
+            catch (Exception ex)
+            {
+                if (GlobalJsonOption.IsJsonMode)
+                {
+                    JsonOutputWriter.Write(new { success = false, error = ex.Message });
+                }
+                else
+                {
+                    StatusWriter.WriteLine($"错误: {ex.Message}");
+                }
+                context.ExitCode = ExitCodes.Error;
+            }
+        });
 
-    private static void CreateSampleConfig()
-    {
-        var sampleFile = "cable_routing_config.json";
-        CableRoutingService.CreateSampleConfig(sampleFile);
-        AnsiConsole.MarkupLine($"[green]✓ 已创建示例配置文件: {sampleFile}[/]");
-        AnsiConsole.MarkupLine($"请编辑配置文件中的点位数据后再运行[/]");
+        return command;
     }
 }

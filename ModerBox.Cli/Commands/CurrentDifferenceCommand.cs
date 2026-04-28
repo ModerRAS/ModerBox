@@ -1,102 +1,140 @@
-using Spectre.Console;
-using ModerBox.Comtrade.CurrentDifferenceAnalysis;
-using ModerBox.Common;
+using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.IO;
+using ModerBox.Comtrade.CurrentDifferenceAnalysis;
+using ModerBox.Cli.Infrastructure;
 
 namespace ModerBox.Cli.Commands;
 
 public static class CurrentDifferenceCommand
 {
-    public static async Task<int> RunAsync(string[]? args = null)
+    public static Command Create()
     {
-        args ??= [];
-        string sourceFolder = "";
-        string targetFile = "";
-        bool exportChart = false;
-        bool exportTop100 = false;
-
-        for (int i = 0; i < args.Length; i++)
+        var sourceOption = new Option<string>(
+            name: "--source",
+            description: "波形文件目录")
         {
-            switch (args[i].ToLower())
+            IsRequired = true
+        };
+        sourceOption.AddAlias("-s");
+
+        var targetOption = new Option<string>(
+            name: "--target",
+            description: "输出CSV文件路径",
+            getDefaultValue: () => "");
+        targetOption.AddAlias("-t");
+
+        var chartOption = new Option<bool>(
+            name: "--chart",
+            description: "导出图表");
+
+        var top100Option = new Option<bool>(
+            name: "--top100",
+            description: "导出前100差值点");
+
+        var command = new Command("current-diff", "接地极电流差值分析")
+        {
+            sourceOption,
+            targetOption,
+            chartOption,
+            top100Option
+        };
+        command.AddAlias("cd");
+
+        command.SetHandler(async (InvocationContext ctx) =>
+        {
+            var source = ctx.ParseResult.GetValueForOption(sourceOption)!;
+            var target = ctx.ParseResult.GetValueForOption(targetOption) ?? "";
+            var exportChart = ctx.ParseResult.GetValueForOption(chartOption);
+            var exportTop100 = ctx.ParseResult.GetValueForOption(top100Option);
+
+            if (!Directory.Exists(source))
             {
-                case "--source" or "-s":
-                    if (i + 1 < args.Length) sourceFolder = args[++i];
-                    break;
-                case "--target" or "-t":
-                    if (i + 1 < args.Length) targetFile = args[++i];
-                    break;
-                case "--chart":
-                    exportChart = true;
-                    break;
-                case "--top100":
-                    exportTop100 = true;
-                    break;
+                if (GlobalJsonOption.IsJsonMode)
+                {
+                    JsonOutputWriter.Write(new { success = false, error = $"目录不存在: {source}" });
+                }
+                else
+                {
+                    StatusWriter.WriteLine($"错误: 目录不存在: {source}");
+                }
+                ctx.ExitCode = ExitCodes.Error;
+                return;
             }
-        }
 
-        if (string.IsNullOrEmpty(sourceFolder))
-        {
-            sourceFolder = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入波形文件目录:")
-                    .DefaultValue(".")
-                    .Validate(d => !string.IsNullOrWhiteSpace(d)));
-        }
-
-        if (string.IsNullOrEmpty(targetFile))
-        {
-            var defaultTarget = Path.Combine(sourceFolder, "电流差值分析.csv");
-            targetFile = AnsiConsole.Prompt(
-                new TextPrompt<string>("请输入输出CSV文件路径:")
-                    .DefaultValue(defaultTarget)
-                    .Validate(f => !string.IsNullOrWhiteSpace(f)));
-        }
-
-        if (!Directory.Exists(sourceFolder))
-        {
-            AnsiConsole.MarkupLine($"[red]错误: 目录不存在: {sourceFolder}[/]");
-            return 1;
-        }
-
-        AnsiConsole.MarkupLine($"[cyan]开始接地极电流差值分析...[/]");
-        AnsiConsole.MarkupLine($"  源目录: {sourceFolder}");
-        AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
-
-        try
-        {
-            var facade = new CurrentDifferenceAnalysisFacade();
-
-            await Task.Run(async () =>
+            if (string.IsNullOrEmpty(target))
             {
-                var (allResults, top100Results) = await facade.ExecuteFullAnalysisAsync(
-                    sourceFolder,
-                    targetFile,
-                    msg => AnsiConsole.MarkupLine($"[cyan]{msg}[/]"));
+                target = Path.Combine(source, "电流差值分析.csv");
+            }
 
-                AnsiConsole.MarkupLine($"[green]✓ 分析完成，共处理 {allResults.Count} 个数据点[/]");
+            if (!GlobalJsonOption.IsJsonMode)
+            {
+                StatusWriter.WriteLine("开始接地极电流差值分析...");
+                StatusWriter.WriteLine($"  源目录: {source}");
+                StatusWriter.WriteLine($"  输出文件: {target}");
+            }
+
+            try
+            {
+                var facade = new CurrentDifferenceAnalysisFacade();
+
+                var (allResults, top100Results) = await facade.ExecuteFullAnalysisAsync(
+                    source,
+                    target,
+                    msg =>
+                    {
+                        if (!GlobalJsonOption.IsJsonMode)
+                        {
+                            StatusWriter.WriteLine(msg);
+                        }
+                    });
 
                 if (exportTop100)
                 {
-                    var top100File = Path.ChangeExtension(targetFile, "_top100.csv");
+                    var top100File = Path.ChangeExtension(target, "_top100.csv");
                     await facade.ExportTop100ByFileToCsvAsync(top100Results, top100File);
-                    AnsiConsole.MarkupLine($"[green]✓ 已导出前100差值点: {top100File}[/]");
+                    if (!GlobalJsonOption.IsJsonMode)
+                    {
+                        StatusWriter.WriteLine($"已导出前100差值点: {top100File}");
+                    }
                 }
 
                 if (exportChart)
                 {
-                    var chartFile = Path.ChangeExtension(targetFile, "_chart.png");
+                    var chartFile = Path.ChangeExtension(target, "_chart.png");
                     await facade.GenerateLineChartAsync(top100Results, chartFile);
-                    AnsiConsole.MarkupLine($"[green]✓ 已导出图表: {chartFile}[/]");
+                    if (!GlobalJsonOption.IsJsonMode)
+                    {
+                        StatusWriter.WriteLine($"已导出图表: {chartFile}");
+                    }
                 }
-            });
 
-            AnsiConsole.MarkupLine($"[green]✓ 接地极电流差值分析完成![/]");
-            AnsiConsole.MarkupLine($"  输出文件: {targetFile}");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-            return 1;
-        }
+                if (GlobalJsonOption.IsJsonMode)
+                {
+                    JsonOutputWriter.Write(new { success = true, totalFiles = allResults.Count });
+                }
+                else
+                {
+                    StatusWriter.WriteLine($"分析完成，共处理 {allResults.Count} 个数据点");
+                    StatusWriter.WriteLine($"输出文件: {target}");
+                }
+
+                ctx.ExitCode = ExitCodes.Success;
+            }
+            catch (Exception ex)
+            {
+                if (GlobalJsonOption.IsJsonMode)
+                {
+                    JsonOutputWriter.Write(new { success = false, error = ex.Message });
+                }
+                else
+                {
+                    StatusWriter.WriteLine($"错误: {ex.Message}");
+                }
+                ctx.ExitCode = ExitCodes.Error;
+            }
+        });
+
+        return command;
     }
 }

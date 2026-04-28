@@ -6,7 +6,7 @@ using ModerBox.Cli.Infrastructure;
 
 namespace ModerBox.Cli.Commands;
 
-public static class FilterWaveformCommand
+public static class SwitchReportCommand
 {
     public static Command Create()
     {
@@ -20,46 +20,44 @@ public static class FilterWaveformCommand
 
         var targetOption = new Option<string>(
             name: "--target",
-            description: "输出 Excel 文件路径",
-            getDefaultValue: () => "");
+            description: "输出 Excel 文件路径")
+        {
+            IsRequired = true
+        };
         targetOption.AddAlias("-t");
 
-        var oldAlgorithmOption = new Option<bool>(
-            name: "--old-algorithm",
-            description: "使用旧算法");
+        var useSlidingWindowOption = new Option<bool>(
+            name: "--use-sliding-window",
+            description: "使用滑动窗口算法",
+            getDefaultValue: () => true);
 
         var ioWorkersOption = new Option<int>(
             name: "--io-workers",
             description: "IO 工作线程数",
-            getDefaultValue: () => 4);
+            getDefaultValue: () => 2);
 
         var processWorkersOption = new Option<int>(
             name: "--process-workers",
             description: "处理工作线程数",
-            getDefaultValue: () => 6);
+            getDefaultValue: () => 4);
 
-        var command = new Command("filter", "滤波器分合闸波形检测");
-        command.AddAlias("f");
+        var command = new Command("switch-report", "分合闸操作报表");
+        command.AddAlias("sr");
+
         command.AddOption(sourceOption);
         command.AddOption(targetOption);
-        command.AddOption(oldAlgorithmOption);
+        command.AddOption(useSlidingWindowOption);
         command.AddOption(ioWorkersOption);
         command.AddOption(processWorkersOption);
 
         command.SetHandler(async (InvocationContext context) =>
         {
             var source = context.ParseResult.GetValueForOption(sourceOption)!;
-            var target = context.ParseResult.GetValueForOption(targetOption) ?? "";
-            var oldAlgorithm = context.ParseResult.GetValueForOption(oldAlgorithmOption);
-            var useNewAlgorithm = !oldAlgorithm;
+            var target = context.ParseResult.GetValueForOption(targetOption)!;
+            var useSlidingWindow = context.ParseResult.GetValueForOption(useSlidingWindowOption);
             var ioWorkers = context.ParseResult.GetValueForOption(ioWorkersOption);
             var processWorkers = context.ParseResult.GetValueForOption(processWorkersOption);
             var isJson = GlobalJsonOption.IsJsonMode;
-
-            if (string.IsNullOrEmpty(target))
-            {
-                target = Path.Combine(source, "滤波器分合闸波形检测.xlsx");
-            }
 
             if (!Directory.Exists(source))
             {
@@ -73,16 +71,16 @@ public static class FilterWaveformCommand
 
             if (!isJson)
             {
-                AnsiConsole.MarkupLine($"[cyan]开始滤波器分合闸波形检测...[/]");
+                AnsiConsole.MarkupLine($"[cyan]开始分合闸操作报表生成...[/]");
                 AnsiConsole.MarkupLine($"  源目录: {source}");
                 AnsiConsole.MarkupLine($"  输出文件: {target}");
-                AnsiConsole.MarkupLine($"  使用新算法: {(useNewAlgorithm ? "是" : "否")}");
+                AnsiConsole.MarkupLine($"  滑动窗口算法: {(useSlidingWindow ? "是" : "否")}");
                 AnsiConsole.MarkupLine($"  IO工作线程: {ioWorkers}");
                 AnsiConsole.MarkupLine($"  处理工作线程: {processWorkers}");
             }
             else
             {
-                StatusWriter.WriteLine($"开始滤波器分合闸波形检测... 源目录: {source}");
+                StatusWriter.WriteLine($"开始分合闸操作报表生成... 源目录: {source}");
             }
 
             var totalFiles = 0;
@@ -93,7 +91,7 @@ public static class FilterWaveformCommand
                 await FilterWaveformStreamingFacade.ExecuteToExcelWithSqliteAsync(
                     source,
                     target,
-                    useNewAlgorithm,
+                    useSlidingWindow,
                     ioWorkers,
                     processWorkers,
                     (processed, total) =>
@@ -113,7 +111,7 @@ public static class FilterWaveformCommand
                     JsonOutputWriter.Write(new { success = true, totalFiles, processedFiles });
                 else
                 {
-                    AnsiConsole.MarkupLine($"[green]✓ 滤波器分合闸波形检测完成![/]");
+                    AnsiConsole.MarkupLine($"[green]✓ 分合闸操作报表生成完成![/]");
                     AnsiConsole.MarkupLine($"  输出文件: {target}");
                 }
                 context.ExitCode = ExitCodes.Success;

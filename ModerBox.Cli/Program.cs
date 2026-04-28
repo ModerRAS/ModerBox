@@ -1,6 +1,6 @@
-using Spectre.Console;
+using System.CommandLine;
+using ModerBox.Cli.Infrastructure;
 using ModerBox.Cli.Commands;
-using ModerBox.Common;
 
 namespace ModerBox.Cli;
 
@@ -8,129 +8,59 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        try
-        {
-            ShowBanner();
+        // Set JSON mode from args before parsing
+        GlobalJsonOption.IsJsonMode = args.Contains("--json") || args.Contains("-j");
 
-            if (args.Length == 0)
-            {
-                return await RunInteractiveMode();
-            }
-            else
-            {
-                return await RunCommandMode(args);
-            }
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-            return 1;
-        }
+        var rootCommand = new RootCommand("ModerBox CLI - 电力系统工具箱命令行版本");
+
+        // Global --json option
+        var jsonOption = new Option<bool>(
+            name: "--json",
+            description: "Output as machine-readable JSON");
+        rootCommand.AddGlobalOption(jsonOption);
+
+        // Register all 12 commands
+        RegisterSubcommands(rootCommand);
+
+        return await rootCommand.InvokeAsync(args);
     }
 
-    static void ShowBanner()
+    static void RegisterSubcommands(RootCommand rootCommand)
     {
-        var banner = @"
-╔═══════════════════════════════════════════════════════════════╗
-║                    ModerBox CLI v1.0.0                       ║
-║               电力系统工具箱 - 命令行版本                      ║
-╚═══════════════════════════════════════════════════════════════╝
-";
-        AnsiConsole.MarkupLine(banner);
-    }
+        // 1. HarmonicCommand - harmonic (h) - 谐波计算
+        rootCommand.Add(HarmonicCommand.Create());
 
-    static async Task<int> RunInteractiveMode()
-    {
-        while (true)
-        {
-            AnsiConsole.WriteLine();
-            var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("请选择功能模块:")
-                    .PageSize(10)
-                    .AddChoices(new[]
-                    {
-                        "1. 谐波计算",
-                        "2. 滤波器分合闸波形检测",
-                        "3. 接地极电流差值分析",
-                        "4. 题库转换",
-                        "5. 电缆走向绘制",
-                        "6. 工作票贡献度计算",
-                        "0. 退出"
-                    }));
+        // 2. FilterWaveformCommand - filter (f) - 滤波器分合闸波形检测
+        rootCommand.Add(FilterWaveformCommand.Create());
 
-            int result = choice switch
-            {
-                "1. 谐波计算" => await HarmonicCommand.RunAsync(),
-                "2. 滤波器分合闸波形检测" => await FilterWaveformCommand.RunAsync(),
-                "3. 接地极电流差值分析" => await CurrentDifferenceCommand.RunAsync(),
-                "4. 题库转换" => await QuestionBankCommand.RunAsync(),
-                "5. 电缆走向绘制" => await CableRoutingCommand.RunAsync(),
-                "6. 工作票贡献度计算" => await ContributionCommand.RunAsync(),
-                "0. 退出" => 0,
-                _ => 0
-            };
+        // 3. CurrentDifferenceCommand - current-diff (cd) - 接地极电流差值分析
+        rootCommand.Add(CurrentDifferenceCommand.Create());
 
-            if (result == 0 && choice == "0. 退出")
-            {
-                AnsiConsole.MarkupLine("[green]再见![/]");
-                break;
-            }
+        // 4. QuestionBankCommand - question-bank (qb) - 题库转换
+        rootCommand.Add(QuestionBankCommand.Create());
 
-            if (result != 0)
-            {
-                AnsiConsole.MarkupLine($"[yellow]命令执行返回代码: {result}[/]");
-            }
-        }
+        // 5. CableRoutingCommand - cable (c) - 电缆走向绘制
+        rootCommand.Add(CableRoutingCommand.Create());
 
-        return 0;
-    }
+        // 6. ContributionCommand - contribution (ctb) - 工作票贡献度计算
+        rootCommand.Add(ContributionCommand.Create());
 
-    static async Task<int> RunCommandMode(string[] args)
-    {
-        if (args.Length == 0)
-        {
-            ShowHelp();
-            return 0;
-        }
+        // 7. FilterCopyCommand - filter-copy (fc) - 分合闸波形筛选复制
+        rootCommand.Add(FilterCopyCommand.Create());
 
-        var command = args[0].ToLower();
-        var commandArgs = args.Length > 1 ? args[1..] : [];
+        // 8. SwitchReportCommand - switch-report (sr) - 分合闸操作报表
+        rootCommand.Add(SwitchReportCommand.Create());
 
-        return command switch
-        {
-            "harmonic" or "h" => await HarmonicCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "filter" or "f" => await FilterWaveformCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "current-diff" or "cd" => await CurrentDifferenceCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "question-bank" or "qb" => await QuestionBankCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "cable" or "c" => await CableRoutingCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "contribution" or "ctb" => await ContributionCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "help" or "?" => ShowHelp(),
-            _ => ShowHelp()
-        };
-    }
+        // 9. PeriodicWorkCommand - periodic-work (pw) - 内置录波定期工作
+        rootCommand.Add(PeriodicWorkCommand.Create());
 
-    static int ShowHelp()
-    {
-        var help = """
-            用法: ModerBox.Cli [命令] [选项]
+        // 10. ThreePhaseIdeeCommand - threephase-idee (idee, idee-idel subcommands) - 三相IDEE分析
+        rootCommand.Add(ThreePhaseIdeeCommand.Create());
 
-            命令:
-              harmonic, h        谐波计算
-              filter, f         滤波器分合闸波形检测
-              current-diff, cd  接地极电流差值分析
-              question-bank, qb 题库转换
-              cable, c          电缆走向绘制
-              contribution, ctb 工作票贡献度计算
-              help, ?           显示帮助信息
+        // 11. ComtradeExportCommand - comtrade-export (list, export subcommands) - COMTRADE通道导出
+        rootCommand.Add(ComtradeExportCommand.Create());
 
-            示例:
-              ModerBox.Cli harmonic --source "C:\data" --target "C:\result.xlsx"
-              ModerBox.Cli filter "C:\waveforms" "C:\output.xlsx"
-              ModerBox.Cli contribution --source "C:\data.csv" --target "C:\result.xlsx"
-              ModerBox.Cli
-            """;
-        AnsiConsole.MarkupLine(help);
-        return 0;
+        // 12. VideoCommand - video (analyze, folder subcommands) - 视频分析
+        rootCommand.Add(VideoCommand.Create());
     }
 }
