@@ -1,6 +1,5 @@
-using Spectre.Console;
-using ModerBox.Cli.Commands;
-using ModerBox.Common;
+using System.CommandLine;
+using ModerBox.Cli.Infrastructure;
 
 namespace ModerBox.Cli;
 
@@ -8,129 +7,59 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        try
-        {
-            ShowBanner();
+        // Set JSON mode from args before parsing
+        GlobalJsonOption.IsJsonMode = args.Contains("--json") || args.Contains("-j");
 
-            if (args.Length == 0)
-            {
-                return await RunInteractiveMode();
-            }
-            else
-            {
-                return await RunCommandMode(args);
-            }
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]错误: {ex.Message}[/]");
-            return 1;
-        }
+        var rootCommand = new RootCommand("ModerBox CLI - 电力系统工具箱命令行版本");
+
+        // Global --json option
+        var jsonOption = new Option<bool>(
+            name: "--json",
+            description: "Output as machine-readable JSON");
+        rootCommand.AddGlobalOption(jsonOption);
+
+        // Register placeholder subcommands
+        RegisterSubcommands(rootCommand);
+
+        return await rootCommand.InvokeAsync(args);
     }
 
-    static void ShowBanner()
+    static void RegisterSubcommands(RootCommand rootCommand)
     {
-        var banner = @"
-╔═══════════════════════════════════════════════════════════════╗
-║                    ModerBox CLI v1.0.0                       ║
-║               电力系统工具箱 - 命令行版本                      ║
-╚═══════════════════════════════════════════════════════════════╝
-";
-        AnsiConsole.MarkupLine(banner);
-    }
+        // harmonic (h) - 谐波计算
+        var harmonicCommand = new Command("harmonic", "谐波计算");
+        harmonicCommand.AddAlias("h");
+        harmonicCommand.SetHandler(_ => Task.FromResult(0));
+        rootCommand.Add(harmonicCommand);
 
-    static async Task<int> RunInteractiveMode()
-    {
-        while (true)
-        {
-            AnsiConsole.WriteLine();
-            var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("请选择功能模块:")
-                    .PageSize(10)
-                    .AddChoices(new[]
-                    {
-                        "1. 谐波计算",
-                        "2. 滤波器分合闸波形检测",
-                        "3. 接地极电流差值分析",
-                        "4. 题库转换",
-                        "5. 电缆走向绘制",
-                        "6. 工作票贡献度计算",
-                        "0. 退出"
-                    }));
+        // filter (f) - 滤波器分合闸波形检测
+        var filterCommand = new Command("filter", "滤波器分合闸波形检测");
+        filterCommand.AddAlias("f");
+        filterCommand.SetHandler(_ => Task.FromResult(0));
+        rootCommand.Add(filterCommand);
 
-            int result = choice switch
-            {
-                "1. 谐波计算" => await HarmonicCommand.RunAsync(),
-                "2. 滤波器分合闸波形检测" => await FilterWaveformCommand.RunAsync(),
-                "3. 接地极电流差值分析" => await CurrentDifferenceCommand.RunAsync(),
-                "4. 题库转换" => await QuestionBankCommand.RunAsync(),
-                "5. 电缆走向绘制" => await CableRoutingCommand.RunAsync(),
-                "6. 工作票贡献度计算" => await ContributionCommand.RunAsync(),
-                "0. 退出" => 0,
-                _ => 0
-            };
+        // current-diff (cd) - 接地极电流差值分析
+        var currentDiffCommand = new Command("current-diff", "接地极电流差值分析");
+        currentDiffCommand.AddAlias("cd");
+        currentDiffCommand.SetHandler(_ => Task.FromResult(0));
+        rootCommand.Add(currentDiffCommand);
 
-            if (result == 0 && choice == "0. 退出")
-            {
-                AnsiConsole.MarkupLine("[green]再见![/]");
-                break;
-            }
+        // question-bank (qb) - 题库转换
+        var questionBankCommand = new Command("question-bank", "题库转换");
+        questionBankCommand.AddAlias("qb");
+        questionBankCommand.SetHandler(_ => Task.FromResult(0));
+        rootCommand.Add(questionBankCommand);
 
-            if (result != 0)
-            {
-                AnsiConsole.MarkupLine($"[yellow]命令执行返回代码: {result}[/]");
-            }
-        }
+        // cable (c) - 电缆走向绘制
+        var cableCommand = new Command("cable", "电缆走向绘制");
+        cableCommand.AddAlias("c");
+        cableCommand.SetHandler(_ => Task.FromResult(0));
+        rootCommand.Add(cableCommand);
 
-        return 0;
-    }
-
-    static async Task<int> RunCommandMode(string[] args)
-    {
-        if (args.Length == 0)
-        {
-            ShowHelp();
-            return 0;
-        }
-
-        var command = args[0].ToLower();
-        var commandArgs = args.Length > 1 ? args[1..] : [];
-
-        return command switch
-        {
-            "harmonic" or "h" => await HarmonicCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "filter" or "f" => await FilterWaveformCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "current-diff" or "cd" => await CurrentDifferenceCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "question-bank" or "qb" => await QuestionBankCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "cable" or "c" => await CableRoutingCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "contribution" or "ctb" => await ContributionCommand.RunAsync(commandArgs.Length > 0 ? commandArgs : null),
-            "help" or "?" => ShowHelp(),
-            _ => ShowHelp()
-        };
-    }
-
-    static int ShowHelp()
-    {
-        var help = """
-            用法: ModerBox.Cli [命令] [选项]
-
-            命令:
-              harmonic, h        谐波计算
-              filter, f         滤波器分合闸波形检测
-              current-diff, cd  接地极电流差值分析
-              question-bank, qb 题库转换
-              cable, c          电缆走向绘制
-              contribution, ctb 工作票贡献度计算
-              help, ?           显示帮助信息
-
-            示例:
-              ModerBox.Cli harmonic --source "C:\data" --target "C:\result.xlsx"
-              ModerBox.Cli filter "C:\waveforms" "C:\output.xlsx"
-              ModerBox.Cli contribution --source "C:\data.csv" --target "C:\result.xlsx"
-              ModerBox.Cli
-            """;
-        AnsiConsole.MarkupLine(help);
-        return 0;
+        // contribution (ctb) - 工作票贡献度计算
+        var contributionCommand = new Command("contribution", "工作票贡献度计算");
+        contributionCommand.AddAlias("ctb");
+        contributionCommand.SetHandler(_ => Task.FromResult(0));
+        rootCommand.Add(contributionCommand);
     }
 }
