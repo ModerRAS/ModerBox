@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModerBox.Comtrade.FilterWaveform;
 using ModerBox.Comtrade.FilterWaveform.Storage;
@@ -238,6 +240,35 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
         }
 
         [TestMethod]
+        public void QueryReportFromSingleDb_LegacyDbWithoutArcReignitionColumns_ReturnsCorrectData() {
+            var dbPath = Path.Combine(Path.GetTempPath(), $"test_legacy_db_{Guid.NewGuid()}.sqlite");
+            try {
+                CreateLegacyReportDatabase(dbPath);
+
+                var result = SwitchOperationReportService.QueryReportFromSingleDb(
+                    dbPath,
+                    new DateTime(2026, 5, 1),
+                    new DateTime(2026, 5, 31));
+
+                Assert.AreEqual(1, result.OpenRows.Count);
+                Assert.AreEqual("T611", result.OpenRows[0].SwitchName);
+                Assert.AreEqual(new DateTime(2026, 5, 13, 9, 8, 44, 405), result.OpenRows[0].Operations[0].Time);
+
+                using var db = FilterWaveformResultDbContext.Create(dbPath);
+                var columns = GetResultTableColumns(db);
+                foreach (var expectedColumn in new[] {
+                    "PhaseAHasArcReignition",
+                    "PhaseBHasArcReignition",
+                    "PhaseCHasArcReignition"
+                }) {
+                    CollectionAssert.Contains(columns, expectedColumn);
+                }
+            } finally {
+                if (File.Exists(dbPath)) File.Delete(dbPath);
+            }
+        }
+
+        [TestMethod]
         public void QueryReport_FromDirectory_FindsAllDatabases() {
             var tempDir = Path.Combine(Path.GetTempPath(), $"test_dir_{Guid.NewGuid()}");
             Directory.CreateDirectory(tempDir);
@@ -463,6 +494,90 @@ namespace ModerBox.Comtrade.FilterWaveform.Test {
             Assert.AreEqual(4.0, opT.PhaseATimeMs);
             Assert.AreEqual(5.0, opT.PhaseBTimeMs);
             Assert.AreEqual(6.0, opT.PhaseCTimeMs);
+        }
+
+        private static void CreateLegacyReportDatabase(string dbPath) {
+            using var db = FilterWaveformResultDbContext.Create(dbPath);
+            var connection = db.Database.GetDbConnection();
+            connection.Open();
+            try {
+                using var command = connection.CreateCommand();
+                command.CommandText = """
+                    CREATE TABLE "filter_waveform_results" (
+                        "Id" INTEGER NOT NULL CONSTRAINT "PK_filter_waveform_results" PRIMARY KEY AUTOINCREMENT,
+                        "Name" TEXT NOT NULL,
+                        "Time" TEXT NOT NULL,
+                        "SwitchType" INTEGER NOT NULL,
+                        "WorkType" INTEGER NOT NULL,
+                        "PhaseATimeInterval" REAL NOT NULL,
+                        "PhaseBTimeInterval" REAL NOT NULL,
+                        "PhaseCTimeInterval" REAL NOT NULL,
+                        "PhaseAVoltageZeroCrossingDiff" REAL NOT NULL,
+                        "PhaseBVoltageZeroCrossingDiff" REAL NOT NULL,
+                        "PhaseCVoltageZeroCrossingDiff" REAL NOT NULL,
+                        "PhaseAClosingResistorDurationMs" REAL NOT NULL,
+                        "PhaseBClosingResistorDurationMs" REAL NOT NULL,
+                        "PhaseCClosingResistorDurationMs" REAL NOT NULL,
+                        "ImagePath" TEXT NULL,
+                        "SourceCfgPath" TEXT NULL
+                    );
+
+                    INSERT INTO "filter_waveform_results" (
+                        "Name",
+                        "Time",
+                        "SwitchType",
+                        "WorkType",
+                        "PhaseATimeInterval",
+                        "PhaseBTimeInterval",
+                        "PhaseCTimeInterval",
+                        "PhaseAVoltageZeroCrossingDiff",
+                        "PhaseBVoltageZeroCrossingDiff",
+                        "PhaseCVoltageZeroCrossingDiff",
+                        "PhaseAClosingResistorDurationMs",
+                        "PhaseBClosingResistorDurationMs",
+                        "PhaseCClosingResistorDurationMs",
+                        "ImagePath",
+                        "SourceCfgPath"
+                    ) VALUES (
+                        'T611',
+                        '2026-05-13 09:08:44.405',
+                        0,
+                        0,
+                        4.7,
+                        2.6,
+                        9.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        NULL,
+                        NULL
+                    );
+                    """;
+                command.ExecuteNonQuery();
+            } finally {
+                connection.Close();
+            }
+        }
+
+        private static List<string> GetResultTableColumns(FilterWaveformResultDbContext db) {
+            var connection = db.Database.GetDbConnection();
+            connection.Open();
+            try {
+                using var command = connection.CreateCommand();
+                command.CommandText = """PRAGMA table_info("filter_waveform_results")""";
+                using var reader = command.ExecuteReader();
+                var columns = new List<string>();
+                while (reader.Read()) {
+                    columns.Add(reader.GetString(1));
+                }
+
+                return columns;
+            } finally {
+                connection.Close();
+            }
         }
 
         private static FilterWaveformResultEntity CreateEntity(
