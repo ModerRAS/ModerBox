@@ -158,6 +158,7 @@ namespace ModerBox.Comtrade.FilterWaveform {
             foreach (var dbFile in dbFiles) {
                 try {
                     using var db = FilterWaveformResultDbContext.Create(dbFile);
+                    db.EnsureCompatibleSchema();
                     var rows = db.Results
                         .AsNoTracking()
                         .Where(r => r.Time >= startTime && r.Time <= endTime)
@@ -186,12 +187,13 @@ namespace ModerBox.Comtrade.FilterWaveform {
             var allResults = new List<FilterWaveformResultEntity>();
             try {
                 using var db = FilterWaveformResultDbContext.Create(dbPath);
+                db.EnsureCompatibleSchema();
                 allResults = db.Results
                     .AsNoTracking()
                     .Where(r => r.Time >= startTime && r.Time <= endTime)
                     .ToList();
-            } catch {
-                // Skip corrupted or inaccessible databases
+            } catch (Exception ex) {
+                throw new InvalidOperationException($"读取 SQLite 数据库失败: {dbPath}", ex);
             }
 
             return BuildReport(allResults, dataSourceConfigs);

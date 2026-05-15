@@ -39,6 +39,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
 
             using (var db = FilterWaveformResultDbContext.Create(_dbPath)) {
                 await db.Database.EnsureCreatedAsync(_cts.Token);
+                db.EnsureCompatibleSchema();
             }
 
             _consumer = Task.Run(ConsumeAsync, _cts.Token);
@@ -87,6 +88,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
 
         public List<ACFilterSheetSpec> ReadAllForExport() {
             using var db = FilterWaveformResultDbContext.Create(_dbPath);
+            db.EnsureCompatibleSchema();
             var rows = db.Results
                 .OrderBy(r => r.Time)
                 .ThenBy(r => r.Name)
@@ -114,6 +116,7 @@ namespace ModerBox.Comtrade.FilterWaveform.Storage {
 
         private async Task ConsumeAsync() {
             using var db = FilterWaveformResultDbContext.Create(_dbPath);
+            db.EnsureCompatibleSchema();
             db.ChangeTracker.AutoDetectChangesEnabled = false;
 
             var pending = 0;
