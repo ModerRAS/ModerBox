@@ -53,11 +53,17 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// <param name="useSlidingWindowAlgorithm">是否使用滑动窗口算法。如果为 true，则使用基于标准差的新算法；否则使用基于阈值的旧算法。</param>
         /// <param name="ioWorkerCount">自定义 IO 读取线程数（可选）。</param>
         /// <param name="processWorkerCount">自定义计算/绘图线程数（可选）。</param>
-        public ACFilterParser(string aCFilterPath, bool useSlidingWindowAlgorithm = false, int? ioWorkerCount = null, int? processWorkerCount = null) {
+        public ACFilterParser(
+            string aCFilterPath,
+            bool useSlidingWindowAlgorithm = false,
+            int? ioWorkerCount = null,
+            int? processWorkerCount = null,
+            IEnumerable<string>? initialCfgPaths = null) {
             ACFilterPath = aCFilterPath;
-            AllDataPath = ACFilterPath
-                .GetAllFiles()
-                .FilterCfgFiles();
+            AllDataPath = initialCfgPaths?.ToList()
+                ?? ACFilterPath
+                    .GetAllFiles()
+                    .FilterCfgFiles();
             UseSlidingWindowAlgorithm = useSlidingWindowAlgorithm;
             IoWorkerCount = NormalizeWorkerCount(ioWorkerCount, 4);
             ProcessWorkerCount = NormalizeWorkerCount(processWorkerCount, 6);
@@ -443,9 +449,38 @@ namespace ModerBox.Comtrade.FilterWaveform {
         /// <param name="plotter">用于生成波形图的 <see cref="ACFilterPlotter"/> 实例。</param>
         /// <returns>分析结果 <see cref="ACFilterSheetSpec"/>，如果文件无效或不包含相关数据，则返回 null。</returns>
         public async Task<ACFilterSheetSpec?> ParsePerComtrade(string cfgPath, ACFilterPlotter plotter) {
+            if (ACFilterData.Count == 0) {
+                await GetFilterData();
+            }
+
             var info = await LoadComtradeAsync(cfgPath);
             if (info is null) return null;
             return ProcessComtrade(info, plotter);
+        }
+
+        /// <summary>
+        /// 解析单个COMTRADE文件，并返回其最终处理状态，供实时监视/增量处理入口使用。
+        /// </summary>
+        public async Task<(ComtradeInfo? Info, ACFilterSheetSpec? Spec, Storage.ProcessedComtradeFileStatus Status)> ParsePerComtradeWithStatus(
+            string cfgPath,
+            ACFilterPlotter plotter) {
+            try {
+                if (ACFilterData.Count == 0) {
+                    await GetFilterData();
+                }
+
+                var info = await LoadComtradeAsync(cfgPath);
+                if (info is null) {
+                    return (null, null, Storage.ProcessedComtradeFileStatus.SkippedNoMatch);
+                }
+
+                var spec = ProcessComtrade(info, plotter);
+                return (info, spec, spec is null
+                    ? Storage.ProcessedComtradeFileStatus.ProcessedNoResult
+                    : Storage.ProcessedComtradeFileStatus.Processed);
+            } catch {
+                return (null, null, Storage.ProcessedComtradeFileStatus.Failed);
+            }
         }
 
     }
