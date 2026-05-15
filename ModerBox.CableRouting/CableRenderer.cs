@@ -156,7 +156,12 @@ public class CableRenderer : IDisposable
     public void DrawPoints(IEnumerable<RoutePoint> points)
     {
         using var font = new SKFont(_typeface, FontSize);
-        using var measurePaint = new SKPaint { IsAntialias = true };
+        using var measurePaint = new SKPaint
+        {
+            IsAntialias = true,
+            Typeface = _typeface,
+            TextSize = FontSize
+        };
         
         foreach (var p in points)
         {
@@ -192,7 +197,7 @@ public class CableRenderer : IDisposable
                 (int)(PointRadius * 2) + 4));
             
             // 测量文本尺寸
-            float textWidth = font.MeasureText(p.Id, out _, measurePaint);
+            float textWidth = measurePaint.MeasureText(p.Id);
             float textHeight = FontSize;
             float margin = PointRadius + 3;
             
@@ -281,7 +286,12 @@ public class CableRenderer : IDisposable
         int[] colWidths = new int[colCount];
         
         // 按实际文本宽度计算每列宽度
-        using var measurePaint = new SKPaint { IsAntialias = true };
+        using var measurePaint = new SKPaint
+        {
+            IsAntialias = true,
+            Typeface = _typeface,
+            TextSize = FontSize
+        };
         for (int j = 0; j < colCount; j++)
         {
             float maxWidth = 0;
@@ -289,7 +299,7 @@ public class CableRenderer : IDisposable
             {
                 if (j < row.Count)
                 {
-                    float w = font.MeasureText(row[j], out _, measurePaint);
+                    float w = measurePaint.MeasureText(row[j]);
                     if (w > maxWidth) maxWidth = w;
                 }
             }
@@ -297,7 +307,7 @@ public class CableRenderer : IDisposable
         }
         
         // 确保表格至少能容纳标题
-        float titleWidth = font.MeasureText(tableData.Title, out _, measurePaint);
+        float titleWidth = measurePaint.MeasureText(tableData.Title);
         int tableWidth = Math.Max(colWidths.Sum() + padding * 2, (int)titleWidth + padding * 2);
         int tableHeight = tableData.Data.Count * rowHeight + padding * 2 + (int)(FontSize * 2);
         
