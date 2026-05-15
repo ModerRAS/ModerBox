@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using ModerBox.Comtrade.FilterWaveform;
 using ModerBox.Services.Scheduling;
+using ModerBox.Services.Watching;
 using static ModerBox.Common.Util;
 
 namespace ModerBox.ViewModels {
@@ -24,6 +25,8 @@ namespace ModerBox.ViewModels {
         public ReactiveCommand<Unit, Unit> RunCalculate { get; }
         public ReactiveCommand<Unit, Unit> StartSchedule { get; }
         public ReactiveCommand<Unit, Unit> StopSchedule { get; }
+        public ReactiveCommand<Unit, Unit> StartRealtime { get; }
+        public ReactiveCommand<Unit, Unit> StopRealtime { get; }
         private int _progress;
         public int Progress {
             get => _progress;
@@ -40,6 +43,8 @@ namespace ModerBox.ViewModels {
             get => _sourceFolder;
             set {
                 this.RaiseAndSetIfChanged(ref _sourceFolder, value);
+                this.RaisePropertyChanged(nameof(CanStartSchedule));
+                this.RaisePropertyChanged(nameof(CanStartRealtime));
                 if (_settingsLoaded) SaveSettings();
             }
         }
@@ -49,6 +54,8 @@ namespace ModerBox.ViewModels {
             get => _targetFile;
             set {
                 this.RaiseAndSetIfChanged(ref _targetFile, value);
+                this.RaisePropertyChanged(nameof(CanStartSchedule));
+                this.RaisePropertyChanged(nameof(CanStartRealtime));
                 if (_settingsLoaded) SaveSettings();
             }
         }
@@ -86,6 +93,7 @@ namespace ModerBox.ViewModels {
         private bool _settingsLoaded;
 
         private readonly LocalRecurringScheduler _scheduler;
+        private FilterWaveformRealtimeMonitor? _realtimeMonitor;
 
         public ScheduleModeOption[] ScheduleModeOptions { get; } = new[] {
             new ScheduleModeOption("每天", ScheduleRecurrence.Daily),
@@ -148,6 +156,7 @@ namespace ModerBox.ViewModels {
                 this.RaiseAndSetIfChanged(ref _isScheduleRunning, value);
                 this.RaisePropertyChanged(nameof(CanStartSchedule));
                 this.RaisePropertyChanged(nameof(CanStopSchedule));
+                this.RaisePropertyChanged(nameof(CanStartRealtime));
             }
         }
 
@@ -157,8 +166,37 @@ namespace ModerBox.ViewModels {
             private set => this.RaiseAndSetIfChanged(ref _scheduleStatusText, value);
         }
 
-        public bool CanStartSchedule => !IsScheduleRunning;
+        private int _realtimeQuietMinutes = 5;
+        public int RealtimeQuietMinutes {
+            get => _realtimeQuietMinutes;
+            set {
+                var v = Math.Clamp(value, 1, 1440);
+                this.RaiseAndSetIfChanged(ref _realtimeQuietMinutes, v);
+                if (_settingsLoaded) SaveSettings();
+            }
+        }
+
+        private bool _isRealtimeRunning;
+        public bool IsRealtimeRunning {
+            get => _isRealtimeRunning;
+            private set {
+                this.RaiseAndSetIfChanged(ref _isRealtimeRunning, value);
+                this.RaisePropertyChanged(nameof(CanStartRealtime));
+                this.RaisePropertyChanged(nameof(CanStopRealtime));
+                this.RaisePropertyChanged(nameof(CanStartSchedule));
+            }
+        }
+
+        private string _realtimeStatusText = "实时监视未启动";
+        public string RealtimeStatusText {
+            get => _realtimeStatusText;
+            private set => this.RaiseAndSetIfChanged(ref _realtimeStatusText, value);
+        }
+
+        public bool CanStartSchedule => !IsScheduleRunning && !IsRealtimeRunning && !string.IsNullOrWhiteSpace(SourceFolder) && !string.IsNullOrWhiteSpace(TargetFile);
         public bool CanStopSchedule => IsScheduleRunning;
+        public bool CanStartRealtime => !IsRealtimeRunning && !IsScheduleRunning && !string.IsNullOrWhiteSpace(SourceFolder) && !string.IsNullOrWhiteSpace(TargetFile);
+        public bool CanStopRealtime => IsRealtimeRunning;
 
         public bool IsWeekly => SelectedScheduleMode.Value == ScheduleRecurrence.Weekly;
         public FilterWaveformSwitchIntervalViewModel() {
@@ -177,22 +215,35 @@ namespace ModerBox.ViewModels {
             _selectedWeekDay = WeekDayOptions[0];
             _scheduleHour = 2;
             _scheduleMinute = 0;
+            _realtimeQuietMinutes = 5;
 
             _scheduler = new LocalRecurringScheduler(async ct => {
                 if (ct.IsCancellationRequested) return;
                 await RunCalculateInternalAsync(openExplorerAfterDone: false);
             });
 
-            var canStart = this.WhenAnyValue(
+            var canStartSchedule = this.WhenAnyValue(
                 x => x.SourceFolder,
                 x => x.TargetFile,
                 x => x.IsScheduleRunning,
-                (s, t, running) => !running && !string.IsNullOrWhiteSpace(s) && !string.IsNullOrWhiteSpace(t));
+                x => x.IsRealtimeRunning,
+                (s, t, scheduleRunning, realtimeRunning) =>
+                    !scheduleRunning && !realtimeRunning && !string.IsNullOrWhiteSpace(s) && !string.IsNullOrWhiteSpace(t));
 
             var canStop = this.WhenAnyValue(x => x.IsScheduleRunning);
+            var canStartRealtime = this.WhenAnyValue(
+                x => x.SourceFolder,
+                x => x.TargetFile,
+                x => x.IsScheduleRunning,
+                x => x.IsRealtimeRunning,
+                (s, t, scheduleRunning, realtimeRunning) =>
+                    !scheduleRunning && !realtimeRunning && !string.IsNullOrWhiteSpace(s) && !string.IsNullOrWhiteSpace(t));
+            var canStopRealtime = this.WhenAnyValue(x => x.IsRealtimeRunning);
 
-            StartSchedule = ReactiveCommand.CreateFromTask(StartScheduleTask, canStart);
+            StartSchedule = ReactiveCommand.CreateFromTask(StartScheduleTask, canStartSchedule);
             StopSchedule = ReactiveCommand.CreateFromTask(StopScheduleTask, canStop);
+            StartRealtime = ReactiveCommand.CreateFromTask(StartRealtimeTask, canStartRealtime);
+            StopRealtime = ReactiveCommand.CreateFromTask(StopRealtimeTask, canStopRealtime);
             LoadSettings();
         }
 
@@ -267,6 +318,50 @@ namespace ModerBox.ViewModels {
             IsScheduleRunning = false;
             ScheduleStatusText = "定时任务已停止";
         }
+
+        private async Task StartRealtimeTask() {
+            try {
+                if (IsRealtimeRunning) {
+                    return;
+                }
+
+                _realtimeMonitor = new FilterWaveformRealtimeMonitor(
+                    SourceFolder,
+                    TargetFile,
+                    UseNewAlgorithm,
+                    IoWorkerCount,
+                    ProcessWorkerCount,
+                    TimeSpan.FromMinutes(RealtimeQuietMinutes),
+                    status => RealtimeStatusText = status,
+                    (processed, total) => Progress = (int)(processed * 100.0 / Math.Max(1, total)));
+
+                _realtimeMonitor.Start();
+                IsRealtimeRunning = true;
+                RealtimeStatusText = "实时监视已启动";
+            } catch (Exception ex) {
+                if (_realtimeMonitor is not null) {
+                    await _realtimeMonitor.DisposeAsync();
+                    _realtimeMonitor = null;
+                }
+
+                RealtimeStatusText = $"实时监视启动失败: {ex.Message}";
+            }
+        }
+
+        private async Task StopRealtimeTask() {
+            try {
+                if (_realtimeMonitor is not null) {
+                    await _realtimeMonitor.StopAsync();
+                    await _realtimeMonitor.DisposeAsync();
+                    _realtimeMonitor = null;
+                }
+            } catch {
+            }
+
+            IsRealtimeRunning = false;
+            RealtimeStatusText = "实时监视已停止";
+        }
+
         private async Task<IStorageFolder?> DoOpenFolderPickerAsync() {
             // For learning purposes, we opted to directly get the reference
             // for StorageProvider APIs here inside the ViewModel.
@@ -336,6 +431,9 @@ namespace ModerBox.ViewModels {
                         if (saved.ScheduleMinute.HasValue) {
                             ScheduleMinute = saved.ScheduleMinute.Value;
                         }
+                        if (saved.RealtimeQuietMinutes.HasValue) {
+                            RealtimeQuietMinutes = saved.RealtimeQuietMinutes.Value;
+                        }
                     }
                 }
             } catch { }
@@ -358,7 +456,8 @@ namespace ModerBox.ViewModels {
                     ScheduleMode = SelectedScheduleMode.Value,
                     ScheduleWeekDay = SelectedWeekDay.Value,
                     ScheduleHour = ScheduleHour,
-                    ScheduleMinute = ScheduleMinute
+                    ScheduleMinute = ScheduleMinute,
+                    RealtimeQuietMinutes = RealtimeQuietMinutes
                 };
                 var json = System.Text.Json.JsonSerializer.Serialize(data);
                 File.WriteAllText(_settingsPath, json);
@@ -384,6 +483,7 @@ namespace ModerBox.ViewModels {
             public DayOfWeek? ScheduleWeekDay { get; set; }
             public int? ScheduleHour { get; set; }
             public int? ScheduleMinute { get; set; }
+            public int? RealtimeQuietMinutes { get; set; }
         }
 
         public readonly record struct ScheduleModeOption(string Display, ScheduleRecurrence Value) {
