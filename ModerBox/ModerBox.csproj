@@ -39,8 +39,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
-<PackageReference Include="ScottPlot" Version="5.1.57" />
-    <PackageReference Include="ScottPlot.Avalonia" Version="5.1.57" />
+<PackageReference Include="ScottPlot" Version="5.0.55" />
+    <PackageReference Include="ScottPlot.Avalonia" Version="5.0.55" />
     <PackageReference Include="DialogHost.Avalonia" Version="0.10.4" />
   </ItemGroup>
 
