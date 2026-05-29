@@ -42,7 +42,7 @@ dotnet run -- cd --source "C:\data" --target "C:\result.csv"
 # 题库转换
 dotnet run -- qb --source "input.txt" --target "output.xlsx" --source-format Txt --target-format Mtb
 
-# 题库合并（多个源文件自动检测格式并去重，支持 .xlsx/.xls 输入）
+# 题库合并（多个源文件自动检测格式并去重，支持风控平台等 .xlsx/.xls 输入）
 dotnet run -- qb merge --sources "bank1.txt" "bank2.xlsx" "bank3.xls" --target "merged.xlsx" --target-format Mtb
 
 # 电缆走向绘制

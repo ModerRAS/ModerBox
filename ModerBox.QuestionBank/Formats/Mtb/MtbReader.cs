@@ -52,6 +52,7 @@ public static class MtbReader {
     private static QuestionType ParseQuestionType(string typeText) {
         if (typeText.Contains("多选")) return QuestionType.MultipleChoice;
         if (typeText.Contains("判断")) return QuestionType.TrueFalse;
+        if (typeText.Contains("简答")) return QuestionType.ShortAnswer;
         return QuestionType.SingleChoice;
     }
 }
