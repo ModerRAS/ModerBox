@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using ModerBox.QuestionBank;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
 
 namespace ModerBox.QuestionBank.Test;
 
@@ -293,5 +295,109 @@ public class QuestionBankServiceTests
             if (File.Exists(ksbPath)) File.Delete(ksbPath);
             if (File.Exists(mtbPath)) File.Delete(mtbPath);
         }
+    }
+
+    [TestMethod]
+    public void QuestionBankConversionService_DetectSourceFormat_ForLegacyXlsWldx4_ReadsQuestions()
+    {
+        var service = new QuestionBankConversionService();
+        var path = Path.Combine(Path.GetTempPath(), $"questionbank_wldx4_{Guid.NewGuid():N}.xls");
+
+        try
+        {
+            WriteLegacyXls(path, sheet =>
+            {
+                SetCell(sheet, 0, 0, "题型");
+                SetCell(sheet, 0, 1, "题干");
+                SetCell(sheet, 0, 2, "选项");
+                SetCell(sheet, 0, 3, "答案");
+                SetCell(sheet, 1, 0, "单选题");
+                SetCell(sheet, 1, 1, "变压器的额定容量单位是？");
+                SetCell(sheet, 1, 2, "A. kW$;$B. kVA");
+                SetCell(sheet, 1, 3, "B");
+            });
+
+            Assert.AreEqual(QuestionBankSourceFormat.Wldx4, service.DetectSourceFormat(path));
+
+            var questions = service.Read(path, QuestionBankSourceFormat.AutoDetect);
+
+            Assert.AreEqual(1, questions.Count);
+            Assert.AreEqual("变压器的额定容量单位是？", questions[0].Topic);
+            Assert.AreEqual(QuestionType.SingleChoice, questions[0].TopicType);
+            CollectionAssert.AreEqual(new List<string> { "A. kW", "B. kVA" }, questions[0].Answer);
+            Assert.AreEqual("B", questions[0].CorrectAnswer);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public void QuestionBankConversionService_DetectSourceFormat_ForLegacyXlsKsbAndMtb_ReturnsMatchingFormats()
+    {
+        var service = new QuestionBankConversionService();
+        var ksbPath = Path.Combine(Path.GetTempPath(), $"questionbank_ksb_{Guid.NewGuid():N}.xls");
+        var mtbPath = Path.Combine(Path.GetTempPath(), $"questionbank_mtb_{Guid.NewGuid():N}.xls");
+
+        try
+        {
+            WriteLegacyXls(ksbPath, sheet =>
+            {
+                SetCell(sheet, 0, 0, "题干（必填）");
+                SetCell(sheet, 0, 1, "题型 （必填）");
+                SetCell(sheet, 0, 2, "选项 A");
+                SetCell(sheet, 0, 3, "选项 B");
+                SetCell(sheet, 0, 10, "正确答案H\n（必填）");
+                SetCell(sheet, 1, 0, "电流互感器二次侧不允许？");
+                SetCell(sheet, 1, 1, "单选题");
+                SetCell(sheet, 1, 2, "开路");
+                SetCell(sheet, 1, 3, "短路");
+                SetCell(sheet, 1, 10, "A");
+            });
+
+            WriteLegacyXls(mtbPath, sheet =>
+            {
+                SetCell(sheet, 0, 0, "标题");
+                SetCell(sheet, 0, 1, "磨题帮测试");
+                SetCell(sheet, 3, 0, "题干");
+                SetCell(sheet, 3, 1, "题型");
+                SetCell(sheet, 3, 2, "选择项1");
+                SetCell(sheet, 3, 3, "选择项2");
+                SetCell(sheet, 3, 7, "解析");
+                SetCell(sheet, 3, 8, "答案1");
+                SetCell(sheet, 4, 0, "隔离开关是否能开断负荷电流？");
+                SetCell(sheet, 4, 1, "单选题");
+                SetCell(sheet, 4, 2, "能");
+                SetCell(sheet, 4, 3, "不能");
+                SetCell(sheet, 4, 8, "B");
+            });
+
+            Assert.AreEqual(QuestionBankSourceFormat.Ksb, service.DetectSourceFormat(ksbPath));
+            Assert.AreEqual(QuestionBankSourceFormat.Mtb, service.DetectSourceFormat(mtbPath));
+            Assert.AreEqual(1, service.Read(ksbPath, QuestionBankSourceFormat.AutoDetect).Count);
+            Assert.AreEqual(1, service.Read(mtbPath, QuestionBankSourceFormat.AutoDetect).Count);
+        }
+        finally
+        {
+            if (File.Exists(ksbPath)) File.Delete(ksbPath);
+            if (File.Exists(mtbPath)) File.Delete(mtbPath);
+        }
+    }
+
+    private static void WriteLegacyXls(string path, Action<ISheet> fillSheet)
+    {
+        using var workbook = new HSSFWorkbook();
+        var sheet = workbook.CreateSheet("题库");
+        fillSheet(sheet);
+
+        using var stream = File.Create(path);
+        workbook.Write(stream);
+    }
+
+    private static void SetCell(ISheet sheet, int rowIndex, int columnIndex, string value)
+    {
+        var row = sheet.GetRow(rowIndex) ?? sheet.CreateRow(rowIndex);
+        row.CreateCell(columnIndex).SetCellValue(value);
     }
 }

@@ -14,6 +14,10 @@ public class ExcelReader {
     /// 从Excel文件读取题目（网络大学格式）
     /// </summary>
     public static List<Question> ReadWLDXFormat(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.ReadWldxFormat(filePath);
+        }
+
         return WldxExcelReader.ReadFromFile(filePath);
     }
 
@@ -21,6 +25,10 @@ public class ExcelReader {
     /// 从Excel文件读取题目（网络大学4列简化格式）
     /// </summary>
     public static List<Question> ReadWLDX4Format(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.ReadWldx4Format(filePath);
+        }
+
         return Wldx4ExcelReader.ReadFromFile(filePath);
     }
 
@@ -28,6 +36,10 @@ public class ExcelReader {
     /// 从Excel文件读取题目（简单5列格式：专业、题型、题目、选项、正确答案）
     /// </summary>
     public static List<Question> ReadSimpleFormat(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.ReadSimpleFormat(filePath);
+        }
+
         return SimpleExcelReader.ReadFromFile(filePath);
     }
 
@@ -35,6 +47,10 @@ public class ExcelReader {
     /// 从Excel文件读取题目（EXC格式）
     /// </summary>
     public static List<Question> ReadEXCFormat(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.ReadExcFormat(filePath);
+        }
+
         using var workbook = new XLWorkbook(filePath);
         var worksheet = workbook.Worksheet(1);
         var result = new List<Question>();
