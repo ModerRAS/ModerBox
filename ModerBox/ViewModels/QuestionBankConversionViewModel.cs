@@ -56,16 +56,42 @@ namespace ModerBox.ViewModels {
 
         #region 文件路径
 
+        private IReadOnlyList<string> _sourceFiles = Array.Empty<string>();
+        private bool _isUpdatingSourceFileText;
+
         private string _sourceFile = string.Empty;
         public string SourceFile {
             get => _sourceFile;
-            set => this.RaiseAndSetIfChanged(ref _sourceFile, value);
+            set {
+                this.RaiseAndSetIfChanged(ref _sourceFile, value);
+                if (!_isUpdatingSourceFileText) {
+                    _sourceFiles = ParseSourceFileText(value);
+                }
+                RaiseSourceSelectionProperties();
+            }
         }
 
         private string _targetFile = string.Empty;
         public string TargetFile {
             get => _targetFile;
             set => this.RaiseAndSetIfChanged(ref _targetFile, value);
+        }
+
+        public bool HasMultipleSourceFiles => GetSourceFilePaths().Count > 1;
+
+        public string SourceFileLabel {
+            get {
+                var count = GetSourceFilePaths().Count;
+                return count > 1 ? $"源文件（{count} 个）" : "源文件";
+            }
+        }
+
+        public string RunButtonText => HasMultipleSourceFiles ? "开始合并" : "开始转换";
+
+        private bool _deduplicateWhenMerging = true;
+        public bool DeduplicateWhenMerging {
+            get => _deduplicateWhenMerging;
+            set => this.RaiseAndSetIfChanged(ref _deduplicateWhenMerging, value);
         }
 
         #endregion
@@ -270,22 +296,37 @@ namespace ModerBox.ViewModels {
 
         private async Task SelectSourceFileTask() {
             try {
-                var file = await DoOpenFilePickerAsync();
-                if (file != null) {
-                    var localPath = file.TryGetLocalPath() ?? file.Path.ToString();
-                    SourceFile = localPath;
+                var files = await DoOpenFilePickerAsync();
+                if (files.Count > 0) {
+                    var localPaths = files
+                        .Select(file => file.TryGetLocalPath() ?? file.Path.ToString())
+                        .Where(path => !string.IsNullOrWhiteSpace(path))
+                        .ToArray();
+
+                    if (localPaths.Length == 0) {
+                        return;
+                    }
+
+                    SetSourceFiles(localPaths);
 
                     // 自动推断源格式
-                    try {
-                        var detected = _conversionService.DetectSourceFormat(localPath);
-                        SelectedSourceFormat = SourceFormatOptions.First(opt => opt.Format == detected);
-                    } catch {
+                    if (localPaths.Length == 1) {
+                        try {
+                            var detected = _conversionService.DetectSourceFormat(localPaths[0]);
+                            SelectedSourceFormat = SourceFormatOptions.First(opt => opt.Format == detected);
+                        } catch {
+                            SelectedSourceFormat = SourceFormatOptions.First();
+                        }
+                    } else {
                         SelectedSourceFormat = SourceFormatOptions.First();
                     }
 
                     if (string.IsNullOrWhiteSpace(TargetFile)) {
-                        var suggestedName = Path.GetFileNameWithoutExtension(localPath) + "_转换结果.xlsx";
-                        var directory = Path.GetDirectoryName(localPath) ?? string.Empty;
+                        var extension = GetTargetFileExtension(SelectedTargetFormat.Format);
+                        var suggestedName = localPaths.Length == 1
+                            ? Path.GetFileNameWithoutExtension(localPaths[0]) + "_转换结果" + extension
+                            : "题库合并结果" + extension;
+                        var directory = Path.GetDirectoryName(localPaths[0]) ?? string.Empty;
                         TargetFile = Path.Combine(directory, suggestedName);
                     }
                 }
@@ -311,25 +352,46 @@ namespace ModerBox.ViewModels {
         #region 转换任务
 
         private async Task RunConversionTask() {
-            if (!File.Exists(SourceFile)) {
-                Status = "错误：源文件不存在";
+            var sourcePaths = GetSourceFilePaths();
+            if (sourcePaths.Count == 0) {
+                Status = "错误：请选择源文件";
+                return;
+            }
+
+            var missing = sourcePaths.FirstOrDefault(path => !File.Exists(path));
+            if (missing is not null) {
+                Status = $"错误：源文件不存在：{missing}";
                 return;
             }
 
             try {
                 IsBusy = true;
-                Status = "正在读取题库...";
+                var isMerge = sourcePaths.Count > 1;
+                Status = isMerge ? "正在读取并合并题库..." : "正在读取题库...";
 
                 var targetPath = EnsureTargetFileExtension(TargetFile, SelectedTargetFormat.Format);
                 TargetFile = targetPath;
 
-                var title = Path.GetFileNameWithoutExtension(SourceFile);
+                var title = isMerge
+                    ? Path.GetFileNameWithoutExtension(targetPath)
+                    : Path.GetFileNameWithoutExtension(sourcePaths[0]);
 
                 // 读取题目
-                var questions = await Task.Run(() => 
-                    _conversionService.Read(SourceFile, SelectedSourceFormat.Format));
+                List<Question> questions;
+                QuestionBankMergeReadResult? mergeResult = null;
 
-                Status = $"已读取 {questions.Count} 道题目";
+                if (isMerge) {
+                    mergeResult = await Task.Run(() =>
+                        _conversionService.ReadAndMerge(sourcePaths, SelectedSourceFormat.Format, DeduplicateWhenMerging));
+                    questions = mergeResult.Questions.ToList();
+                } else {
+                    questions = await Task.Run(() =>
+                        _conversionService.Read(sourcePaths[0], SelectedSourceFormat.Format));
+                }
+
+                Status = isMerge && mergeResult is not null
+                    ? $"已合并 {mergeResult.SourceFileCount} 个文件，读取 {mergeResult.TotalQuestionCount} 道题目，去重 {mergeResult.DuplicateQuestionCount} 道。"
+                    : $"已读取 {questions.Count} 道题目";
 
                 // 如果启用了大模型解析
                 if (LlmEnabled && !string.IsNullOrWhiteSpace(LlmApiKey)) {
@@ -348,7 +410,10 @@ namespace ModerBox.ViewModels {
                     _llmService.ProgressChanged += OnLlmProgressChanged;
 
                     try {
-                        questions = await _llmService.GenerateAnalysisAsync(questions, SourceFile);
+                        var analysisSourceKey = isMerge
+                            ? BuildMergeAnalysisSourceKey(sourcePaths)
+                            : sourcePaths[0];
+                        questions = await _llmService.GenerateAnalysisAsync(questions, analysisSourceKey);
                         UpdateCacheStats();
                     } finally {
                         _llmService.ProgressChanged -= OnLlmProgressChanged;
@@ -362,7 +427,9 @@ namespace ModerBox.ViewModels {
                 await Task.Run(() => 
                     _conversionService.Write(questions, targetPath, SelectedTargetFormat.Format, title));
 
-                Status = $"转换完成，共 {questions.Count} 道题目。";
+                Status = isMerge
+                    ? $"合并完成，共输出 {questions.Count} 道题目。"
+                    : $"转换完成，共 {questions.Count} 道题目。";
                 LlmProgress = string.Empty;
                 Util.OpenFileWithExplorer(targetPath);
             } catch (OperationCanceledException) {
@@ -390,14 +457,14 @@ namespace ModerBox.ViewModels {
 
         #region 辅助方法
 
-        private async Task<IStorageFile?> DoOpenFilePickerAsync() {
+        private async Task<IReadOnlyList<IStorageFile>> DoOpenFilePickerAsync() {
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
                 desktop.MainWindow?.StorageProvider is not { } provider)
                 throw new NullReferenceException("Missing StorageProvider instance.");
 
             var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions {
-                Title = "选择题库源文件",
-                AllowMultiple = false,
+                Title = "选择题库源文件（可多选合并）",
+                AllowMultiple = true,
                 FileTypeFilter = new[] {
                     new FilePickerFileType("所有支持的文件") { Patterns = new[] { "*.txt", "*.xlsx", "*.xls", "*.json" } },
                     new FilePickerFileType("文本文件") { Patterns = new[] { "*.txt" } },
@@ -407,7 +474,7 @@ namespace ModerBox.ViewModels {
                 }
             });
 
-            return files?.Count >= 1 ? files[0] : null;
+            return files ?? Array.Empty<IStorageFile>();
         }
 
         private async Task<IStorageFile?> DoSaveFilePickerAsync() {
@@ -415,27 +482,76 @@ namespace ModerBox.ViewModels {
                 desktop.MainWindow?.StorageProvider is not { } provider)
                 throw new NullReferenceException("Missing StorageProvider instance.");
 
+            var extension = GetTargetFileExtension(SelectedTargetFormat.Format);
             return await provider.SaveFilePickerAsync(new FilePickerSaveOptions {
                 Title = "保存题库文件",
-                DefaultExtension = ".xlsx",
+                DefaultExtension = extension,
                 SuggestedFileName = string.IsNullOrWhiteSpace(SourceFile)
-                    ? "题库转换结果.xlsx"
-                    : Path.GetFileNameWithoutExtension(SourceFile) + "_转换结果.xlsx",
+                    ? "题库转换结果" + extension
+                    : Path.GetFileNameWithoutExtension(GetSourceFilePaths().FirstOrDefault() ?? SourceFile) + "_转换结果" + extension,
                 FileTypeChoices = new[] {
-                    new FilePickerFileType("Excel 文件") { Patterns = new[] { "*.xlsx" } }
+                    new FilePickerFileType("Excel 文件") { Patterns = new[] { "*.xlsx" } },
+                    new FilePickerFileType("文本文件") { Patterns = new[] { "*.txt" } }
                 }
             });
         }
 
         private static string EnsureTargetFileExtension(string filePath, QuestionBankTargetFormat format) {
-            var expectedExtension = ".xlsx";
+            var expectedExtension = GetTargetFileExtension(format);
             return Path.ChangeExtension(filePath, expectedExtension) ?? filePath;
+        }
+
+        private static string GetTargetFileExtension(QuestionBankTargetFormat format) {
+            return format == QuestionBankTargetFormat.XiaobaoTxt ? ".txt" : ".xlsx";
+        }
+
+        private static string BuildMergeAnalysisSourceKey(IReadOnlyList<string> sourcePaths) {
+            var fullPaths = sourcePaths.Select(Path.GetFullPath);
+            return "merge:" + string.Join("|", fullPaths);
         }
 
         private void AutoAdjustTargetExtension() {
             if (!string.IsNullOrWhiteSpace(TargetFile)) {
                 TargetFile = EnsureTargetFileExtension(TargetFile, SelectedTargetFormat.Format);
             }
+        }
+
+        private void SetSourceFiles(IReadOnlyList<string> sourceFiles) {
+            _sourceFiles = sourceFiles
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path.Trim())
+                .ToArray();
+
+            _isUpdatingSourceFileText = true;
+            SourceFile = string.Join(Environment.NewLine, _sourceFiles);
+            _isUpdatingSourceFileText = false;
+            RaiseSourceSelectionProperties();
+        }
+
+        private IReadOnlyList<string> GetSourceFilePaths() {
+            if (_sourceFiles.Count > 0) {
+                return _sourceFiles;
+            }
+
+            return ParseSourceFileText(SourceFile);
+        }
+
+        private static IReadOnlyList<string> ParseSourceFileText(string? value) {
+            if (string.IsNullOrWhiteSpace(value)) {
+                return Array.Empty<string>();
+            }
+
+            return value
+                .Split(new[] { "\r\n", "\n", ";" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(path => path.Trim())
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .ToArray();
+        }
+
+        private void RaiseSourceSelectionProperties() {
+            this.RaisePropertyChanged(nameof(HasMultipleSourceFiles));
+            this.RaisePropertyChanged(nameof(SourceFileLabel));
+            this.RaisePropertyChanged(nameof(RunButtonText));
         }
 
         private static InfoBarSeverity DetermineSeverity(string? value) {
