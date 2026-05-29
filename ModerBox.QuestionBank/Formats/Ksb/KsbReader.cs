@@ -10,6 +10,10 @@ public static class KsbReader {
     /// 从考试宝格式（.xlsx）读取题目
     /// </summary>
     public static List<Question> ReadFromFile(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.ReadKsbFormat(filePath);
+        }
+
         using var workbook = new XLWorkbook(filePath);
         var worksheet = workbook.Worksheet(1);
         var result = new List<Question>();
