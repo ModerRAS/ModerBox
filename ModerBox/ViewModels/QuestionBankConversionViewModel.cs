@@ -410,7 +410,10 @@ namespace ModerBox.ViewModels {
                     _llmService.ProgressChanged += OnLlmProgressChanged;
 
                     try {
-                        questions = await _llmService.GenerateAnalysisAsync(questions, sourcePaths[0]);
+                        var analysisSourceKey = isMerge
+                            ? BuildMergeAnalysisSourceKey(sourcePaths)
+                            : sourcePaths[0];
+                        questions = await _llmService.GenerateAnalysisAsync(questions, analysisSourceKey);
                         UpdateCacheStats();
                     } finally {
                         _llmService.ProgressChanged -= OnLlmProgressChanged;
@@ -500,6 +503,11 @@ namespace ModerBox.ViewModels {
 
         private static string GetTargetFileExtension(QuestionBankTargetFormat format) {
             return format == QuestionBankTargetFormat.XiaobaoTxt ? ".txt" : ".xlsx";
+        }
+
+        private static string BuildMergeAnalysisSourceKey(IReadOnlyList<string> sourcePaths) {
+            var fullPaths = sourcePaths.Select(Path.GetFullPath);
+            return "merge:" + string.Join("|", fullPaths);
         }
 
         private void AutoAdjustTargetExtension() {

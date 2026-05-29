@@ -347,6 +347,48 @@ public class QuestionBankCommandTests
                 Directory.Delete(tempDir, true);
         }
     }
+
+    [TestMethod]
+    public async Task Invoke_Merge_WithShortAliases_Succeeds()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "ModerBox_QbMerge_Alias_Test_" + Guid.NewGuid());
+        var source1 = Path.Combine(tempDir, "source1.txt");
+        var source2 = Path.Combine(tempDir, "source2.txt");
+        var target = Path.Combine(tempDir, "merged.txt");
+
+        var content = """
+        单选题
+        隔离开关是否能开断负荷电流？
+        A. 能
+        B. 不能
+        答案：B
+        """;
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            File.WriteAllText(source1, content);
+            File.WriteAllText(source2, content);
+
+            var command = QuestionBankCommand.Create();
+            var result = await command.InvokeAsync(new[]
+            {
+                "merge",
+                "-s", source1, source2,
+                "-t", target,
+                "--target-format", "XiaobaoTxt"
+            });
+
+            result.Should().Be(0);
+            File.Exists(target).Should().BeTrue();
+            File.ReadAllLines(target).Should().HaveCount(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
 }
 
 [TestClass]

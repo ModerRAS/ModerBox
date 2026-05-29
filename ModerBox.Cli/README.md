@@ -122,7 +122,7 @@ dotnet run -- harmonic --source "C:\data" --json
 
 合并子命令：
 
-```
+```bash
 qb merge --sources <file1> <file2> ... --target <output>
 
 --sources, -s        源文件路径列表（可传多个路径）
