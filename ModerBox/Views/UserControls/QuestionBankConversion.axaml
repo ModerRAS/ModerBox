@@ -39,19 +39,24 @@
                         Padding="15">
                 <StackPanel Spacing="5">
                     <TextBlock Text="• 支持从多种格式的题库文件读取题目" TextWrapping="Wrap"/>
-                    <TextBlock Text="• 支持导出为考试宝、磨题帮格式" TextWrapping="Wrap"/>
+                    <TextBlock Text="• 支持多选文件合并，并可自动去重" TextWrapping="Wrap"/>
+                    <TextBlock Text="• 支持导出为考试宝、磨题帮、网络大学、小包搜题格式" TextWrapping="Wrap"/>
                     <TextBlock Text="• 支持单选题、多选题、判断题" TextWrapping="Wrap"/>
                 </StackPanel>
             </ui:InfoBar>
 
             <!-- 源文件选择 -->
             <StackPanel Spacing="8">
-                <TextBlock Text="源文件" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding SourceFileLabel}" FontWeight="SemiBold"/>
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBox Grid.Column="0" 
                              Margin="0 0 10 0" 
                              Watermark="选择题库源文件" 
                              Text="{Binding SourceFile}"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             MinHeight="36"
+                             MaxHeight="120"
                              IsReadOnly="True"/>
                     <Button Grid.Column="1" 
                             Content="浏览..." 
@@ -68,6 +73,10 @@
                           DisplayMemberBinding="{Binding DisplayName}"
                           HorizontalAlignment="Stretch"/>
             </StackPanel>
+
+            <CheckBox Content="合并时自动去重"
+                      IsChecked="{Binding DeduplicateWhenMerging}"
+                      IsVisible="{Binding HasMultipleSourceFiles}"/>
 
             <!-- 目标格式选择 -->
             <StackPanel Spacing="8">
@@ -95,7 +104,7 @@
             </StackPanel>
 
             <!-- 转换按钮 -->
-        <Button Content="开始转换"
+        <Button Content="{Binding RunButtonText}"
             Command="{Binding RunConversion}"
             HorizontalAlignment="Stretch"
             Height="40"

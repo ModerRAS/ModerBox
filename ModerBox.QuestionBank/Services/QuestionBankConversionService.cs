@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace ModerBox.QuestionBank;
 
@@ -24,6 +25,14 @@ public enum QuestionBankSourceFormat {
     [Description("TXT 文本")]
     [FormatDetail("从Word格式题库转换的文本文件")]
     Txt,
+
+    [Description("考试宝 Excel")]
+    [FormatDetail("考试宝导出的Excel题库格式")]
+    Ksb,
+
+    [Description("磨题帮 Excel")]
+    [FormatDetail("磨题帮导出的Excel题库格式")]
+    Mtb,
 
     [Description("网络大学 Excel")]
     [FormatDetail("标准网络大学题库格式（G列题干，F列题型）")]
@@ -120,12 +129,18 @@ public class QuestionBankConversionService {
     /// </summary>
     public List<Question> Read(string filePath, QuestionBankSourceFormat format) {
         ArgumentNullException.ThrowIfNull(filePath);
+        if (!File.Exists(filePath)) {
+            throw new FileNotFoundException("源文件不存在", filePath);
+        }
+
         if (format == QuestionBankSourceFormat.AutoDetect) {
             format = DetectSourceFormat(filePath);
         }
 
         return format switch {
             QuestionBankSourceFormat.Txt => TxtReader.ReadFromFile(filePath),
+            QuestionBankSourceFormat.Ksb => KsbReader.ReadFromFile(filePath),
+            QuestionBankSourceFormat.Mtb => MtbReader.ReadFromFile(filePath),
             QuestionBankSourceFormat.Wldx => ExcelReader.ReadWLDXFormat(filePath),
             QuestionBankSourceFormat.Wldx4 => ExcelReader.ReadWLDX4Format(filePath),
             QuestionBankSourceFormat.Exc => ExcelReader.ReadEXCFormat(filePath),
@@ -200,7 +215,88 @@ public class QuestionBankConversionService {
         return new QuestionBankConversionSummary(questions.Count, detectedFormat, targetFormat, targetPath);
     }
 
+    /// <summary>
+    /// 读取多个题库文件并合并为题目列表。
+    /// </summary>
+    public QuestionBankMergeReadResult ReadAndMerge(IEnumerable<string> sourcePaths,
+                                                    QuestionBankSourceFormat sourceFormat,
+                                                    bool deduplicate = true) {
+        ArgumentNullException.ThrowIfNull(sourcePaths);
+
+        var paths = sourcePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path.Trim())
+            .ToList();
+
+        if (paths.Count == 0) {
+            throw new ArgumentException("至少需要提供一个源文件", nameof(sourcePaths));
+        }
+
+        var allQuestions = new List<Question>();
+        var sources = new List<QuestionBankMergeSourceSummary>();
+
+        foreach (var sourcePath in paths) {
+            if (!File.Exists(sourcePath)) {
+                throw new FileNotFoundException("源文件不存在", sourcePath);
+            }
+
+            var detectedFormat = sourceFormat == QuestionBankSourceFormat.AutoDetect
+                ? DetectSourceFormat(sourcePath)
+                : sourceFormat;
+
+            var questions = Read(sourcePath, detectedFormat);
+            allQuestions.AddRange(questions);
+            sources.Add(new QuestionBankMergeSourceSummary(sourcePath, detectedFormat, questions.Count));
+        }
+
+        var mergedQuestions = deduplicate
+            ? DeduplicateQuestions(allQuestions)
+            : allQuestions;
+
+        var duplicateCount = deduplicate ? allQuestions.Count - mergedQuestions.Count : 0;
+
+        return new QuestionBankMergeReadResult(
+            mergedQuestions,
+            paths.Count,
+            allQuestions.Count,
+            duplicateCount,
+            sources);
+    }
+
+    /// <summary>
+    /// 合并多个题库并写入目标格式。
+    /// </summary>
+    public QuestionBankMergeSummary Merge(IEnumerable<string> sourcePaths,
+                                          string targetPath,
+                                          QuestionBankSourceFormat sourceFormat,
+                                          QuestionBankTargetFormat targetFormat,
+                                          bool deduplicate = true,
+                                          string? title = null) {
+        ArgumentNullException.ThrowIfNull(sourcePaths);
+        ArgumentNullException.ThrowIfNull(targetPath);
+
+        var readResult = ReadAndMerge(sourcePaths, sourceFormat, deduplicate);
+        Write(readResult.Questions, targetPath, targetFormat, title);
+
+        return new QuestionBankMergeSummary(
+            readResult.SourceFileCount,
+            readResult.TotalQuestionCount,
+            readResult.DuplicateQuestionCount,
+            readResult.Questions.Count,
+            targetFormat,
+            targetPath,
+            readResult.Sources);
+    }
+
     private static QuestionBankSourceFormat DetectExcelFormat(string filePath) {
+        if (IsKsbFormat(filePath)) {
+            return QuestionBankSourceFormat.Ksb;
+        }
+
+        if (IsMtbFormat(filePath)) {
+            return QuestionBankSourceFormat.Mtb;
+        }
+
         // 优先检测 Simple 格式（专业、题型、题目、选项、正确答案）
         if (SimpleExcelReader.IsMatchingFormat(filePath)) {
             return QuestionBankSourceFormat.Simple;
@@ -247,6 +343,123 @@ public class QuestionBankConversionService {
 
         return QuestionBankSourceFormat.Wldx;
     }
+
+    private static bool IsKsbFormat(string filePath) {
+        try {
+            using var workbook = new XLWorkbook(filePath);
+            var worksheet = workbook.Worksheet(1);
+
+            return HeaderContains(worksheet, 1, 1, "题干")
+                && HeaderContains(worksheet, 1, 2, "题型")
+                && HeaderContains(worksheet, 1, 11, "正确答案");
+        } catch {
+            return false;
+        }
+    }
+
+    private static bool IsMtbFormat(string filePath) {
+        try {
+            using var workbook = new XLWorkbook(filePath);
+            var worksheet = workbook.Worksheet(1);
+
+            return HeaderEquals(worksheet, 1, 1, "标题")
+                && HeaderEquals(worksheet, 4, 1, "题干")
+                && HeaderEquals(worksheet, 4, 2, "题型")
+                && HeaderContains(worksheet, 4, 9, "答案");
+        } catch {
+            return false;
+        }
+    }
+
+    private static bool HeaderEquals(IXLWorksheet worksheet, int row, int column, string expected) {
+        return NormalizeHeader(worksheet.Cell(row, column).GetString()) == NormalizeHeader(expected);
+    }
+
+    private static bool HeaderContains(IXLWorksheet worksheet, int row, int column, string expected) {
+        return NormalizeHeader(worksheet.Cell(row, column).GetString()).Contains(NormalizeHeader(expected));
+    }
+
+    private static string NormalizeHeader(string value) {
+        return new string((value ?? string.Empty)
+            .Where(c => !char.IsWhiteSpace(c))
+            .ToArray());
+    }
+
+    private static IReadOnlyList<Question> DeduplicateQuestions(IEnumerable<Question> questions) {
+        var result = new List<Question>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var question in questions) {
+            if (question is null || string.IsNullOrWhiteSpace(question.Topic)) {
+                continue;
+            }
+
+            var key = BuildQuestionKey(question);
+            if (seen.Add(key)) {
+                result.Add(question);
+            }
+        }
+
+        return result;
+    }
+
+    private static string BuildQuestionKey(Question question) {
+        var options = question.Answer
+            .Select(option => NormalizeQuestionText(RemoveOptionPrefix(option)));
+
+        return string.Join('\u001f', new[] {
+            ((int)question.TopicType).ToString(),
+            NormalizeQuestionText(question.Topic),
+            string.Join('\u001e', options),
+            NormalizeQuestionText(question.CorrectAnswer)
+        });
+    }
+
+    private static string NormalizeQuestionText(string? value) {
+        if (string.IsNullOrWhiteSpace(value)) {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        var pendingSpace = false;
+
+        foreach (var c in value.Trim()) {
+            if (char.IsWhiteSpace(c)) {
+                pendingSpace = true;
+                continue;
+            }
+
+            if (pendingSpace && builder.Length > 0) {
+                builder.Append(' ');
+            }
+
+            builder.Append(char.ToUpperInvariant(c));
+            pendingSpace = false;
+        }
+
+        return builder.ToString();
+    }
+
+    private static string RemoveOptionPrefix(string? option) {
+        if (string.IsNullOrWhiteSpace(option)) {
+            return string.Empty;
+        }
+
+        var trimmed = option.Trim();
+        if (trimmed.Length < 2) {
+            return trimmed;
+        }
+
+        var firstChar = char.ToUpperInvariant(trimmed[0]);
+        var secondChar = trimmed[1];
+
+        if (firstChar is >= 'A' and <= 'H'
+            && (secondChar == '.' || secondChar == '、' || secondChar == '．' || secondChar == '-')) {
+            return trimmed[2..].TrimStart();
+        }
+
+        return trimmed;
+    }
 }
 
 /// <summary>
@@ -260,3 +473,30 @@ public record QuestionBankConversionSummary(int QuestionCount,
                                             QuestionBankSourceFormat SourceFormat,
                                             QuestionBankTargetFormat TargetFormat,
                                             string TargetPath);
+
+/// <summary>
+/// 单个合并源文件读取摘要。
+/// </summary>
+public record QuestionBankMergeSourceSummary(string SourcePath,
+                                             QuestionBankSourceFormat SourceFormat,
+                                             int QuestionCount);
+
+/// <summary>
+/// 多题库合并读取结果。
+/// </summary>
+public record QuestionBankMergeReadResult(IReadOnlyList<Question> Questions,
+                                          int SourceFileCount,
+                                          int TotalQuestionCount,
+                                          int DuplicateQuestionCount,
+                                          IReadOnlyList<QuestionBankMergeSourceSummary> Sources);
+
+/// <summary>
+/// 题库合并结果摘要。
+/// </summary>
+public record QuestionBankMergeSummary(int SourceFileCount,
+                                       int TotalQuestionCount,
+                                       int DuplicateQuestionCount,
+                                       int OutputQuestionCount,
+                                       QuestionBankTargetFormat TargetFormat,
+                                       string TargetPath,
+                                       IReadOnlyList<QuestionBankMergeSourceSummary> Sources);

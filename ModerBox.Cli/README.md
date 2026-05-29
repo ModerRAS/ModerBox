@@ -42,6 +42,9 @@ dotnet run -- cd --source "C:\data" --target "C:\result.csv"
 # 题库转换
 dotnet run -- qb --source "input.txt" --target "output.xlsx" --source-format Txt --target-format Mtb
 
+# 题库合并（多个源文件自动检测格式并去重）
+dotnet run -- qb merge --sources "bank1.txt" "bank2.xlsx" --target "merged.xlsx" --target-format Mtb
+
 # 电缆走向绘制
 dotnet run -- cable --config "config.json"
 
@@ -117,9 +120,21 @@ dotnet run -- harmonic --source "C:\data" --json
 --target-format, -tf 目标格式 (默认: Mtb)
 ```
 
+合并子命令：
+
+```
+qb merge --sources <file1> <file2> ... --target <output>
+
+--sources, -s        源文件路径列表（可传多个路径）
+--target, -t         目标文件路径 (必填)
+--source-format, -sf 源格式 (默认: AutoDetect，每个文件单独检测)
+--target-format, -tf 目标格式 (默认: Mtb)
+--deduplicate        合并时去除重复题目 (默认: true)
+```
+
 支持格式:
-- 源格式: Txt, Wldx, Wldx4, Excel, Gdpx
-- 目标格式: Ksb, Mtb, Wldx, Xiaobao
+- 源格式: AutoDetect, Txt, Ksb, Mtb, Wldx, Wldx4, Exc, Gdpx, Simple
+- 目标格式: Ksb, Mtb, Wldx, Wldx4, Xiaobao, XiaobaoTxt
 
 ### cable / c
 

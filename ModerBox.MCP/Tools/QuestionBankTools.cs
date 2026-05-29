@@ -83,6 +83,69 @@ public static partial class QuestionBankTools
 
         return result;
     }
+
+    [McpServerTool, Description("Merge multiple question bank files into one output file. Supports auto-detection per source file and optional duplicate removal.")]
+    public static QuestionBankMergeResult MergeQuestionBanks(
+        [Description("Source question bank file paths to merge")] string[] sourcePaths,
+        [Description("Target output file path")] string targetPath,
+        [Description("Target format (Ksb, Mtb, Wldx, Wldx4, Xiaobao, XiaobaoTxt)")] QuestionBankTargetFormat targetFormat,
+        [Description("Source format (AutoDetect, Txt, Ksb, Mtb, Wldx, Wldx4, Exc, Gdpx, Simple). If not specified, each source file will be auto-detected.")] QuestionBankSourceFormat? sourceFormat = null,
+        [Description("Remove duplicate questions while merging. Defaults to true.")] bool deduplicate = true)
+    {
+        var result = new QuestionBankMergeResult
+        {
+            SourcePaths = sourcePaths,
+            TargetPath = targetPath,
+            TargetFormat = targetFormat.ToString()
+        };
+
+        try
+        {
+            if (sourcePaths.Length == 0)
+            {
+                result.Success = false;
+                result.ErrorMessage = "At least one source file is required.";
+                return result;
+            }
+
+            var missing = sourcePaths.FirstOrDefault(path => !File.Exists(path));
+            if (missing is not null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Source file does not exist: {missing}";
+                return result;
+            }
+
+            var service = new QuestionBankConversionService();
+            var sourceFmt = sourceFormat ?? QuestionBankSourceFormat.AutoDetect;
+            var title = Path.GetFileNameWithoutExtension(targetPath);
+
+            var summary = service.Merge(sourcePaths, targetPath, sourceFmt, targetFormat, deduplicate, title);
+
+            result.Success = true;
+            result.SourceFileCount = summary.SourceFileCount;
+            result.TotalQuestionCount = summary.TotalQuestionCount;
+            result.DuplicateQuestionCount = summary.DuplicateQuestionCount;
+            result.OutputQuestionCount = summary.OutputQuestionCount;
+            result.TargetFormat = summary.TargetFormat.ToString();
+            result.OutputPath = summary.TargetPath;
+            result.Sources = summary.Sources
+                .Select(source => new QuestionBankMergeSourceResult
+                {
+                    SourcePath = source.SourcePath,
+                    SourceFormat = source.SourceFormat.ToString(),
+                    QuestionCount = source.QuestionCount
+                })
+                .ToArray();
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+        }
+
+        return result;
+    }
 }
 
 public class QuestionBankConversionResult
@@ -103,4 +166,26 @@ public class QuestionBankFormatDetectionResult
     public string? ErrorMessage { get; set; }
     public string FilePath { get; set; } = "";
     public string DetectedFormat { get; set; } = "";
+}
+
+public class QuestionBankMergeResult
+{
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+    public string[] SourcePaths { get; set; } = Array.Empty<string>();
+    public string TargetPath { get; set; } = "";
+    public int SourceFileCount { get; set; }
+    public int TotalQuestionCount { get; set; }
+    public int DuplicateQuestionCount { get; set; }
+    public int OutputQuestionCount { get; set; }
+    public string TargetFormat { get; set; } = "";
+    public string OutputPath { get; set; } = "";
+    public QuestionBankMergeSourceResult[] Sources { get; set; } = Array.Empty<QuestionBankMergeSourceResult>();
+}
+
+public class QuestionBankMergeSourceResult
+{
+    public string SourcePath { get; set; } = "";
+    public string SourceFormat { get; set; } = "";
+    public int QuestionCount { get; set; }
 }

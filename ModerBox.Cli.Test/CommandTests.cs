@@ -285,6 +285,68 @@ public class QuestionBankCommandTests
         command.Name.Should().Be("question-bank");
         command.Aliases.Should().Contain("qb");
     }
+
+    [TestMethod]
+    public void Create_HasMergeSubcommand()
+    {
+        var command = QuestionBankCommand.Create();
+        command.Subcommands.Should().Contain(c => c.Name == "merge");
+    }
+
+    [TestMethod]
+    public async Task Invoke_Merge_WithValidSources_Succeeds()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "ModerBox_QbMerge_Test_" + Guid.NewGuid());
+        var source1 = Path.Combine(tempDir, "source1.txt");
+        var source2 = Path.Combine(tempDir, "source2.txt");
+        var target = Path.Combine(tempDir, "merged.txt");
+
+        var content1 = """
+        单选题
+        变压器的额定容量单位是？
+        A. kW
+        B. kVA
+        答案：B
+        """;
+
+        var content2 = """
+        单选题
+        变压器的额定容量单位是？
+        A. kW
+        B. kVA
+        答案：B
+
+        断路器主要用于？
+        A. 接通和开断电路
+        B. 测量电流
+        答案：A
+        """;
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            File.WriteAllText(source1, content1);
+            File.WriteAllText(source2, content2);
+
+            var command = QuestionBankCommand.Create();
+            var result = await command.InvokeAsync(new[]
+            {
+                "merge",
+                "--sources", source1, source2,
+                "--target", target,
+                "--target-format", "XiaobaoTxt"
+            });
+
+            result.Should().Be(0);
+            File.Exists(target).Should().BeTrue();
+            File.ReadAllLines(target).Should().HaveCount(2);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
 }
 
 [TestClass]

@@ -85,7 +85,7 @@ dotnet run -- harmonic --source "C:\data" --target "C:\result.xlsx"
 | `harmonic` / `h` | 批量谐波分析 | `ModerBox.Cli h --source "C:\data" --target "result.xlsx"` |
 | `filter` / `f` | 滤波器分合闸波形检测 | `ModerBox.Cli f --source "C:\waveforms" --target "output.xlsx"` |
 | `current-diff` / `cd` | 接地极电流差值分析 | `ModerBox.Cli cd --source "C:\data" --target "result.csv"` |
-| `question-bank` / `qb` | 题库格式转换 | `ModerBox.Cli qb --source "input.txt" --target "output.xlsx"` |
+| `question-bank` / `qb` | 题库格式转换/合并 | `ModerBox.Cli qb merge --sources "bank1.txt" "bank2.xlsx" --target "merged.xlsx"` |
 | `cable` / `c` | 电缆走向绘制 | `ModerBox.Cli c --config "config.json"` |
 
 更多用法请参阅 `ModerBox.Cli/README.md`

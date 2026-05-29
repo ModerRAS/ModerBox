@@ -2,7 +2,7 @@
 
 ## 功能概述
 
-题库转换工具用于将不同格式的题库文件转换为统一的标准格式，方便在不同的学习平台间迁移题库数据。
+题库转换工具用于将不同格式的题库文件转换或合并为统一的标准格式，方便在不同的学习平台间迁移题库数据。
 
 ## 支持的格式
 
@@ -18,21 +18,29 @@
    - 题型在F列，题干在G列
    - 选项在H列，答案在I列
 
-3. **网络大学4列简化格式**
+3. **考试宝 Excel**
+   - 考试宝导出的Excel题库格式
+   - 支持解析、章节、难度等扩展字段
+
+4. **磨题帮 Excel**
+   - 磨题帮导出的Excel题库格式
+   - 支持题库标题、描述和解析字段
+
+5. **网络大学4列简化格式**
    - 简化版网络大学格式
    - 包含4列数据：题型、题干、选项、答案
 
-4. **EXC格式**
+6. **EXC格式**
    - 特定的Excel题库格式
    - 题型在E列，题干在F列
    - 选项在G列，答案在H列
 
-5. **简单 Excel（5列）**
+7. **简单 Excel（5列）**
    - 表头：专业、题型、题目、选项、正确答案
    - 选项列用逗号分隔，格式如：`A. 选项1,B. 选项2,C. 选项3`
    - 答案列可写：`A. 选项1` 或 `A. 选项1,C. 选项3`，系统仅提取字母答案
 
-6. **国电培训 JSON**
+8. **国电培训 JSON**
    - 国电培训系统导出的JSON题库格式
 
 ### 目标格式（输出）
@@ -75,11 +83,11 @@ ModerBox.QuestionBank.Test/
 
 1. 启动ModerBox应用程序
 2. 在导航菜单中选择"题库转换"
-3. 选择源文件（支持.txt、.xlsx、.xls格式）
+3. 选择源文件（支持.txt、.xlsx、.xls、.json格式；多选文件会进入合并模式）
 4. 选择源格式类型（可以使用"自动检测"）
 5. 选择目标格式（考试宝、磨题帮、小包搜题 Excel、小包搜题 TXT）
 6. 选择保存位置
-7. 点击"开始转换"
+7. 点击"开始转换"或"开始合并"
 
 ### 在代码中使用
 
@@ -106,6 +114,14 @@ QuestionBankWriter.WriteToXiaobaoFormat(questions, "output.xlsx");
 
 // 导出为小包搜题TXT格式
 QuestionBankWriter.WriteToXiaobaoTxtFormat(questions, "output.txt");
+
+// 合并多个题库，默认自动检测每个源文件格式并去重
+var service = new QuestionBankConversionService();
+var summary = service.Merge(
+    new[] { "题库1.txt", "题库2.xlsx" },
+    "合并结果.xlsx",
+    QuestionBankSourceFormat.AutoDetect,
+    QuestionBankTargetFormat.Mtb);
 ```
 
 ## 依赖项
