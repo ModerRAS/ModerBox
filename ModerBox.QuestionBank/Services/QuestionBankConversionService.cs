@@ -50,6 +50,10 @@ public enum QuestionBankSourceFormat {
     [FormatDetail("国电培训系统导出的JSON格式题库")]
     Gdpx,
 
+    [Description("风控平台格式题库")]
+    [FormatDetail("风控平台导出的Excel题库格式（A序号，B一级纲要，C二级纲要，E题型，F题干，G选项，H答案）")]
+    RiskControlPlatform,
+
     [Description("简单 Excel")]
     [FormatDetail("简单5列格式（A专业，B题型，C题目，D选项，E正确答案）；D列选项用逗号分隔，格式如 A. 选项1,B. 选项2；E列答案可写 A. 选项1 或 A. 选项1,C. 选项3，系统仅提取字母答案")]
     Simple
@@ -145,6 +149,7 @@ public class QuestionBankConversionService {
             QuestionBankSourceFormat.Wldx4 => ExcelReader.ReadWLDX4Format(filePath),
             QuestionBankSourceFormat.Exc => ExcelReader.ReadEXCFormat(filePath),
             QuestionBankSourceFormat.Gdpx => GdpxReader.ReadFromFile(filePath),
+            QuestionBankSourceFormat.RiskControlPlatform => RiskControlPlatformReader.ReadFromFile(filePath),
             QuestionBankSourceFormat.Simple => ExcelReader.ReadSimpleFormat(filePath),
             _ => throw new NotSupportedException($"暂不支持的读取格式: {format}")
         };
@@ -299,6 +304,10 @@ public class QuestionBankConversionService {
 
         if (IsMtbFormat(filePath)) {
             return QuestionBankSourceFormat.Mtb;
+        }
+
+        if (RiskControlPlatformReader.IsMatchingFormat(filePath)) {
+            return QuestionBankSourceFormat.RiskControlPlatform;
         }
 
         // 优先检测 Simple 格式（专业、题型、题目、选项、正确答案）

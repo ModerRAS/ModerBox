@@ -65,6 +65,7 @@ public static class MtbWriter {
             QuestionType.SingleChoice => "单选题",
             QuestionType.MultipleChoice => "多选题",
             QuestionType.TrueFalse => "判断题",
+            QuestionType.ShortAnswer => "简答题",
             _ => "单选题"
         };
     }

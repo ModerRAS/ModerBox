@@ -12,7 +12,7 @@ public static partial class QuestionBankTools
         [Description("Source question bank file path")] string sourcePath,
         [Description("Target output file path")] string targetPath,
         [Description("Target format (Ksb, Mtb, Wldx, Wldx4, Xiaobao, XiaobaoTxt)")] QuestionBankTargetFormat targetFormat,
-        [Description("Source format (AutoDetect, Txt, Wldx, Wldx4, Exc, Gdpx, Simple). If not specified, format will be auto-detected.")] QuestionBankSourceFormat? sourceFormat = null)
+        [Description("Source format (AutoDetect, Txt, Ksb, Mtb, Wldx, Wldx4, Exc, Gdpx, RiskControlPlatform, Simple). If not specified, format will be auto-detected.")] QuestionBankSourceFormat? sourceFormat = null)
     {
         var result = new QuestionBankConversionResult
         {
@@ -89,7 +89,7 @@ public static partial class QuestionBankTools
         [Description("Source question bank file paths to merge")] string[] sourcePaths,
         [Description("Target output file path")] string targetPath,
         [Description("Target format (Ksb, Mtb, Wldx, Wldx4, Xiaobao, XiaobaoTxt)")] QuestionBankTargetFormat targetFormat,
-        [Description("Source format (AutoDetect, Txt, Ksb, Mtb, Wldx, Wldx4, Exc, Gdpx, Simple). If not specified, each source file will be auto-detected.")] QuestionBankSourceFormat? sourceFormat = null,
+        [Description("Source format (AutoDetect, Txt, Ksb, Mtb, Wldx, Wldx4, Exc, Gdpx, RiskControlPlatform, Simple). If not specified, each source file will be auto-detected.")] QuestionBankSourceFormat? sourceFormat = null,
         [Description("Remove duplicate questions while merging. Defaults to true.")] bool deduplicate = true)
     {
         var result = new QuestionBankMergeResult
