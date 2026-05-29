@@ -103,6 +103,10 @@ public static class SimpleExcelReader {
     /// 检测整个工作簿是否包含匹配此格式的工作表
     /// </summary>
     public static bool IsMatchingFormat(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.IsSimpleFormat(filePath);
+        }
+
         try {
             using var workbook = new XLWorkbook(filePath);
             foreach (var worksheet in workbook.Worksheets) {
@@ -119,7 +123,7 @@ public static class SimpleExcelReader {
     /// <summary>
     /// 检测选项格式是否有效（A. xxx,B. xxx 格式）
     /// </summary>
-    private static bool IsValidOptionFormat(string optionValue) {
+    internal static bool IsValidOptionFormat(string optionValue) {
         if (string.IsNullOrWhiteSpace(optionValue)) {
             return false;
         }
@@ -134,7 +138,7 @@ public static class SimpleExcelReader {
     /// 输入格式：A. 3.00 或 A. 存在的危险因素,C. 防范措施,D. 事故紧急处理措施
     /// 输出：A 或 ACD
     /// </summary>
-    private static string ExtractAnswerLetters(string answerString) {
+    internal static string ExtractAnswerLetters(string answerString) {
         if (string.IsNullOrWhiteSpace(answerString)) {
             return string.Empty;
         }
@@ -181,7 +185,7 @@ public static class SimpleExcelReader {
     /// 输入格式：A. 3.00,B. 2.80,C. 2.70,D. 2.55
     /// 输出：["A. 3.00", "B. 2.80", "C. 2.70", "D. 2.55"]
     /// </summary>
-    private static List<string> ParseSimpleOptions(string optionsString) {
+    internal static List<string> ParseSimpleOptions(string optionsString) {
         if (string.IsNullOrWhiteSpace(optionsString)) {
             return new List<string>();
         }

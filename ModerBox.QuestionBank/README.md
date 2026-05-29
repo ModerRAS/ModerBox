@@ -21,24 +21,29 @@
 3. **考试宝 Excel**
    - 考试宝导出的Excel题库格式
    - 支持解析、章节、难度等扩展字段
+   - 支持 `.xlsx`、`.xls` 输入
 
 4. **磨题帮 Excel**
    - 磨题帮导出的Excel题库格式
    - 支持题库标题、描述和解析字段
+   - 支持 `.xlsx`、`.xls` 输入
 
 5. **网络大学4列简化格式**
    - 简化版网络大学格式
    - 包含4列数据：题型、题干、选项、答案
+   - 支持 `.xlsx`、`.xls` 输入
 
 6. **EXC格式**
    - 特定的Excel题库格式
    - 题型在E列，题干在F列
    - 选项在G列，答案在H列
+   - 支持 `.xlsx`、`.xls` 输入
 
 7. **简单 Excel（5列）**
    - 表头：专业、题型、题目、选项、正确答案
    - 选项列用逗号分隔，格式如：`A. 选项1,B. 选项2,C. 选项3`
    - 答案列可写：`A. 选项1` 或 `A. 选项1,C. 选项3`，系统仅提取字母答案
+   - 支持 `.xlsx`、`.xls` 输入
 
 8. **国电培训 JSON**
    - 国电培训系统导出的JSON题库格式
@@ -118,7 +123,7 @@ QuestionBankWriter.WriteToXiaobaoTxtFormat(questions, "output.txt");
 // 合并多个题库，默认自动检测每个源文件格式并去重
 var service = new QuestionBankConversionService();
 var summary = service.Merge(
-    new[] { "题库1.txt", "题库2.xlsx" },
+    new[] { "题库1.txt", "题库2.xlsx", "题库3.xls" },
     "合并结果.xlsx",
     QuestionBankSourceFormat.AutoDetect,
     QuestionBankTargetFormat.Mtb);
@@ -126,7 +131,8 @@ var summary = service.Merge(
 
 ## 依赖项
 
-- **ClosedXML**: 用于读写Excel文件
+- **ClosedXML**: 用于读写 `.xlsx` Excel 文件
+- **ExcelDataReader**: 用于读取 `.xls` 旧版 Excel 文件
 - **System.Text.Encoding.CodePages**: 用于支持多种文本编码
 
 ## 题目模型
@@ -152,7 +158,7 @@ public enum QuestionType {
 ## 注意事项
 
 1. **编码支持**: TXT文件自动检测编码（UTF-8、GB2312等）
-2. **格式兼容**: Excel文件建议使用.xlsx格式以获得最佳兼容性
+2. **格式兼容**: 输入支持 `.xlsx`、`.xls`；导出为 Excel 时仍生成 `.xlsx`
 3. **数据验证**: 转换前会验证文件格式和数据完整性
 4. **错误处理**: 遇到无法解析的行会跳过并在控制台输出警告
 

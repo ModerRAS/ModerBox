@@ -10,6 +10,10 @@ public static class MtbReader {
     /// 从磨题帮格式（.xlsx）读取题目
     /// </summary>
     public static List<Question> ReadFromFile(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.ReadMtbFormat(filePath);
+        }
+
         using var workbook = new XLWorkbook(filePath);
         var worksheet = workbook.Worksheet(1);
         var result = new List<Question>();

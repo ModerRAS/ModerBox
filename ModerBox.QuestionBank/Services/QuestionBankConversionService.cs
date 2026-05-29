@@ -289,6 +289,10 @@ public class QuestionBankConversionService {
     }
 
     private static QuestionBankSourceFormat DetectExcelFormat(string filePath) {
+        if (LegacyExcelWorkbookReader.IsLegacyExcel(filePath)) {
+            return LegacyExcelReader.DetectFormat(filePath);
+        }
+
         if (IsKsbFormat(filePath)) {
             return QuestionBankSourceFormat.Ksb;
         }
