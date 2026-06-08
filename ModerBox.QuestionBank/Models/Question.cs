@@ -15,7 +15,11 @@ public enum QuestionType {
     /// <summary>
     /// 判断题
     /// </summary>
-    TrueFalse
+    TrueFalse,
+    /// <summary>
+    /// 简答题
+    /// </summary>
+    ShortAnswer
 }
 
 /// <summary>

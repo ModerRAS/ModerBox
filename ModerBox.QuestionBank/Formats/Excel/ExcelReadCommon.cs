@@ -12,6 +12,7 @@ internal static class ExcelReadCommon {
         if (s.Contains("单选")) return QuestionType.SingleChoice;
         if (s.Contains("多选")) return QuestionType.MultipleChoice;
         if (s.Contains("判断")) return QuestionType.TrueFalse;
+        if (s.Contains("简答")) return QuestionType.ShortAnswer;
         return QuestionType.SingleChoice;
     }
 

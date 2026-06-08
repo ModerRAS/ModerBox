@@ -173,6 +173,10 @@ internal static class LegacyExcelReader {
 
     public static QuestionBankSourceFormat DetectFormat(string filePath) {
         var worksheet = ReadFirstWorksheet(filePath);
+        if (RiskControlPlatformReader.IsMatchingWorksheet(worksheet)) {
+            return QuestionBankSourceFormat.RiskControlPlatform;
+        }
+
         if (IsKsbFormat(worksheet)) {
             return QuestionBankSourceFormat.Ksb;
         }
