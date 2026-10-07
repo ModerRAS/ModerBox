@@ -400,3 +400,6 @@ FodyWeavers.xsd
 tmp/
 
 .sisyphus
+
+# Local requirement and design notes
+specs/

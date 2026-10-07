@@ -21,8 +21,15 @@ namespace ModerBox {
             { typeof(ComtradeExportViewModel), () => new ComtradeExport() },
             { typeof(SwitchOperationReportViewModel), () => new SwitchOperationReport() },
             { typeof(CableRoutingViewModel), () => new Views.UserControls.CableRouting() },
-            { typeof(VideoAnalysisViewModel), () => new Views.UserControls.VideoAnalysis() }
+            { typeof(VideoAnalysisViewModel), () => new Views.UserControls.VideoAnalysis() },
+            { typeof(ContributionCalculationViewModel), () => new Views.UserControls.ContributionCalculation() },
+            { typeof(LauncherViewModel), () => new FeatureLauncher() },
+            { typeof(FeatureHostViewModel), () => new FeatureHost() }
         };
+
+        public static bool HasMapping(Type viewModelType) {
+            return ViewMappings.ContainsKey(viewModelType);
+        }
 
         public Control? Build(object? data) {
             if (data is null)
