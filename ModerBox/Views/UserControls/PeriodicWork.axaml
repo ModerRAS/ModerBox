@@ -12,6 +12,7 @@
 		<vm:PeriodicWorkViewModel/>
 
 	</Design.DataContext>
+	<ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
 	<StackPanel Margin="20">
 		<TextBlock Margin="0 5" >波形路径</TextBlock>
 		<Grid>
@@ -50,4 +51,5 @@
                 Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding Progress}"
                 ShowProgressText="True"/>
 	</StackPanel>
+	</ScrollViewer>
 </UserControl>

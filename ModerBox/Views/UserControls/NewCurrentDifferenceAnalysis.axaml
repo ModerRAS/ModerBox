@@ -10,7 +10,7 @@
         <vm:NewCurrentDifferenceAnalysisViewModel/>
     </Design.DataContext>
 
-    <ScrollViewer>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,*">
             <TextBlock Grid.Row="0"
                        Text="接地极电流差值分析 (新版)"

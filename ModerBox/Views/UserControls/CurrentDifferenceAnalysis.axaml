@@ -11,7 +11,7 @@
     <vm:CurrentDifferenceAnalysisViewModel/>
   </Design.DataContext>
 
-  <ScrollViewer>
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,*">
       
       <!-- 标题 -->

@@ -9,6 +9,7 @@
     <Design.DataContext>
         <vm:ContributionCalculationViewModel/>
     </Design.DataContext>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20">
         <TextBlock Margin="0 5">CSV文件</TextBlock>
         <Grid>
@@ -34,4 +35,5 @@
                 ShowProgressText="True"/>
         <TextBlock Margin="5" Text="{Binding StatusMessage}" />
     </StackPanel>
+    </ScrollViewer>
 </UserControl>
