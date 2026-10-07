@@ -11,7 +11,7 @@
         <vm:VideoAnalysisViewModel/>
     </Design.DataContext>
 
-    <ScrollViewer>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20" Spacing="12">
 
             <!-- 输入模式选择 -->

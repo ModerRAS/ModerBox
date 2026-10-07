@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="ModerBox.Views.UserControls.FeatureLauncher"
              x:DataType="vm:LauncherViewModel">
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="16" Spacing="8">
             <TextBox Watermark="搜索功能"
                      Text="{Binding SearchText}"

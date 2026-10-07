@@ -10,6 +10,7 @@
         <vm:CableRoutingViewModel/>
     </Design.DataContext>
     
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20" Spacing="10">
         <!-- 标题说明 -->
         <TextBlock Text="电缆走向自动化绘制" FontSize="18" FontWeight="Bold" Margin="0 0 0 10"/>
@@ -72,4 +73,5 @@
                  FontFamily="Consolas, Microsoft YaHei"
                  FontSize="12"/>
     </StackPanel>
+    </ScrollViewer>
 </UserControl>

@@ -7,7 +7,7 @@
              x:Class="ModerBox.Views.UserControls.FilterWaveformSwitchCopy"
              x:DataType="vm:FilterWaveformSwitchCopyViewModel">
 
-    <ScrollViewer>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20" Spacing="15" MaxWidth="800" HorizontalAlignment="Left">
             
             <!-- 标题 (Title) -->

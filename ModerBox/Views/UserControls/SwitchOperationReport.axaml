@@ -7,7 +7,7 @@
              x:Class="ModerBox.Views.UserControls.SwitchOperationReport"
              x:DataType="vm:SwitchOperationReportViewModel">
 
-    <ScrollViewer>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20" Spacing="15" MaxWidth="900" HorizontalAlignment="Left">
 
             <!-- 标题 -->
@@ -96,7 +96,7 @@
                     <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                             BorderThickness="1" CornerRadius="4" MaxHeight="300"
                             IsVisible="{Binding HasLoadedSwitches}">
-                        <ScrollViewer>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding SwitchDataSources}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:SwitchDataSourceItemViewModel">
