@@ -1,35 +1,38 @@
 ﻿using ReactiveUI;
-using System.Collections.ObjectModel;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace ModerBox.ViewModels {
     public class MainWindowViewModel : ViewModelBase {
-        public ObservableCollection<ViewModelBase> Pages { get; }
+        private readonly ShellNavigation _navigation;
 
-        private ViewModelBase _currentPage;
-        public ViewModelBase CurrentPage {
-            get => _currentPage;
-            set => this.RaiseAndSetIfChanged(ref _currentPage, value);
+        public MainWindowViewModel() : this(FeatureCatalog.Create(), new HomePageViewModel()) {
         }
 
-        public MainWindowViewModel() {
-            Pages = new ObservableCollection<ViewModelBase> {
-                new HomePageViewModel { Title = "首页", Icon = "Home" },
-                new HarmonicCalculateViewModel { Title = "谐波计算", Icon = "Audio" },
-                new FilterWaveformSwitchIntervalViewModel { Title = "滤波器分合闸波形检测", Icon = "Filter" },
-                new FilterWaveformSwitchCopyViewModel { Title = "分合闸波形筛选复制", Icon = "Copy" },
-                new SwitchOperationReportViewModel { Title = "分合闸操作报表导出", Icon = "Save" },
-                new PeriodicWorkViewModel { Title = "内置录波定期工作", Icon = "Calendar" },
-                new CurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析", Icon = "Ruler" },
-                new NewCurrentDifferenceAnalysisViewModel { Title = "接地极电流差值分析 (新版)", Icon = "RulerFilled" },
-                new ThreePhaseIdeeAnalysisViewModel { Title = "三相IDEE分析", Icon = "ThreeBars" },
-                new QuestionBankConversionViewModel { Title = "题库转换", Icon = "Document" },
-                new ComtradeExportViewModel { Title = "波形通道导出", Icon = "Save" },
-                new CableRoutingViewModel { Title = "电缆走向绘制", Icon = "Ruler" },
-                new VideoAnalysisViewModel { Title = "视频分析", Icon = "Play" },
-                new ContributionCalculationViewModel { Title = "工作票贡献度计算", Icon = "Calculate" }
+        public MainWindowViewModel(IReadOnlyList<FeatureEntry> features, HomePageViewModel home) {
+            _navigation = new ShellNavigation(features, home);
+            _navigation.Changed += () => {
+                this.RaisePropertyChanged(nameof(SelectedNavigation));
+                this.RaisePropertyChanged(nameof(CurrentContent));
             };
-            _currentPage = Pages.First();
+        }
+
+        public IReadOnlyList<ShellNavigationItem> NavigationItems => _navigation.Items;
+
+        public ShellNavigationItem SelectedNavigation {
+            get => _navigation.SelectedItem;
+            set {
+                if (value is null || ReferenceEquals(value, _navigation.SelectedItem)) {
+                    return;
+                }
+
+                _navigation.Select(value);
+            }
+        }
+
+        public object CurrentContent => _navigation.CurrentContent;
+
+        public void ActivateNavigation(ShellNavigationItem item) {
+            _navigation.Select(item);
         }
     }
 }
