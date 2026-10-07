@@ -38,6 +38,14 @@ public class VideoAnalysisFacade
 
         try
         {
+            if (!VideoProcessingAvailability.IsMediaExtractionAvailable)
+            {
+                ReportProgress(progress, AnalysisStage.Failed, 0, VideoProcessingAvailability.UnavailableMessage);
+                result.IsSuccess = false;
+                result.ErrorMessage = VideoProcessingAvailability.UnavailableMessage;
+                return result;
+            }
+
             // 阶段 0: 初始化
             ReportProgress(progress, AnalysisStage.Initializing, 0, "正在初始化...");
 

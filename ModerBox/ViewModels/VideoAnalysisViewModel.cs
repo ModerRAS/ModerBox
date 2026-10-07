@@ -440,6 +440,12 @@ namespace ModerBox.ViewModels {
             }
         }
 
+        public bool IsMediaExtractionAvailable => VideoProcessingAvailability.IsMediaExtractionAvailable;
+
+        public string MediaExtractionNotice => VideoProcessingAvailability.UnavailableMessage;
+
+        public bool ShowMediaExtractionNotice => !IsMediaExtractionAvailable;
+
         // 命令
         public ReactiveCommand<Unit, Unit> StartAnalysis { get; }
         public ReactiveCommand<Unit, Unit> CancelAnalysis { get; }
@@ -456,7 +462,7 @@ namespace ModerBox.ViewModels {
         public VideoAnalysisViewModel() {
             var canStart = this.WhenAnyValue(
                 x => x.IsRunning,
-                running => !running);
+                running => !running && VideoProcessingAvailability.IsMediaExtractionAvailable);
 
             StartAnalysis = ReactiveCommand.CreateFromTask(StartAnalysisAsync, canStart);
 

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType Condition="$([MSBuild]::IsOSPlatform('Windows'))">WinExe</OutputType>
+    <OutputType Condition="!$([MSBuild]::IsOSPlatform('Windows'))">Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -33,7 +34,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Coravel" Version="6.0.2" />
   <PackageReference Include="FluentAvaloniaUI" Version="2.5.0" />
-  <PackageReference Include="VC-LTL" Version="5.2.1" />
+  <PackageReference Include="VC-LTL" Version="5.2.1" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
   <PackageReference Include="Velopack" Version="0.0.1298" />
   <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />

@@ -18,7 +18,9 @@ namespace ModerBox {
         [STAThread]
         public static void Main(string[] args) {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            VelopackApp.Build().Run();
+            if (OperatingSystem.IsWindows()) {
+                VelopackApp.Build().Run();
+            }
             Env.host = Host.CreateDefaultBuilder()
                 .ConfigureServices(service => {
                     service.AddSingleton(service);

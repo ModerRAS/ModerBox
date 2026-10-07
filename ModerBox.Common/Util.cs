@@ -87,14 +87,56 @@ namespace ModerBox.Common {
         }
 
         /// <summary>
-        /// 启动指定的文件（例如Excel文档）使用explorer.exe。
+        /// 在系统文件管理器中打开或选中指定路径（Windows ShellExecute / Linux xdg-open / macOS open）。
         /// </summary>
-        /// <param name="filePath">要启动的文件的完整路径。</param>
+        /// <param name="filePath">文件或目录的完整路径。</param>
         public static void OpenFileWithExplorer(this string filePath) {
-            Process process = new Process();
-            process.StartInfo.FileName = "explorer.exe";
-            process.StartInfo.Arguments = "\"" + filePath + "\"";
+            ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+            using var process = new Process();
+            process.StartInfo = CreateRevealInFileManagerStartInfo(filePath);
             process.Start();
+        }
+
+        internal static ProcessStartInfo CreateRevealInFileManagerStartInfo(string filePath) {
+            ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+            var fullPath = Path.GetFullPath(filePath);
+
+            if (OperatingSystem.IsWindows()) {
+                if (File.Exists(fullPath)) {
+                    return new ProcessStartInfo {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{fullPath}\"",
+                        UseShellExecute = true,
+                    };
+                }
+
+                return new ProcessStartInfo {
+                    FileName = fullPath,
+                    UseShellExecute = true,
+                };
+            }
+
+            if (OperatingSystem.IsMacOS()) {
+                if (File.Exists(fullPath)) {
+                    return new ProcessStartInfo {
+                        FileName = "open",
+                        Arguments = $"-R \"{fullPath}\"",
+                        UseShellExecute = false,
+                    };
+                }
+
+                return new ProcessStartInfo {
+                    FileName = "open",
+                    Arguments = $"\"{fullPath}\"",
+                    UseShellExecute = false,
+                };
+            }
+
+            return new ProcessStartInfo {
+                FileName = "xdg-open",
+                Arguments = $"\"{(File.Exists(fullPath) ? Path.GetDirectoryName(fullPath) ?? fullPath : fullPath)}\"",
+                UseShellExecute = false,
+            };
         }
         
 

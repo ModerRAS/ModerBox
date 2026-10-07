@@ -187,7 +187,45 @@ namespace ModerBox.Common.Test {
             Assert.AreEqual("https://velopack.miaostay.com", result);
         }
 
-        // 注意：OpenFileWithExplorer 方法启动外部进程，在单元测试中不容易测试
-        // 可以考虑重构该方法以便于测试，或者创建集成测试
+        [TestMethod]
+        public void CreateRevealInFileManagerStartInfo_OnLinux_UsesXdgOpenForExistingFile() {
+            if (!OperatingSystem.IsLinux()) {
+                return;
+            }
+
+            var tempFile = Path.Combine(Path.GetTempPath(), $"moderbox-open-test-{Guid.NewGuid():N}.txt");
+            File.WriteAllText(tempFile, "test");
+
+            try {
+                var info = Util.CreateRevealInFileManagerStartInfo(tempFile);
+                Assert.AreEqual("xdg-open", info.FileName);
+                Assert.IsTrue(info.Arguments.Contains(Path.GetDirectoryName(tempFile)!));
+            } finally {
+                File.Delete(tempFile);
+            }
+        }
+
+        [TestMethod]
+        public void CreateRevealInFileManagerStartInfo_OnWindows_UsesExplorerSelectForFile() {
+            if (!OperatingSystem.IsWindows()) {
+                return;
+            }
+
+            var info = Util.CreateRevealInFileManagerStartInfo(@"C:\temp\result.xlsx");
+            Assert.AreEqual("explorer.exe", info.FileName);
+            Assert.IsTrue(info.Arguments.Contains("/select,"));
+            Assert.IsTrue(info.UseShellExecute);
+        }
+
+        [TestMethod]
+        public void CreateRevealInFileManagerStartInfo_OnMacOS_UsesOpenReveal() {
+            if (!OperatingSystem.IsMacOS()) {
+                return;
+            }
+
+            var info = Util.CreateRevealInFileManagerStartInfo("/tmp/result.xlsx");
+            Assert.AreEqual("open", info.FileName);
+            Assert.IsTrue(info.Arguments.StartsWith("-R "));
+        }
     }
 }
