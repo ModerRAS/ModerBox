@@ -24,7 +24,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore ModerBox/ModerBox.csproj ModerBox.Cli/ModerBox.Cli.csproj ModerBox.MCP/ModerBox.MCP.csproj
+        run: |
+          dotnet restore ModerBox/ModerBox.csproj
+          dotnet restore ModerBox.Cli/ModerBox.Cli.csproj
+          dotnet restore ModerBox.MCP/ModerBox.MCP.csproj
 
       - name: Build
         run: |

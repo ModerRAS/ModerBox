@@ -211,10 +211,17 @@ namespace ModerBox.Common.Test {
                 return;
             }
 
-            var info = Util.CreateRevealInFileManagerStartInfo(@"C:\temp\result.xlsx");
-            Assert.AreEqual("explorer.exe", info.FileName);
-            Assert.IsTrue(info.Arguments.Contains("/select,"));
-            Assert.IsTrue(info.UseShellExecute);
+            var tempFile = Path.Combine(Path.GetTempPath(), $"moderbox-open-test-{Guid.NewGuid():N}.txt");
+            File.WriteAllText(tempFile, "test");
+
+            try {
+                var info = Util.CreateRevealInFileManagerStartInfo(tempFile);
+                Assert.AreEqual("explorer.exe", info.FileName);
+                Assert.IsTrue(info.Arguments.Contains("/select,"));
+                Assert.IsTrue(info.UseShellExecute);
+            } finally {
+                File.Delete(tempFile);
+            }
         }
 
         [TestMethod]
