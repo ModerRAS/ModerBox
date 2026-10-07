@@ -14,6 +14,15 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20" Spacing="12">
 
+            <Border IsVisible="{Binding ShowMediaExtractionNotice}"
+                    Background="#FFF4E5"
+                    BorderBrush="#E6A700"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="12">
+                <TextBlock Text="{Binding MediaExtractionNotice}" TextWrapping="Wrap"/>
+            </Border>
+
             <!-- 输入模式选择 -->
             <TextBlock Text="输入模式" FontWeight="Bold" FontSize="16"/>
             <StackPanel Orientation="Horizontal" Spacing="20">

@@ -8,7 +8,7 @@ namespace ModerBox.MCP.Tools;
 [McpServerToolType]
 public static partial class VideoAnalysisTools
 {
-    [McpServerTool, Description("Analyze a video file for speech transcription, visual content analysis, and summary generation.")]
+    [McpServerTool, Description("Analyze a video file for speech transcription, visual content analysis, and summary generation. Media extraction requires FFmpeg and is disabled in shipped builds.")]
     public static async Task<VideoAnalysisToolResult> AnalyzeVideo(
         [Description("Path to the video file to analyze")] string videoPath,
         [Description("Output path for the analysis result (optional, if not provided, result is returned directly)")] string? outputPath = null,

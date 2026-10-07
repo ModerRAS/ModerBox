@@ -1,3 +1,4 @@
+using ModerBox.VideoAnalysis.Models;
 using ModerBox.VideoAnalysis.Services;
 
 namespace ModerBox.VideoAnalysis.Test;
@@ -5,6 +6,18 @@ namespace ModerBox.VideoAnalysis.Test;
 [TestClass]
 public class VideoAnalysisFacadeTest
 {
+    [TestMethod]
+    public async Task AnalyzeAsync_WhenMediaExtractionDisabled_ReturnsFailureWithoutCallingProcessor()
+    {
+        var facade = new VideoAnalysisFacade();
+        var result = await facade.AnalyzeAsync(
+            Path.Combine(Path.GetTempPath(), "nonexistent-video.mp4"),
+            new VideoAnalysisSettings());
+
+        Assert.IsFalse(result.IsSuccess);
+        Assert.AreEqual(VideoProcessingAvailability.UnavailableMessage, result.ErrorMessage);
+    }
+
     [TestMethod]
     public void ApplyFileNameTemplate_WithFilename_ShouldReplace()
     {

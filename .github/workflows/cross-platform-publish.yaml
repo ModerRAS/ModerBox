@@ -1,0 +1,127 @@
+name: Cross-Platform Publish
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-unix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: |
+          dotnet restore ModerBox/ModerBox.csproj
+          dotnet restore ModerBox.Cli/ModerBox.Cli.csproj
+          dotnet restore ModerBox.MCP/ModerBox.MCP.csproj
+
+      - name: Build
+        run: |
+          dotnet build ModerBox/ModerBox.csproj --no-restore -c Release
+          dotnet build ModerBox.Cli/ModerBox.Cli.csproj --no-restore -c Release
+          dotnet build ModerBox.MCP/ModerBox.MCP.csproj --no-restore -c Release
+
+      - name: Test (non-Windows projects)
+        run: |
+          dotnet test ModerBox.Common.Test/ModerBox.Common.Test.csproj -c Release
+          dotnet test ModerBox.VideoAnalysis.Test/ModerBox.VideoAnalysis.Test.csproj -c Release
+          dotnet test ModerBox.Comtrade.Test/ModerBox.Comtrade.Test.csproj -c Release
+
+  publish-linux:
+    runs-on: ubuntu-latest
+    needs: build-test-unix
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [linux-x64, linux-arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish ModerBox (${{ matrix.rid }})
+        run: |
+          dotnet publish ModerBox/ModerBox.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -o publish-moderbox-${{ matrix.rid }}
+
+      - name: Verify no FFmpeg artifacts
+        shell: bash
+        run: |
+          if find publish-moderbox-${{ matrix.rid }} -iname '*ffmpeg*' | grep -q .; then
+            echo "::error::FFmpeg artifacts must not be shipped."
+            find publish-moderbox-${{ matrix.rid }} -iname '*ffmpeg*'
+            exit 1
+          fi
+
+      - name: Archive publish output
+        run: |
+          tar -czf ModerBox-${{ matrix.rid }}.tar.gz -C publish-moderbox-${{ matrix.rid }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moderbox-${{ matrix.rid }}
+          path: ModerBox-${{ matrix.rid }}.tar.gz
+
+  publish-macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [osx-x64, osx-arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish ModerBox (${{ matrix.rid }})
+        run: |
+          dotnet publish ModerBox/ModerBox.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -o publish-moderbox-${{ matrix.rid }}
+
+      - name: Verify no FFmpeg artifacts
+        shell: bash
+        run: |
+          if find publish-moderbox-${{ matrix.rid }} -iname '*ffmpeg*' | grep -q .; then
+            echo "::error::FFmpeg artifacts must not be shipped."
+            find publish-moderbox-${{ matrix.rid }} -iname '*ffmpeg*'
+            exit 1
+          fi
+
+      - name: Archive publish output
+        run: |
+          tar -czf ModerBox-${{ matrix.rid }}.tar.gz -C publish-moderbox-${{ matrix.rid }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moderbox-${{ matrix.rid }}
+          path: ModerBox-${{ matrix.rid }}.tar.gz
